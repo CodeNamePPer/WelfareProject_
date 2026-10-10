@@ -12,21 +12,19 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    // รับเฉพาะ field ที่อนุญาตให้แก้ไข — id ใช้เพื่อระบุ record เท่านั้น ห้ามแก้ไข
-    const { id, email, name, role, status, employeeId } = body;
+    const { id, email, name, role, status } = body;
 
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "ไม่พบรหัสผู้ใช้" }, { status: 400 });
     }
 
     const now = new Date().toISOString();
-    // ส่งเฉพาะ field ที่แก้ไขได้ — id ไม่ถูกส่งเข้า updateUser เพราะเป็น primary key
     await updateUser(id, {
       ...(email !== undefined ? { email } : {}),
       ...(name !== undefined ? { name } : {}),
       ...(role !== undefined ? { role } : {}),
       ...(status !== undefined ? { status } : {}),
-      ...(employeeId !== undefined ? { employeeId } : {}),
+      // employeeId ถูกล็อกไว้ - ไม่อนุญาตให้แก้ไข เนื่องจากเป็น primary key
     });
 
     return NextResponse.json({ ok: true, updatedAt: now });

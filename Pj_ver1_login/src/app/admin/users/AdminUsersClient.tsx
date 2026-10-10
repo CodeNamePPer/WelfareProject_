@@ -39,21 +39,17 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
 
   const handleEdit = (user: User) => {
     setEditingId(user.id);
-    // ตัด id ออกจาก editForm เพราะ id คือ primary key ห้ามแก้ไข
-    const { id: _id, ...editableFields } = user;
-    setEditForm(editableFields);
+    setEditForm(user);
   };
 
   const handleSave = async () => {
     if (!editingId) return;
     setSaving(true);
     try {
-      // ส่งเฉพาะ editingId เป็น id สำหรับระบุ record (ห้ามให้ editForm มี id)
-      const { id: _omit, ...safeForm } = editForm as User;
       const res = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingId, ...safeForm }),
+        body: JSON.stringify({ id: editingId, ...editForm }),
       });
       if (res.ok) {
         const result = await res.json().catch(() => ({}));
@@ -157,12 +153,10 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
                   <tr key={u.id} className="hover:bg-slip/50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-ink whitespace-nowrap">
                       {isEditing ? (
-                        <input
-                          type="text"
-                          className="border border-mist px-2 py-1 rounded w-24 bg-white text-ink text-sm font-semibold"
-                          value={editForm.employeeId || ""}
-                          onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })}
-                        />
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-ink text-sm">{u.employeeId}</span>
+                          <span className="text-[10px] text-ink-mute bg-mist px-1.5 py-0.5 rounded w-fit">🔒 Primary Key · แก้ไขไม่ได้</span>
+                        </div>
                       ) : (
                         u.employeeId
                       )}
