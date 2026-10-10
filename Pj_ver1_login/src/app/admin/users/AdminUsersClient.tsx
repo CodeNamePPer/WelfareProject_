@@ -152,14 +152,7 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
                 return (
                   <tr key={u.id} className="hover:bg-slip/50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-ink whitespace-nowrap">
-                      {isEditing ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-semibold text-ink text-sm">{u.employeeId}</span>
-                          <span className="text-[10px] text-ink-mute bg-mist px-1.5 py-0.5 rounded w-fit">🔒 Primary Key · แก้ไขไม่ได้</span>
-                        </div>
-                      ) : (
-                        u.employeeId
-                      )}
+                      {u.employeeId}
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
