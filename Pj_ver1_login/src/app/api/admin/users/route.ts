@@ -12,6 +12,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
+    // รับเฉพาะ field ที่อนุญาตให้แก้ไข — id ใช้เพื่อระบุ record เท่านั้น ห้ามแก้ไข
     const { id, email, name, role, status, employeeId } = body;
 
     if (!id || typeof id !== "string") {
@@ -19,6 +20,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
+    // ส่งเฉพาะ field ที่แก้ไขได้ — id ไม่ถูกส่งเข้า updateUser เพราะเป็น primary key
     await updateUser(id, {
       ...(email !== undefined ? { email } : {}),
       ...(name !== undefined ? { name } : {}),

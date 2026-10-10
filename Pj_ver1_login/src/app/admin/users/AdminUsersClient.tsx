@@ -39,17 +39,21 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
 
   const handleEdit = (user: User) => {
     setEditingId(user.id);
-    setEditForm(user);
+    // ตัด id ออกจาก editForm เพราะ id คือ primary key ห้ามแก้ไข
+    const { id: _id, ...editableFields } = user;
+    setEditForm(editableFields);
   };
 
   const handleSave = async () => {
     if (!editingId) return;
     setSaving(true);
     try {
+      // ส่งเฉพาะ editingId เป็น id สำหรับระบุ record (ห้ามให้ editForm มี id)
+      const { id: _omit, ...safeForm } = editForm as User;
       const res = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingId, ...editForm }),
+        body: JSON.stringify({ id: editingId, ...safeForm }),
       });
       if (res.ok) {
         const result = await res.json().catch(() => ({}));
