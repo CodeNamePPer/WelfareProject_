@@ -13,7 +13,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
     "@types/bcryptjs": "^2.4.6",
-    "argon2": "^0.45.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "jose": "^5.9.6",
