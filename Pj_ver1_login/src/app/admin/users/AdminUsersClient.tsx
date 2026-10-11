@@ -4,8 +4,7 @@ import { useState } from "react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
 
 type User = {
-  id: string;
-  employeeId: string;
+  employeeId: string; // Primary Key
   email: string;
   name: string;
   role: string;
@@ -38,7 +37,7 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleEdit = (user: User) => {
-    setEditingId(user.id);
+    setEditingId(user.employeeId);
     setEditForm(user);
   };
 
@@ -49,14 +48,14 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
       const res = await fetch("/api/admin/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingId, ...editForm }),
+        body: JSON.stringify({ employeeId: editingId, ...editForm }),
       });
       if (res.ok) {
         const result = await res.json().catch(() => ({}));
         const newUpdatedAt = result.updatedAt || new Date().toISOString();
         setUsers(
           users.map((u) =>
-            u.id === editingId ? ({ ...u, ...editForm, updatedAt: newUpdatedAt } as User) : u
+            u.employeeId === editingId ? ({ ...u, ...editForm, updatedAt: newUpdatedAt } as User) : u
           )
         );
         setEditingId(null);
@@ -106,7 +105,7 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหารหัสพนักงาน (เช่น E0001), ชื่อ หรืออีเมล..."
+            placeholder="ค้นหา รหัสพนักงาน(E0000) ชื่อหรืออีเมล"
             className="w-full rounded-lg border border-mist bg-slip pl-9 pr-9 py-2 text-sm text-ink placeholder:text-ink-mute/70 focus:border-ink focus:outline-none focus:ring-1 focus:ring-ink"
           />
           {searchQuery && (
@@ -135,7 +134,7 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
               <th className="px-4 py-3 whitespace-nowrap">ชื่อ-นามสกุล</th>
               <th className="px-4 py-3 whitespace-nowrap">บทบาท</th>
               <th className="px-4 py-3 whitespace-nowrap">สถานะ</th>
-              <th className="px-4 py-3 whitespace-nowrap">แก้ไขล่าสุด (updated_at)</th>
+              <th className="px-4 py-3 whitespace-nowrap">แก้ไขล่าสุด</th>
               <th className="px-4 py-3 text-right whitespace-nowrap">จัดการ</th>
             </tr>
           </thead>
@@ -148,9 +147,9 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
               </tr>
             ) : (
               filteredUsers.map((u) => {
-                const isEditing = editingId === u.id;
+                const isEditing = editingId === u.employeeId;
                 return (
-                  <tr key={u.id} className="hover:bg-slip/50 transition-colors">
+                  <tr key={u.employeeId} className="hover:bg-slip/50 transition-colors">
                     <td className="px-4 py-3 font-semibold text-ink whitespace-nowrap">
                       {u.employeeId}
                     </td>

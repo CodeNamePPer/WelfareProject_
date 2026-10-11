@@ -5,8 +5,7 @@ import { supabaseAdmin } from "../supabase";
 export type EmploymentStatus = "ACTIVE" | "RESIGNED";
 
 export interface User {
-  id: string;
-  employeeId: string;
+  employeeId: string; // Primary Key
   email: string;
   name: string;
   role: Role;
@@ -32,7 +31,6 @@ export async function findUserByIdentifier(identifier: string): Promise<User | n
 
     if (!error && data) {
       return {
-        id: data.id,
         employeeId: data.employee_id,
         email: data.email,
         name: data.name,
@@ -48,14 +46,14 @@ export async function findUserByIdentifier(identifier: string): Promise<User | n
   return null;
 }
 
-export async function markLogin(userId: string): Promise<void> {
+export async function markLogin(employeeId: string): Promise<void> {
   const now = new Date().toISOString();
 
   try {
     await supabaseAdmin
       .from("users")
       .update({ last_login_at: now })
-      .eq("id", userId);
+      .eq("employee_id", employeeId);
   } catch (err) {
     console.error("Supabase markLogin error", err);
   }
@@ -73,12 +71,11 @@ export async function getAllUsers(): Promise<Omit<User, "passwordHash">[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("id, employee_id, email, name, role, status, last_login_at, updated_at")
-      .order("created_at", { ascending: true });
+      .select("employee_id, email, name, role, status, last_login_at, updated_at")
+      .order("employee_id", { ascending: true });
 
     if (!error && data) {
       return data.map((u) => ({
-        id: u.id,
         employeeId: u.employee_id,
         email: u.email,
         name: u.name,
@@ -94,12 +91,11 @@ export async function getAllUsers(): Promise<Omit<User, "passwordHash">[]> {
   return [];
 }
 
-export async function updateUser(userId: string, data: Partial<User>): Promise<void> {
+export async function updateUser(employeeId: string, data: Partial<User>): Promise<void> {
   try {
     const dbUpdate: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
-    if (data.employeeId !== undefined) dbUpdate.employee_id = data.employeeId;
     if (data.name !== undefined) dbUpdate.name = data.name;
     if (data.email !== undefined) dbUpdate.email = data.email;
     if (data.role !== undefined) dbUpdate.role = data.role;
@@ -109,7 +105,7 @@ export async function updateUser(userId: string, data: Partial<User>): Promise<v
     await supabaseAdmin
       .from("users")
       .update(dbUpdate)
-      .eq("id", userId);
+      .eq("employee_id", employeeId);
   } catch (err) {
     console.error("Supabase updateUser error", err);
   }

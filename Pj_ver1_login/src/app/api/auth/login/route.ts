@@ -52,13 +52,13 @@ export async function POST(req: NextRequest) {
 
   if (!user || !passwordOk) {
     registerFailure(lockKey);
-    await writeAudit({ action: "LOGIN_FAILED", userId: user?.id ?? null, identifier, ip });
+    await writeAudit({ action: "LOGIN_FAILED", userId: user?.employeeId ?? null, identifier, ip });
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 401 });
   }
 
   // 4) พนักงานที่ลาออกแล้ว (RESIGNED) หรือไม่ได้อยู่ในสถานะ ACTIVE
   if (user.status === "RESIGNED") {
-    await writeAudit({ action: "LOGIN_BLOCKED_INACTIVE", userId: user.id, identifier, ip });
+    await writeAudit({ action: "LOGIN_BLOCKED_INACTIVE", userId: user.employeeId, identifier, ip });
     return NextResponse.json(
       { error: "บัญชีนี้พ้นสภาพการเป็นพนักงานแล้ว (ลาออก) ไม่สามารถเข้าสู่ระบบได้ กรุณาติดต่อฝ่ายบุคคล (HR)" },
       { status: 403 },
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (user.status !== "ACTIVE") {
-    await writeAudit({ action: "LOGIN_BLOCKED_INACTIVE", userId: user.id, identifier, ip });
+    await writeAudit({ action: "LOGIN_BLOCKED_INACTIVE", userId: user.employeeId, identifier, ip });
     return NextResponse.json(
       { error: "บัญชีนี้ไม่ได้อยู่ในสถานะที่สามารถใช้งานได้ กรุณาติดต่อฝ่ายบุคคล (HR)" },
       { status: 403 },
@@ -76,14 +76,14 @@ export async function POST(req: NextRequest) {
   // 5) สำเร็จ: ออก session ใน httpOnly cookie
   clearFailures(lockKey);
   const token = await createSessionToken({
-    sub: user.id,
+    sub: user.employeeId,
     name: user.name,
     email: user.email,
     role: user.role,
   });
 
-  await markLogin(user.id);
-  await writeAudit({ action: "LOGIN_SUCCESS", userId: user.id, identifier, ip });
+  await markLogin(user.employeeId);
+  await writeAudit({ action: "LOGIN_SUCCESS", userId: user.employeeId, identifier, ip });
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);

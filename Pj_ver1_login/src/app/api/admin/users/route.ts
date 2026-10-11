@@ -12,19 +12,19 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, email, name, role, status } = body;
+    const { employeeId, email, name, role, status } = body;
 
-    if (!id || typeof id !== "string") {
-      return NextResponse.json({ error: "ไม่พบรหัสผู้ใช้" }, { status: 400 });
+    if (!employeeId || typeof employeeId !== "string") {
+      return NextResponse.json({ error: "ไม่พบรหัสพนักงาน" }, { status: 400 });
     }
 
     const now = new Date().toISOString();
-    await updateUser(id, {
+    await updateUser(employeeId, {
       ...(email !== undefined ? { email } : {}),
       ...(name !== undefined ? { name } : {}),
       ...(role !== undefined ? { role } : {}),
       ...(status !== undefined ? { status } : {}),
-      // employeeId ถูกล็อกไว้ - ไม่อนุญาตให้แก้ไข เนื่องจากเป็น primary key
+      // employeeId เป็น Primary Key — ไม่อนุญาตให้แก้ไข
     });
 
     return NextResponse.json({ ok: true, updatedAt: now });

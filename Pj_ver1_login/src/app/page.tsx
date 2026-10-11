@@ -17,7 +17,7 @@ export default async function Home() {
 
   const roleLabel = ROLE_LABELS[session.role as Role] || session.role;
 
-  // สำหรับ Role อื่นๆ ที่ยังไม่มีหน้าระบบ แสดงหน้าว่างชั่วคราว
+  
   return (
     <div className="min-h-screen bg-paper flex flex-col">
       <header className="border-b border-mist bg-slip px-6 py-4">
@@ -66,7 +66,7 @@ export default async function Home() {
           <div className="mt-6 rounded-lg bg-paper p-4 text-left border border-mist text-sm">
             <p className="text-ink-soft font-medium">📌 สถานะระบบ:</p>
             <p className="mt-1 text-xs text-ink-mute">
-              ส่วนของบทบาทนี้ยังอยู่ระหว่างการพัฒนา (ยังไม่ได้เปิดให้บริการ) หากมีข้อสงสัยสามารถติดต่อฝ่าย IT Support ได้ครับ
+              ส่วนของบทบาทนี้ยังอยู่ระหว่างการพัฒนา (ยังไม่ได้เปิดให้บริการ)
             </p>
           </div>
         </div>

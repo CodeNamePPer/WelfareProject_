@@ -5,7 +5,7 @@ export const SESSION_COOKIE = "welfare_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 ชั่วโมง (หนึ่งวันทำงาน)
 
 export interface SessionPayload {
-  sub: string; // user id
+  sub: string; // employee_id (Primary Key)
   name: string;
   email: string;
   role: Role;
