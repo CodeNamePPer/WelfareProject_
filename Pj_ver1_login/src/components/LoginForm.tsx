@@ -168,7 +168,7 @@ export function LoginForm({ next }: { next: string }) {
         {loading ? "กำลังเข้าสู่ระบบ" : "เข้าสู่ระบบ"}
       </button>
 
-      <p className="text-sm text-ink-mute">ลืมรหัสผ่าน? ติดต่อ IT Support เพื่อรีเซ็ตให้</p>
+      <p className="text-sm text-ink-mute">ลืมรหัสผ่าน? ติดต่อผู้ดูแลระบบ</p>
     </form>
   );
 }
