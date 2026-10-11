@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     await writeAudit({ action: "LOGIN_BLOCKED_LOCKED", userId: null, identifier, ip });
     const minutes = Math.ceil(lock.retryAfterSec / 60);
     return NextResponse.json(
-      { error: `ใส่รหัสผ่านผิดหลายครั้ง กรุณารอ ${minutes} นาทีแล้วลองใหม่ หรือติดต่อ IT Support` },
+      { error: `ใส่รหัสผ่านผิดหลายครั้ง กรุณารอ ${minutes} นาทีแล้วลองใหม่ หรือติดต่อ admin` },
       { status: 429 },
     );
   }
