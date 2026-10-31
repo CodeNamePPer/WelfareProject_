@@ -11,7 +11,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   EMPLOYEE: "พนักงาน",
   HR: "ฝ่ายบุคคล (HR)",
   FINANCE: "ฝ่ายการเงิน (Finance)",
-  SUPER_ADMIN: "Super Admin",
+  SUPER_ADMIN: "Admin",
 };
 
 /**

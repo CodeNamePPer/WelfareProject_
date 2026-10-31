@@ -1,61 +1,86 @@
 import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { table } from "@/components/ui/table";
 
-const ROW_COUNT = 8;
-const COLUMNS = ["รหัสพนักงาน", "อีเมล", "ชื่อ-นามสกุล", "บทบาท", "สถานะ", "แก้ไขล่าสุด", "จัดการ"];
+const ROW_COUNT = 7;
+const COLUMNS = ["รหัส", "ชื่อ", "Email", "บทบาท", "สถานะ", "ใช้งานล่าสุด"];
 
-// โครงหน้าจัดการผู้ใช้ระหว่างรอโหลดรายชื่อพนักงาน
+// โครงหน้าผู้ใช้งานระหว่างรอโหลดรายชื่อ (sidebar มาจาก admin/layout อยู่แล้ว)
 export default function AdminUsersLoading() {
   return (
-    <SkeletonScreen className="mx-auto max-w-6xl px-6 py-12">
-      <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-mist pb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-ink">จัดการผู้ใช้งานระบบ</h1>
-          <p className="mt-1 text-ink-mute">แก้ไขข้อมูลพนักงาน กำหนดสิทธิ์ และสถานะการใช้งาน (สำหรับ Super Admin)</p>
-        </div>
+    <SkeletonScreen className="flex flex-col gap-[24px]">
+      <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
 
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end gap-1.5">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-4 w-20" />
+      <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_355px]">
+        <section className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+          <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-[17px] font-semibold text-ink">รายชื่อผู้ใช้งานระบบ</h2>
+            <Skeleton className="h-10 w-full rounded-lg sm:w-[200px]" />
           </div>
-          <Skeleton className="h-9 w-28 rounded-lg" />
-        </div>
-      </header>
 
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <Skeleton className="h-9 w-full sm:w-80 rounded-lg" />
-          <Skeleton className="h-3 w-36" />
-        </div>
+          <Skeleton className="h-10 w-full rounded-lg sm:max-w-[400px]" />
 
-        <div className="overflow-x-auto rounded-lg border border-mist shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slip border-b border-mist text-ink font-semibold">
-              <tr>
-                {COLUMNS.map((col, i) => (
-                  <th
-                    key={col}
-                    className={`px-4 py-3 whitespace-nowrap ${i === COLUMNS.length - 1 ? "text-right" : ""}`}
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-mist">
-              {Array.from({ length: ROW_COUNT }).map((_, i) => (
-                <tr key={i}>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-14" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-44" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-6 w-20 rounded-md" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-6 w-16 rounded-md" /></td>
-                  <td className="px-4 py-3"><Skeleton className="h-3 w-28" /></td>
-                  <td className="px-4 py-3"><Skeleton className="ml-auto h-4 w-10" /></td>
+          <div className="flex gap-[8px]">
+            <Skeleton className="h-8 w-24 rounded-full" />
+            <Skeleton className="h-8 w-28 rounded-full" />
+            <Skeleton className="h-8 w-20 rounded-full" />
+          </div>
+
+          <div className={table.wrapper}>
+            <table className={table.table}>
+              <thead>
+                <tr>
+                  {COLUMNS.map((col) => (
+                    <th key={col} scope="col" className={table.th}>
+                      {col}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {Array.from({ length: ROW_COUNT }).map((_, i) => (
+                  <tr key={i}>
+                    <td className={table.td}><Skeleton className="h-4 w-12" /></td>
+                    <td className={table.td}><Skeleton className="h-4 w-28" /></td>
+                    <td className={table.td}><Skeleton className="h-4 w-40" /></td>
+                    <td className={table.td}><Skeleton className="h-6 w-20 rounded-full" /></td>
+                    <td className={table.td}><Skeleton className="h-6 w-16 rounded-md" /></td>
+                    <td className={table.td}><Skeleton className="h-4 w-20" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-auto flex items-center justify-between pt-[8px]">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-8 w-40 rounded-lg" />
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[20px] xl:self-start">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-[6px]">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-3 w-36" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+            <Skeleton className="h-6 w-16 rounded-md" />
+          </div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex flex-col gap-[6px]">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          ))}
+          <div className="flex flex-col gap-[6px]">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-28 w-full rounded-lg" />
+          </div>
+          <div className="grid grid-cols-2 gap-[8px]">
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+          </div>
         </div>
       </div>
     </SkeletonScreen>
