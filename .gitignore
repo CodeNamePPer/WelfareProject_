@@ -1,0 +1,10 @@
+# Impeccable: the launcher downloads its platform binary on first run
+**/skills/impeccable/scripts/bin/
+.impeccable/config.local.json
+.impeccable/critique/
+
+# Per-machine Claude Code settings
+.claude/settings.local.json
+
+# Stray lockfile (the app lives in Pj_ver1_login/)
+/package-lock.json
