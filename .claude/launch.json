@@ -5,6 +5,12 @@
       "name": "welfare-dev",
       "url": "http://localhost:3000",
       "port": 3000
+    },
+    {
+      "name": "welfare-dev-start",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "Pj_ver1_login", "run", "dev"],
+      "port": 3000
     }
   ]
 }
