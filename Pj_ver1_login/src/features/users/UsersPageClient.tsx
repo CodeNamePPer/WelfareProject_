@@ -11,7 +11,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   EMPLOYEE: 'พนักงาน',
   HR: 'ฝ่ายบุคคล (HR)',
   FINANCE: 'ฝ่ายการเงิน',
-  SUPER_ADMIN: 'Super Admin',
+  SUPER_ADMIN: 'Admin',
 };
 
 const ROLE_COLORS: Record<UserRole, string> = {

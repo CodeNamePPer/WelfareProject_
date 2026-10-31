@@ -91,22 +91,40 @@ export async function getAllUsers(): Promise<Omit<User, "passwordHash">[]> {
   return [];
 }
 
-export async function updateUser(employeeId: string, data: Partial<User>): Promise<void> {
-  try {
-    const dbUpdate: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
-    if (data.name !== undefined) dbUpdate.name = data.name;
-    if (data.email !== undefined) dbUpdate.email = data.email;
-    if (data.role !== undefined) dbUpdate.role = data.role;
-    if (data.status !== undefined) dbUpdate.status = data.status;
-    if (data.passwordHash !== undefined) dbUpdate.password_hash = data.passwordHash;
+export async function getUserById(employeeId: string): Promise<Omit<User, "passwordHash"> | null> {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("employee_id, email, name, role, status, last_login_at, updated_at")
+    .eq("employee_id", employeeId)
+    .maybeSingle();
 
-    await supabaseAdmin
-      .from("users")
-      .update(dbUpdate)
-      .eq("employee_id", employeeId);
-  } catch (err) {
-    console.error("Supabase updateUser error", err);
-  }
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    employeeId: data.employee_id,
+    email: data.email,
+    name: data.name,
+    role: data.role as Role,
+    status: data.status as EmploymentStatus,
+    lastLoginAt: data.last_login_at ?? undefined,
+    updatedAt: data.updated_at ?? undefined,
+  };
+}
+
+/** โยน error ถ้าบันทึกไม่สำเร็จ เพื่อให้ผู้เรียกแจ้งผู้ใช้และไม่เขียน audit log */
+export async function updateUser(employeeId: string, data: Partial<User>): Promise<void> {
+  const dbUpdate: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (data.name !== undefined) dbUpdate.name = data.name;
+  if (data.email !== undefined) dbUpdate.email = data.email;
+  if (data.role !== undefined) dbUpdate.role = data.role;
+  if (data.status !== undefined) dbUpdate.status = data.status;
+  if (data.passwordHash !== undefined) dbUpdate.password_hash = data.passwordHash;
+
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update(dbUpdate)
+    .eq("employee_id", employeeId);
+  if (error) throw error;
 }

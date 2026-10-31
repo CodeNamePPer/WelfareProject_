@@ -45,10 +45,10 @@ export function Sidebar({
 }: SidebarProps) {
   const items: NavItem[] = [
     { id: 'home', label: 'หน้าแรก Home', icon: LayoutDashboard, href: '/admin' },
-    { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount },
-    { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift },
+    { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount, href: '/admin/notifications' },
+    { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
     { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
-    { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History },
+    { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History, href: '/admin/logs' },
     { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
   ];
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useToast } from '../../components/ui/Toast';
 import { ActivityLogPanel } from './ActivityLogPanel';
 import { EmployeeClaimStats } from './EmployeeClaimStats';
@@ -39,13 +40,15 @@ export function DashboardPage({
   claims,
 }: DashboardPageProps) {
   const { notifyPending } = useToast();
+  const router = useRouter();
+  const go = (href: string) => () => router.push(href);
 
   return (
     <div className="flex flex-col">
       {/* Page header – Figma 163:1272 */}
       <header className="flex flex-col gap-[4px]">
         <h1 className="text-[22px] font-semibold text-ink">ภาพรวมระบบ</h1>
-        <p className="text-[13px] text-muted">Admin / Super admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก</p>
+        <p className="text-[13px] text-muted">Admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก</p>
       </header>
 
       {/* Summary cards – Figma 163:1146 */}
@@ -57,16 +60,16 @@ export function DashboardPage({
       <div className="mt-[10px] grid grid-cols-1 gap-[10px] lg:grid-cols-[602fr_464fr]">
         <NotificationPanel
           items={notifications}
-          onReview={(item) => notifyPending(item.title)}
-          onViewAll={() => notifyPending('การแจ้งเตือนทั้งหมด')}
+          onReview={go('/admin/notifications')}
+          onViewAll={go('/admin/notifications')}
         />
-        <UsersByRolePanel roles={roleCounts} onViewAll={() => notifyPending('ผู้ใช้ทั้งหมด')} />
+        <UsersByRolePanel roles={roleCounts} onViewAll={go('/admin/users')} />
       </div>
 
       {/* Shortcut (493) + Log (564) – Figma 163:1247 / 163:1223 */}
       <div className="mt-[24px] grid grid-cols-1 gap-[20px] lg:grid-cols-[493fr_564fr]">
-        <ShortcutPanel onSelect={notifyPending} />
-        <ActivityLogPanel groups={logGroups} onViewAll={() => notifyPending('ประวัติการแก้ไขทั้งหมด')} />
+        <ShortcutPanel onSelect={(shortcut) => (shortcut.href ? router.push(shortcut.href) : notifyPending(shortcut.label))} />
+        <ActivityLogPanel groups={logGroups} onViewAll={go('/admin/logs')} />
       </div>
 
       {/* Per-employee claim stats – Figma 163:1276 */}
