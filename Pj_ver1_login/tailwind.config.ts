@@ -41,6 +41,16 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-plex-thai)", "system-ui", "sans-serif"],
       },
+      keyframes: {
+        "skeleton-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+      },
+      animation: {
+        // หน่วง 200ms ก่อนค่อยๆ แสดง skeleton
+        "skeleton-in": "skeleton-in 200ms ease-out 200ms both",
+      },
     },
   },
   plugins: [],
