@@ -25,7 +25,7 @@ export function AppShell({ notificationCount, children }: AppShellProps) {
   return (
     <div className="min-h-screen">
       <Sidebar
-        activeId={pathname === '/admin' ? 'home' : pathname?.startsWith('/admin/users') ? 'users' : ''}
+        activeId={pathname === '/admin' ? 'home' : (pathname?.match(/^\/admin\/([^/]+)/)?.[1] ?? '')}
         notificationCount={notificationCount}
         collapsed={collapsed}
         mobileOpen={mobileOpen}
