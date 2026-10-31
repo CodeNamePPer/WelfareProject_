@@ -10,9 +10,9 @@ export default async function Home() {
     redirect("/login");
   }
 
-  // ผู้ดูแลระบบ ส่งต่อไปยังหน้าจัดการสมาชิก
+  // ผู้ดูแลระบบ ส่งต่อไปยังหน้าแผงควบคุม Admin
   if (session.role === "SUPER_ADMIN") {
-    redirect("/admin/users");
+    redirect("/admin");
   }
 
   const roleLabel = ROLE_LABELS[session.role as Role] || session.role;

@@ -210,15 +210,15 @@ export default function AdminUsersClient({ initialUsers }: { initialUsers: User[
                         <span
                           className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
                             u.status === "ACTIVE"
-                              ? "bg-ok/20 text-ok-dark"
-                              : "bg-danger/20 text-danger"
+                              ? "bg-ok/15 text-ok"
+                              : "bg-danger/15 text-danger"
                           }`}
                         >
-                          {u.status}
+                          {u.status === "ACTIVE" ? "ปกติ" : "ลาออก"}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-mute">
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-mute tabular-nums">
                       {formatThaiDateTime(u.updatedAt)}
                     </td>
                     <td className="px-4 py-3 text-right">
