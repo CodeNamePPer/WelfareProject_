@@ -18,6 +18,11 @@ body {
   }
 }
 
+::selection {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
 @layer base {
   html {
     font-size: 0.875rem;
