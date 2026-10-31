@@ -10,7 +10,7 @@ cp .env.example .env.local      # แล้วแก้ AUTH_SECRET (openssl ran
 npm run dev                     # สร้าง data/users.json ให้อัตโนมัติถ้ายังไม่มี
 ```
 
-เปิด http://localhost:3000 — บัญชีทดสอบ: `hr@company.co.th` / `E0003` รหัสผ่าน `Welfare@2026`
+เปิด http://localhost:3000 — บัญชีทดสอบ: `hr@company.co.th` / `E00003` รหัสผ่าน `Welfare@2026`
 (ดูบัญชีอื่นทั้งหมดใน `scripts/seed-users.mjs`)
 
 ## ข้อมูลเก็บเป็น JSON (โฟลเดอร์ `data/`)
@@ -22,7 +22,7 @@ npm run dev                     # สร้าง data/users.json ให้อ�
 
 เพิ่มผู้ใช้ใหม่ (ระบบจะเข้ารหัสรหัสผ่านให้):
 ```bash
-npm run add-user -- E0100 new@company.co.th "ใหม่ ทดสอบ" EMPLOYEE "MyPass#2026"
+npm run add-user -- auto new@company.co.th "ใหม่ ทดสอบ" EMPLOYEE "MyPass#2026"
 ```
 ROLE: EMPLOYEE, APPROVER, HR, ACCOUNTING, AUDITOR, IT_SUPPORT, SUPER_ADMIN
 
