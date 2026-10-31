@@ -1,6 +1,7 @@
-// เพิ่มผู้ใช้ใหม่ลงใน Supabase
-// รัน: npm run add-user -- <employeeId> <email> "<ชื่อ>" <ROLE> <password>
-// ตัวอย่าง: npm run add-user -- E0100 new@company.co.th "ใหม่ ทดสอบ" EMPLOYEE "MyPass#2026"
+// เพิ่มผู้ใช้ใหม่ลงใน Supabase (สร้าง employee + บัญชีล็อกอิน + บทบาท ในหนึ่ง transaction)
+// รัน: npm run add-user -- <employeeId> <loginName> "<ชื่อ>" <ROLE> <password>
+// employeeId: รูปแบบ E + เลข 5 หลัก (เช่น E00019) หรือ auto = ใช้รหัสถัดไปอัตโนมัติ
+// ตัวอย่าง: npm run add-user -- auto new@company.co.th "ใหม่ ทดสอบ" EMPLOYEE "MyPass#2026"
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
 import { existsSync, readFileSync } from "node:fs";
@@ -23,24 +24,32 @@ function loadEnv() {
 loadEnv();
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// ต้องใช้ service role key เท่านั้น (ฟังก์ชันสร้างบัญชีเรียกได้เฉพาะ service role)
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ ขาด Supabase URL หรือ Key ใน .env.local");
+  console.error("❌ ขาด NEXT_PUBLIC_SUPABASE_URL หรือ SUPABASE_SERVICE_ROLE_KEY ใน .env.local");
   process.exit(1);
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 const ROLES = ["EMPLOYEE", "HR", "FINANCE", "SUPER_ADMIN"];
-const [employeeId, email, name, role, password] = process.argv.slice(2);
+const [employeeId, loginName, name, role, password] = process.argv.slice(2);
 
-if (!employeeId || !email || !name || !role || !password) {
-  console.error('ใช้งาน: npm run add-user -- <employeeId> <email> "<ชื่อ>" <ROLE> <password>');
+if (!employeeId || !loginName || !name || !role || !password) {
+  console.error('ใช้งาน: npm run add-user -- <employeeId> <loginName> "<ชื่อ>" <ROLE> <password>');
   process.exit(1);
 }
 if (!ROLES.includes(role)) {
   console.error(`ROLE ไม่ถูกต้อง เลือกจาก: ${ROLES.join(", ")}`);
+  process.exit(1);
+}
+const autoCode = employeeId.toLowerCase() === "auto";
+if (!autoCode && !/^Ed{5}$/.test(employeeId)) {
+  console.error("รหัสพนักงานต้องเป็นรูปแบบ E + เลข 5 หลัก (เช่น E00019) หรือใช้ auto");
   process.exit(1);
 }
 if (password.length < 8) {
@@ -51,26 +60,20 @@ if (password.length < 8) {
 async function run() {
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const { data, error } = await supabase
-    .from("users")
-    .insert([
-      {
-        employee_id: employeeId,
-        email,
-        name,
-        role,
-        status: "ACTIVE",
-        password_hash: passwordHash,
-      },
-    ])
-    .select();
+  const { data: code, error } = await supabase.rpc("admin_create_user_account", {
+    p_employee_code: autoCode ? null : employeeId,
+    p_login_name: loginName,
+    p_name: name,
+    p_role: role,
+    p_password_hash: passwordHash,
+  });
 
   if (error) {
     console.error("❌ เพิ่มผู้ใช้ไม่สำเร็จ:", error.message);
     process.exit(1);
   }
 
-  console.log(`✅ เพิ่ม ${email} (${role}) ลงใน Supabase สำเร็จแล้ว!`);
+  console.log(`✅ เพิ่ม ${loginName} (${role}) รหัสพนักงาน ${code} ลงใน Supabase สำเร็จแล้ว!`);
 }
 
 run();

@@ -94,10 +94,10 @@ export const logGroups: LogGroup[] = [
 ];
 
 export const employees: Employee[] = [
-  { id: 'e3', code: 'E0003', name: 'สมชาย ใจดี' },
-  { id: 'e7', code: 'E0007', name: 'วิภา สุขสันต์' },
-  { id: 'e12', code: 'E0012', name: 'ธนากร แสงทอง' },
-  { id: 'e21', code: 'E0021', name: 'พิมพ์ชนก รัตนวงศ์' },
+  { id: 'e3', code: 'E00003', name: 'สมชาย ใจดี' },
+  { id: 'e7', code: 'E00007', name: 'วิภา สุขสันต์' },
+  { id: 'e12', code: 'E00012', name: 'ธนากร แสงทอง' },
+  { id: 'e21', code: 'E00021', name: 'พิมพ์ชนก รัตนวงศ์' },
 ];
 
 export const periods: Period[] = [
@@ -121,7 +121,7 @@ export const claims: Claim[] = [
 // ─── ข้อมูลผู้ใช้งานระบบ (Mock) ────────────────────────────────────────────
 export const systemUsers: SystemUser[] = [
   {
-    employeeId: 'E0001',
+    employeeId: 'E00001',
     email: 'somchai.j@company.co.th',
     name: 'สมชาย ใจดี',
     role: 'SUPER_ADMIN',
@@ -130,7 +130,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-10-01T09:00:00Z',
   },
   {
-    employeeId: 'E0003',
+    employeeId: 'E00003',
     email: 'vipa.s@company.co.th',
     name: 'วิภา สุขสันต์',
     role: 'HR',
@@ -139,7 +139,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-09-15T11:30:00Z',
   },
   {
-    employeeId: 'E0007',
+    employeeId: 'E00007',
     email: 'thanakorn.s@company.co.th',
     name: 'ธนากร แสงทอง',
     role: 'HR',
@@ -148,7 +148,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-10-20T10:00:00Z',
   },
   {
-    employeeId: 'E0012',
+    employeeId: 'E00012',
     email: 'pimchanok.r@company.co.th',
     name: 'พิมพ์ชนก รัตนวงศ์',
     role: 'FINANCE',
@@ -157,7 +157,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-10-10T08:00:00Z',
   },
   {
-    employeeId: 'E0021',
+    employeeId: 'E00021',
     email: 'anon.k@company.co.th',
     name: 'อานนท์ กาญจนา',
     role: 'EMPLOYEE',
@@ -166,7 +166,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-08-01T08:00:00Z',
   },
   {
-    employeeId: 'E0034',
+    employeeId: 'E00034',
     email: 'nipa.w@company.co.th',
     name: 'นิภา วิชิต',
     role: 'EMPLOYEE',
@@ -175,7 +175,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-09-10T15:00:00Z',
   },
   {
-    employeeId: 'E0042',
+    employeeId: 'E00042',
     email: 'finance2@company.co.th',
     name: 'ประเสริฐ มั่งมี',
     role: 'FINANCE',
@@ -184,7 +184,7 @@ export const systemUsers: SystemUser[] = [
     updatedAt: '2026-10-05T09:30:00Z',
   },
   {
-    employeeId: 'E0055',
+    employeeId: 'E00055',
     email: 'hr3@company.co.th',
     name: 'จิตรา สวยงาม',
     role: 'HR',
@@ -294,13 +294,13 @@ export const auditEntries: AuditEntry[] = [
   },
   {
     id: 'g7', at: '2026-10-08T16:45', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'แก้ไขอีเมลของ นันทพร เจริญสุข', detail: 'E0004',
+    title: 'แก้ไขอีเมลของ นันทพร เจริญสุข', detail: 'E00004',
     category: 'settings', action: 'user-update',
     change: { before: 'อีเมล: nanthaporn@qmail.com', after: 'อีเมล: nannaporn@qmail.com', reason: 'สะกดผิด' },
   },
   {
     id: 'g8', at: '2026-10-07T10:10', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'เปลี่ยนสถานะ พงศกร วงศ์สวัสดิ์', detail: 'E0005',
+    title: 'เปลี่ยนสถานะ พงศกร วงศ์สวัสดิ์', detail: 'E00005',
     category: 'settings', action: 'user-update',
     change: { before: 'สถานะ: ใช้งาน', after: 'สถานะ: ลาออก', reason: 'ลาออกมีผล 30 ก.ย. 69' },
   },
