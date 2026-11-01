@@ -2,14 +2,16 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ChevronRight, LayoutGrid, X } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import { getShortcuts } from './shortcuts';
 
-// ปุ่มลอยมุมขวาล่าง เปิดเมนูทางลัดขนาดกะทัดรัด
+// ปุ่มลอยมุมขวาล่างของทุกหน้า Admin (วางใน admin/layout) เปิดเมนูทางลัดขนาดกะทัดรัด
 // ปิดได้ด้วยการคลิกนอกเมนู กด Escape หรือเลือกรายการ (focus กลับไปที่ปุ่ม)
 // z-[25]: อยู่เหนือหัวมือถือ (z-20) แต่ใต้ฉากหลังของเมนูข้างเมื่อเปิดบนมือถือ (z-30)
 export function ShortcutFab({ notificationCount }: { notificationCount: number | null }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -61,39 +63,50 @@ export function ShortcutFab({ notificationCount }: { notificationCount: number |
           ทางลัด
         </p>
         <ul className="flex flex-col">
-          {shortcuts.map(({ id, label, description, icon: Icon, href, badge: count }, index) => (
-            <li key={id}>
-              <Link
-                ref={index === 0 ? firstLinkRef : undefined}
-                href={href}
-                onClick={() => setOpen(false)}
-                className="group flex items-center gap-[12px] rounded-[8px] px-[10px] py-[8px] transition-colors hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
-              >
-                <span
-                  className="flex size-[36px] shrink-0 items-center justify-center rounded-[8px] bg-primary-50 text-primary-600 group-hover:bg-white group-focus-visible:bg-white"
-                  aria-hidden="true"
+          {shortcuts.map(({ id, label, description, icon: Icon, href, badge: count }, index) => {
+            // หน้าที่เปิดอยู่ (เทียบเฉพาะ path – ?tab=import ไม่นับว่าเป็นหน้าเดียวกับ /admin/benefits)
+            const current = !href.includes('?') && pathname === href;
+            return (
+              <li key={id}>
+                <Link
+                  ref={index === 0 ? firstLinkRef : undefined}
+                  href={href}
+                  aria-current={current ? 'page' : undefined}
+                  onClick={() => setOpen(false)}
+                  className={cx(
+                    'group flex items-center gap-[12px] rounded-[8px] px-[10px] py-[8px] transition-colors hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none',
+                    current && 'bg-primary-50',
+                  )}
                 >
-                  <Icon className="size-[18px]" strokeWidth={1.75} />
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="flex items-center gap-[8px]">
-                    <span className="truncate text-14 font-semibold text-ink group-hover:text-primary-700">{label}</span>
-                    {count ? (
-                      <span className="inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-primary-600 px-[6px] text-11 font-semibold leading-[calc(18rem/14)] text-white tabular-nums">
-                        {count.toLocaleString('th-TH')}
-                        <span className="sr-only"> รายการยังไม่อ่าน</span>
-                      </span>
-                    ) : null}
+                  <span
+                    className={cx(
+                      'flex size-[36px] shrink-0 items-center justify-center rounded-[8px] text-primary-600 group-hover:bg-white group-focus-visible:bg-white',
+                      current ? 'bg-white' : 'bg-primary-50',
+                    )}
+                    aria-hidden="true"
+                  >
+                    <Icon className="size-[18px]" strokeWidth={1.75} />
                   </span>
-                  <span className="truncate text-12 text-muted">{description}</span>
-                </span>
-                <ChevronRight
-                  className="size-[16px] shrink-0 text-muted transition-transform group-hover:translate-x-[2px] group-hover:text-primary-600 motion-reduce:transition-none"
-                  aria-hidden="true"
-                />
-              </Link>
-            </li>
-          ))}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="flex items-center gap-[8px]">
+                      <span className="truncate text-14 font-semibold text-ink group-hover:text-primary-700">{label}</span>
+                      {count ? (
+                        <span className="inline-flex min-w-[20px] shrink-0 items-center justify-center rounded-full bg-primary-600 px-[6px] text-11 font-semibold leading-[calc(18rem/14)] text-white tabular-nums">
+                          {count.toLocaleString('th-TH')}
+                          <span className="sr-only"> รายการยังไม่อ่าน</span>
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="truncate text-12 text-muted">{description}</span>
+                  </span>
+                  <ChevronRight
+                    className="size-[16px] shrink-0 text-muted transition-transform group-hover:translate-x-[2px] group-hover:text-primary-600 motion-reduce:transition-none"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

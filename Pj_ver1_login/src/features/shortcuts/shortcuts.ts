@@ -10,7 +10,7 @@ export interface Shortcut {
   badge?: number;
 }
 
-// "ทางลัด" – งานที่ Admin ทำบ่อย แสดงในเมนูของปุ่มลอย (ShortcutFab)
+// "ทางลัด" – งานที่ Admin ทำบ่อย แสดงในเมนูของปุ่มลอย (ShortcutFab) ทุกหน้า Admin
 export function getShortcuts(notificationCount: number | null): Shortcut[] {
   return [
     { id: 'add-benefit', label: 'เพิ่มสวัสดิการ', description: 'สร้างหรือแก้ไขรายการสวัสดิการ', icon: PackagePlus, href: '/admin/benefits' },

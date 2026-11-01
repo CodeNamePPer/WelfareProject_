@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
+import { ShortcutFab } from "@/features/shortcuts/ShortcutFab";
 import { countUnread, getAdminAlerts } from "@/lib/admin/alerts";
 
-// Shared by every Admin page: sidebar + toast.
+// Shared by every Admin page: sidebar + toast + floating shortcut button.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
   if (!session) {
@@ -15,9 +16,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/access-denied?reason=role");
   }
 
+  const unread = countUnread(getAdminAlerts());
+
   return (
     <ToastProvider>
-      <AppShell notificationCount={countUnread(getAdminAlerts())}>{children}</AppShell>
+      <AppShell notificationCount={unread}>
+        {/* pb-[72px] เว้นที่ท้ายทุกหน้าไม่ให้ปุ่มทางลัดบังเนื้อหาส่วนล่าง */}
+        <div className="pb-[72px]">{children}</div>
+      </AppShell>
+      <ShortcutFab notificationCount={unread} />
     </ToastProvider>
   );
 }

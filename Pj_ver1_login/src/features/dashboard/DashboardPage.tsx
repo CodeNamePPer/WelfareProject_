@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { ActivityLogPanel } from './ActivityLogPanel';
 import { EmployeeClaimStats } from './EmployeeClaimStats';
 import { NotificationPanel } from './NotificationPanel';
-import { ShortcutFab } from './ShortcutFab';
 import { SummaryCards } from './SummaryCards';
 import { UsersByRolePanel } from './UsersByRolePanel';
 import type {
@@ -27,7 +26,7 @@ interface DashboardPageProps {
   claims: Claim[];
 }
 
-// Based on Figma "Admin / ภาพรวมและสถิติรายบุคคล" (node 163:1108); shortcuts live in a floating button (ShortcutFab).
+// Based on Figma "Admin / ภาพรวมและสถิติรายบุคคล" (node 163:1108); shortcuts live in the admin-wide floating button (ShortcutFab).
 // Colours follow the project Style Guide (white–blue theme).
 export function DashboardPage({
   stats,
@@ -42,7 +41,7 @@ export function DashboardPage({
   const go = (href: string) => () => router.push(href);
 
   return (
-    <div className="flex flex-col gap-[24px] pb-[72px]">
+    <div className="flex flex-col gap-[24px]">
       <header className="flex flex-col gap-[4px]">
         <h1 className="text-22 font-semibold text-ink">ภาพรวมระบบ</h1>
         <p className="text-13 text-muted">Admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก</p>
@@ -62,9 +61,6 @@ export function DashboardPage({
       <ActivityLogPanel entries={logEntries} onViewAll={go('/admin/logs')} />
 
       <EmployeeClaimStats employees={employees} periods={periods} claims={claims} />
-
-      {/* ทางลัดเป็นปุ่มลอยมุมขวาล่าง กดได้ทุกตำแหน่งที่เลื่อนอยู่ – pb-[72px] เว้นที่ไม่ให้ปุ่มบังเนื้อหาท้ายหน้า */}
-      <ShortcutFab notificationCount={stats.notifications} />
     </div>
   );
 }
