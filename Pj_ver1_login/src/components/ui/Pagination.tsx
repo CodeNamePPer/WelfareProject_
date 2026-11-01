@@ -24,11 +24,11 @@ export function Pagination({ page, pageSize, total, unit = 'รายการ',
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   const square =
-    'inline-flex size-[32px] items-center justify-center rounded-[6px] border text-[13px] tabular-nums transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40';
+    'inline-flex size-[32px] items-center justify-center rounded-[6px] border text-13 tabular-nums transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 disabled:cursor-not-allowed disabled:opacity-40';
 
   return (
     <nav aria-label="เลือกหน้า" className="flex flex-wrap items-center justify-between gap-3">
-      <p className="text-[12px] text-muted tabular-nums">
+      <p className="text-12 text-muted tabular-nums">
         แสดง {from}–{to} จาก {total} {unit}
       </p>
       <div className="flex items-center gap-[6px]">

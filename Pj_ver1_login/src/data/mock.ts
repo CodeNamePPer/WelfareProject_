@@ -6,7 +6,6 @@ import type {
   ImportRecord,
   WelfareItem,
   Employee,
-  LogGroup,
   NotificationItem,
   Period,
   RoleCount,
@@ -55,42 +54,6 @@ export const roleCounts: RoleCount[] = [
   { id: 'hr', role: 'HR', count: 6 },
   { id: 'finance', role: 'การเงิน', count: 4 },
   { id: 'employee', role: 'พนักงานทั่วไป', count: 118 },
-];
-
-export const logGroups: LogGroup[] = [
-  {
-    label: 'วันนี้',
-    entries: [
-      {
-        id: 'l0',
-        kind: 'permission',
-        title: 'อนุมัติสิทธิ์ HR Recruiter',
-        detail: 'Admin สมชาย อนุมัติคำขอของ ธนากร แสงทอง',
-        time: '09:42 น.',
-        change: { before: 'พนักงานทั่วไป', after: 'HR Recruiter' },
-      },
-    ],
-  },
-  {
-    label: 'เมื่อวาน',
-    entries: [
-      {
-        id: 'l1',
-        kind: 'permission',
-        title: 'ปรับสิทธิ์ผู้ใช้งานแล้ว',
-        detail: 'Admin สมชาย มอบหมาย HR Manager ให้ วิภา สุขสันต์',
-        time: '16:20 น.',
-        change: { before: 'HR', after: 'HR Manager' },
-      },
-      {
-        id: 'l2',
-        kind: 'system',
-        title: 'ประกาศจากระบบ',
-        detail: 'มีการปรับปรุงระบบคืนวันเสาร์',
-        time: '10:05 น.',
-      },
-    ],
-  },
 ];
 
 export const employees: Employee[] = [

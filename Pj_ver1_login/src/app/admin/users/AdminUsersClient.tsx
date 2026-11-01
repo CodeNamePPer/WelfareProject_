@@ -108,7 +108,7 @@ export default function AdminUsersClient({ initialUsers, orgOptions }: { initial
     <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
       <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
-          <h2 id="user-list-title" className="text-[17px] font-semibold text-ink">
+          <h2 id="user-list-title" className="text-17 font-semibold text-ink">
             รายชื่อผู้ใช้งานระบบ
           </h2>
           <Button onClick={exportCsv} disabled={filteredUsers.length === 0} className="sm:w-[200px] disabled:opacity-50">
@@ -186,11 +186,11 @@ export default function AdminUsersClient({ initialUsers, orgOptions }: { initial
                       </td>
                       <td className={table.td}>
                         {u.name}
-                        {u.profile.nickname ? <span className="block text-[12px] text-muted">({u.profile.nickname})</span> : null}
+                        {u.profile.nickname ? <span className="block text-12 text-muted">({u.profile.nickname})</span> : null}
                       </td>
                       <td className={table.td}>
                         {u.profile.departmentName ?? <span className="text-muted">—</span>}
-                        {u.profile.positionName ? <span className="block text-[12px] text-muted">{u.profile.positionName}</span> : null}
+                        {u.profile.positionName ? <span className="block text-12 text-muted">{u.profile.positionName}</span> : null}
                       </td>
                       <td className={cx(table.td, "break-all text-muted")}>{u.email}</td>
                       <td className={table.td}>
@@ -228,7 +228,7 @@ export default function AdminUsersClient({ initialUsers, orgOptions }: { initial
           onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.employeeId === updated.employeeId ? updated : u)))}
         />
       ) : (
-        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-[14px] text-muted xl:self-start">
+        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-14 text-muted xl:self-start">
           เลือกผู้ใช้จากตารางเพื่อดูและแก้ไขข้อมูล
         </p>
       )}
@@ -237,7 +237,7 @@ export default function AdminUsersClient({ initialUsers, orgOptions }: { initial
 }
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-line bg-white px-3 text-[13px] font-normal text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500";
+  "h-10 w-full rounded-lg border border-line bg-white px-3 text-13 font-normal text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500";
 
 type InfoRow = [label: string, value: ReactNode];
 
@@ -245,7 +245,7 @@ function InfoRows({ rows }: { rows: InfoRow[] }) {
   return (
     <dl className="flex flex-col gap-[8px]">
       {rows.map(([label, value]) => (
-        <div key={label} className="flex items-start justify-between gap-3 text-[13px]">
+        <div key={label} className="flex items-start justify-between gap-3 text-13">
           <dt className="shrink-0 text-muted">{label}</dt>
           <dd className={cx("min-w-0 break-words text-right", value ? "font-medium text-ink" : "text-muted")}>{value || "—"}</dd>
         </div>
@@ -320,7 +320,7 @@ function SectionForm({
           );
           return f.type === "select" ? (
             <div key={f.key} className={cx("flex min-w-0 flex-col gap-[6px]", f.wide && "col-span-2")}>
-              <span className="text-[13px] font-medium text-ink" aria-hidden="true">
+              <span className="text-13 font-medium text-ink" aria-hidden="true">
                 {labelText}
               </span>
               <Select label={f.label} value={values[f.key]} onChange={(e) => set(e.target.value)} required={f.required}>
@@ -332,7 +332,7 @@ function SectionForm({
               </Select>
             </div>
           ) : (
-            <label key={f.key} className={cx("flex min-w-0 flex-col gap-[6px] text-[13px] font-medium text-ink", f.wide && "col-span-2")}>
+            <label key={f.key} className={cx("flex min-w-0 flex-col gap-[6px] text-13 font-medium text-ink", f.wide && "col-span-2")}>
               {labelText}
               <input
                 type={f.type ?? "text"}
@@ -351,7 +351,7 @@ function SectionForm({
         })}
       </div>
 
-      <label className="flex flex-col gap-[6px] text-[13px] font-medium text-ink">
+      <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
         <span>
           เหตุผลการเปลี่ยนแปลง <span className="text-danger">*</span>
         </span>
@@ -360,12 +360,12 @@ function SectionForm({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="ระบุเหตุผล เช่น ย้ายแผนก, แก้ไขเบอร์โทร"
-          className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-[13px] font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-13 font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
         />
       </label>
 
       {error ? (
-        <p role="alert" className="text-[12px] text-danger">
+        <p role="alert" className="text-12 text-danger">
           {error}
         </p>
       ) : null}
@@ -563,29 +563,29 @@ function UserPanel({
       <header className="flex items-start gap-[12px]">
         <div
           aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-50 text-[18px] font-semibold text-primary-700"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-50 text-18 font-semibold text-primary-700"
         >
           {initial}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h2 id="user-panel-title" className="min-w-0 break-words text-[17px] font-semibold text-ink">
+            <h2 id="user-panel-title" className="min-w-0 break-words text-17 font-semibold text-ink">
               {user.name}
             </h2>
             <Tag tone={user.status === "ACTIVE" ? "success" : "neutral"} className="shrink-0">
               {statusLabel(user.status)}
             </Tag>
           </div>
-          <p className="mt-[2px] text-[12px] text-muted tabular-nums">
+          <p className="mt-[2px] text-12 text-muted tabular-nums">
             {user.employeeId}
             {p.nickname ? ` · ${p.nickname}` : ""}
           </p>
-          {workLine ? <p className="text-[12px] text-muted">{workLine}</p> : null}
+          {workLine ? <p className="text-12 text-muted">{workLine}</p> : null}
         </div>
       </header>
 
       {notice && !editing ? (
-        <p role="status" className="rounded-lg bg-surface px-3 py-2 text-[12px] text-ok">
+        <p role="status" className="rounded-lg bg-surface px-3 py-2 text-12 text-ok">
           {notice}
         </p>
       ) : null}
@@ -608,9 +608,9 @@ function UserPanel({
             )}
           >
             <div className="flex min-h-8 items-center justify-between gap-3">
-              <h3 className="text-[13px] font-semibold text-ink">{s.title}</h3>
+              <h3 className="text-13 font-semibold text-ink">{s.title}</h3>
               {isEditing ? (
-                <span className="text-[12px] text-primary-700">กำลังแก้ไข</span>
+                <span className="text-12 text-primary-700">กำลังแก้ไข</span>
               ) : (
                 <Button
                   size="sm"

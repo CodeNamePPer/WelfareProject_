@@ -14,7 +14,7 @@ export default function AdminUsersLoading() {
       <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
           <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-[17px] font-semibold text-ink">รายชื่อผู้ใช้งานระบบ</h2>
+            <h2 className="text-17 font-semibold text-ink">รายชื่อผู้ใช้งานระบบ</h2>
             <Skeleton className="h-10 w-full rounded-lg sm:w-[200px]" />
           </div>
 

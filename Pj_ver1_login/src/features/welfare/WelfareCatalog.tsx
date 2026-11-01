@@ -101,7 +101,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
     <div className="grid grid-cols-1 gap-[20px] xl:grid-cols-[minmax(0,1fr)_350px]">
       <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
         <div className="flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
-          <h2 id="welfare-list-title" className="text-[17px] font-semibold text-ink">
+          <h2 id="welfare-list-title" className="text-17 font-semibold text-ink">
             รายการสวัสดิการที่มีอยู่
           </h2>
           <div className="flex flex-col gap-[8px] sm:flex-row">
@@ -236,7 +236,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
           }}
         />
       ) : (
-        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-[14px] text-muted">
+        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-14 text-muted">
           เลือกสวัสดิการจากตารางเพื่อดูรายละเอียด
         </p>
       )}
@@ -255,7 +255,7 @@ function RowMenu({
   onEdit: () => void;
   onToggle: () => void;
 }) {
-  const itemClass = 'block w-full px-[12px] py-[8px] text-left text-[13px] text-ink hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none';
+  const itemClass = 'block w-full px-[12px] py-[8px] text-left text-13 text-ink hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none';
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} aria-hidden="true" />

@@ -26,7 +26,7 @@ export function FilterChips<T extends string>({ label, options, value, onChange 
             aria-pressed={active}
             onClick={() => onChange(option.id)}
             className={cx(
-              'inline-flex h-[34px] items-center gap-[6px] rounded-full border px-[12px] text-[13px] font-medium transition-colors motion-reduce:transition-none',
+              'inline-flex h-[40px] items-center gap-[6px] sm:h-[34px] rounded-full border px-[12px] text-13 font-medium transition-colors motion-reduce:transition-none',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
               active
                 ? 'border-primary-600 bg-primary-600 text-white'

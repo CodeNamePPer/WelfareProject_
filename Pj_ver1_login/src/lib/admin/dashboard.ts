@@ -3,10 +3,10 @@ import { supabaseAdmin } from "../supabase";
 import { listAudit } from "../auth/audit";
 import { ROLE_LABELS, type Role } from "../auth/roles";
 import { getAllUsers } from "../auth/users";
-import { formatShortThaiDate } from "../format";
 import { toLogEntries } from "../../features/logs/fromAuditLog";
 import { summaryStats as mockStats } from "../../data/mock";
-import type { Employee, LogEntry, LogGroup, RoleCount, SummaryStats } from "../../types";
+import { countUnread, getAdminAlerts } from "./alerts";
+import type { AuditEntry, Employee, RoleCount, SummaryStats } from "../../types";
 
 /**
  * ข้อมูลหน้า Admin Dashboard จาก Supabase (เรียกฝั่ง server เท่านั้น)
@@ -14,15 +14,16 @@ import type { Employee, LogEntry, LogGroup, RoleCount, SummaryStats } from "../.
  */
 export interface AdminDashboardData {
   stats: SummaryStats;
-  roleCounts: RoleCount[];
+  /** null = โหลดรายชื่อผู้ใช้ไม่สำเร็จ */
+  roleCounts: RoleCount[] | null;
   employees: Employee[];
-  logGroups: LogGroup[];
+  logEntries: AuditEntry[];
 }
 
 const TZ = "Asia/Bangkok";
 const ROLE_ORDER: Role[] = ["SUPER_ADMIN", "HR", "FINANCE", "EMPLOYEE"];
-const LOG_LIMIT = 10;
-// listAudit คืนทุก action แต่ตัวแปลงตัดล็อกอิน/ออกสำเร็จทิ้ง จึงดึงเผื่อไว้แล้วค่อยตัดเหลือ 10
+const LOG_LIMIT = 5;
+// listAudit คืนทุก action แต่ตัวแปลงตัดล็อกอิน/ออกสำเร็จทิ้ง จึงดึงเผื่อไว้แล้วค่อยตัดเหลือ LOG_LIMIT
 const AUDIT_FETCH = 200;
 const ERROR_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -39,18 +40,19 @@ function currentMonthRange(): { from: string; to: string } {
   return { from: `${year}-${pad(month)}-01`, to: `${next}-01` };
 }
 
-async function safe<T>(label: string, fallback: T, run: () => Promise<T>): Promise<T> {
+/** คืน null เมื่อดึงข้อมูลไม่สำเร็จ เพื่อให้หน้าจอแสดงสถานะ "โหลดไม่สำเร็จ" แทนตัวเลขปลอม */
+async function safe<T>(label: string, run: () => Promise<T>): Promise<T | null> {
   try {
     return await run();
   } catch (err) {
     console.error(`[admin dashboard] ${label} failed`, err);
-    return fallback;
+    return null;
   }
 }
 
 /** รหัสพนักงานที่เริ่มงานในเดือนนี้ */
-function fetchHiredThisMonth(): Promise<Set<string>> {
-  return safe("hired this month", new Set<string>(), async () => {
+function fetchHiredThisMonth(): Promise<Set<string> | null> {
+  return safe("hired this month", async () => {
     const { from, to } = currentMonthRange();
     const { data, error } = await supabaseAdmin
       .from("employee")
@@ -63,8 +65,8 @@ function fetchHiredThisMonth(): Promise<Set<string>> {
   });
 }
 
-function fetchSystemErrors(): Promise<number> {
-  return safe("system errors", 0, async () => {
+function fetchSystemErrors(): Promise<number | null> {
+  return safe("system errors", async () => {
     const since = new Date(Date.now() - ERROR_WINDOW_MS).toISOString();
     const { count, error } = await supabaseAdmin
       .from("audit_logs")
@@ -76,8 +78,8 @@ function fetchSystemErrors(): Promise<number> {
   });
 }
 
-function fetchEmployees(): Promise<Employee[]> {
-  return safe("employees", [] as Employee[], async () => {
+function fetchEmployees(): Promise<Employee[] | null> {
+  return safe("employees", async () => {
     const { data, error } = await supabaseAdmin
       .from("employee")
       .select("employee_code, first_name_th, last_name_th")
@@ -93,30 +95,6 @@ function fetchEmployees(): Promise<Employee[]> {
   });
 }
 
-/** "2026-10-31T09:42" (เวลาไทย) → กลุ่มตามวัน: วันนี้ / เมื่อวาน / 29 ต.ค. 69 */
-function groupByDay(entries: ReturnType<typeof toLogEntries>): LogGroup[] {
-  const today = bangkokDate();
-  const yesterday = bangkokDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
-  const groups = new Map<string, LogEntry[]>();
-
-  for (const entry of entries) {
-    const [day, time] = entry.at.split("T");
-    const label = day === today ? "วันนี้" : day === yesterday ? "เมื่อวาน" : formatShortThaiDate(day);
-    const list = groups.get(label) ?? [];
-    list.push({
-      id: entry.id,
-      kind: entry.category === "settings" ? "permission" : "system",
-      title: entry.title,
-      detail: entry.detail,
-      time: `${time} น.`,
-      change: entry.change ? { before: entry.change.before, after: entry.change.after } : undefined,
-    });
-    groups.set(label, list);
-  }
-
-  return [...groups].map(([label, list]) => ({ label, entries: list }));
-}
-
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
   // getAllUsers / listAudit จัดการ error เองแล้ว (log และคืน [])
   const [users, auditRows, hiredThisMonth, systemErrors, employees] = await Promise.all([
@@ -127,28 +105,34 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     fetchEmployees(),
   ]);
 
+  // getAllUsers กลืน error แล้วคืน [] – แต่ผู้เปิดหน้านี้คือ Admin ที่ล็อกอินอยู่ จึงต้องมีผู้ใช้อย่างน้อย 1 คนเสมอ
+  // รายชื่อว่างจึงหมายถึงโหลดไม่สำเร็จ ไม่ใช่ "ไม่มีผู้ใช้"
+  const usersLoaded = users.length > 0;
   const activeUsers = users.filter((u) => u.status === "ACTIVE");
-  const roleCounts: RoleCount[] = ROLE_ORDER.map((role) => ({
-    id: role.toLowerCase(),
-    role: ROLE_LABELS[role],
-    count: activeUsers.filter((u) => u.role === role).length,
-  }));
+  const roleCounts: RoleCount[] | null = usersLoaded
+    ? ROLE_ORDER.map((role) => ({
+        id: role.toLowerCase(),
+        role: ROLE_LABELS[role],
+        count: activeUsers.filter((u) => u.role === role).length,
+      }))
+    : null;
 
   const userMap = new Map(users.map((u) => [u.employeeId, { name: u.name, role: u.role }]));
-  const logGroups = groupByDay(toLogEntries(auditRows, userMap).slice(0, LOG_LIMIT));
+  const logEntries = toLogEntries(auditRows, userMap).slice(0, LOG_LIMIT);
 
   return {
     stats: {
-      totalUsers: activeUsers.length,
-      newUsersThisCycle: users.filter((u) => hiredThisMonth.has(u.employeeId)).length,
+      totalUsers: usersLoaded ? activeUsers.length : null,
+      newUsersThisCycle:
+        usersLoaded && hiredThisMonth ? users.filter((u) => hiredThisMonth.has(u.employeeId)).length : null,
       // TODO: รอตารางคำขอเบิกสวัสดิการ (welfare claim/request) ก่อนนับคำขอที่รอ HR
       hrRequests: mockStats.hrRequests,
-      // TODO: รอตารางแจ้งเตือน (notification) ก่อนนับจากฐานข้อมูล
-      notifications: mockStats.notifications,
+      // ตัวเลขเดียวกับ badge ใน sidebar และ "ยังไม่อ่าน" ในหน้าแจ้งเตือน
+      notifications: countUnread(getAdminAlerts()),
       systemErrors,
     },
     roleCounts,
-    employees,
-    logGroups,
+    employees: employees ?? [],
+    logEntries,
   };
 }

@@ -89,8 +89,8 @@ export function Sidebar({
             <Menu className="size-5" aria-hidden="true" />
           </button>
           <div className={cx('min-w-0 flex-1 leading-tight', hideWhenCollapsed)}>
-            <p className="text-[15px] leading-snug font-semibold text-ink">ระบบพนักงานและสวัสดิการ</p>
-            <p className="text-[11px] text-muted">Admin</p>
+            <p className="text-15 leading-snug font-semibold text-ink">ระบบพนักงานและสวัสดิการ</p>
+            <p className="text-11 text-muted">Admin</p>
           </div>
           <button
             type="button"
@@ -102,7 +102,7 @@ export function Sidebar({
           </button>
         </div>
 
-        <p className={cx('px-3 pb-1.5 text-[11px] font-semibold text-muted', hideWhenCollapsed)}>
+        <p className={cx('px-3 pb-1.5 text-11 font-semibold text-muted', hideWhenCollapsed)}>
           ADMIN
         </p>
 
@@ -123,7 +123,7 @@ export function Sidebar({
                   onCloseMobile();
                 }}
                 className={cx(
-                  'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[13px] font-semibold transition-colors motion-reduce:transition-none',
+                  'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 font-semibold transition-colors motion-reduce:transition-none',
                   collapsed && 'md:justify-center',
                   active
                     ? 'bg-primary-100 text-primary-700'
@@ -146,7 +146,7 @@ export function Sidebar({
                 {badge ? (
                   <span
                     className={cx(
-                      'ml-auto rounded-[9px] bg-primary-600 px-[7px] py-px text-[11px] font-medium text-white tabular-nums',
+                      'ml-auto rounded-[9px] bg-primary-600 px-[7px] py-px text-11 font-medium text-white tabular-nums',
                       hideWhenCollapsed,
                     )}
                   >
@@ -166,7 +166,7 @@ export function Sidebar({
           onClick={handleLogout}
           title={collapsed ? 'ออกจากระบบ' : undefined}
           className={cx(
-            'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[13px] text-muted hover:bg-danger/10 hover:text-danger cursor-pointer',
+            'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 text-muted hover:bg-danger/10 hover:text-danger cursor-pointer',
             collapsed && 'md:justify-center',
           )}
         >

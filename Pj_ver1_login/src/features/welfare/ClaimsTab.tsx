@@ -12,10 +12,10 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
   return (
     <section aria-labelledby="claims-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
       <header>
-        <h2 id="claims-title" className="text-[17px] font-semibold text-ink">
+        <h2 id="claims-title" className="text-17 font-semibold text-ink">
           คำขอเบิกล่าสุด
         </h2>
-        <p className="mt-[4px] text-[12px] text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
+        <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
       </header>
       <div className={table.wrapper}>
         <table className={table.table}>

@@ -40,7 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4"
       >
         {message ? (
-          <p className="pointer-events-auto rounded-lg bg-ink px-4 py-2.5 text-[13px] text-white shadow-lg">
+          <p className="pointer-events-auto rounded-lg bg-ink px-4 py-2.5 text-13 text-white shadow-lg">
             {message}
           </p>
         ) : null}

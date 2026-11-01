@@ -41,26 +41,13 @@ export interface RoleCount {
   count: number;
 }
 
-export interface LogEntry {
-  id: string;
-  kind: 'permission' | 'system';
-  title: string;
-  detail: string;
-  time: string;
-  change?: { before: string; after: string };
-}
-
-export interface LogGroup {
-  label: string;
-  entries: LogEntry[];
-}
-
+/** null = โหลดไม่สำเร็จ – แสดง "—" แทน 0 เพื่อไม่ให้ดูเหมือนข้อมูลจริง */
 export interface SummaryStats {
-  totalUsers: number;
-  newUsersThisCycle: number;
-  hrRequests: number;
-  notifications: number;
-  systemErrors: number;
+  totalUsers: number | null;
+  newUsersThisCycle: number | null;
+  hrRequests: number | null;
+  notifications: number | null;
+  systemErrors: number | null;
 }
 
 // ─── ตั้งค่าผู้ใช้งานระบบ ───────────────────────────────────────────────────

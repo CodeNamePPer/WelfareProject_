@@ -37,16 +37,16 @@ function summarize(list: Claim[]): Totals {
 function StatCard({ label, amount, caption }: { label: string; amount: number; caption: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-[6px] rounded-[8px] border border-line bg-white p-[16px]">
-      <p className="text-[13px] text-muted">{label}</p>
-      <p className="text-[24px] font-semibold text-ink tabular-nums">{formatBaht(amount)}</p>
-      <p className="text-[11px] text-muted">{caption}</p>
+      <p className="text-13 text-muted">{label}</p>
+      <p className="text-24 font-semibold text-ink tabular-nums">{formatBaht(amount)}</p>
+      <p className="text-11 text-muted">{caption}</p>
     </div>
   );
 }
 
 function DetailRow({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-[16px] text-[13px]">
+    <div className="flex items-baseline justify-between gap-[16px] text-13">
       <dt className="text-muted">{label}</dt>
       <dd className={cx('text-right font-semibold', muted ? 'text-muted' : 'text-ink')}>{value}</dd>
     </div>
@@ -79,7 +79,7 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
       <div className="flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-[4px]">
           <PanelTitle id="claim-stats-title">สถิติการขอเบิกรายบุคคล</PanelTitle>
-          <p className="text-[13px] text-muted">
+          <p className="text-13 text-muted">
             ยอดรวมเป็นของพนักงานที่เลือกเท่านั้น ·{' '}
             {isEmpty ? 'ไม่มีข้อมูลแสดง 0' : `แสดง ${filtered.length.toLocaleString('th-TH')} รายการ`}
           </p>
@@ -123,7 +123,7 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
 
       <div className="grid items-start gap-[12px] lg:grid-cols-2">
         <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
-          <h3 className="text-[14px] font-semibold text-ink">รายละเอียด</h3>
+          <h3 className="text-14 font-semibold text-ink">รายละเอียด</h3>
           <dl className="flex flex-col gap-[10px]">
             <DetailRow label="พนักงานที่เลือก" value={employeeLabel} />
             <DetailRow label="ช่วงเวลา" value={period?.label ?? '-'} />
@@ -132,9 +132,9 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
         </div>
 
         <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
-          <h3 className="text-[14px] font-semibold text-ink">รายการของพนักงาน</h3>
+          <h3 className="text-14 font-semibold text-ink">รายการของพนักงาน</h3>
           {isEmpty ? (
-            <div className="flex flex-col gap-[8px] text-[13px] text-muted">
+            <div className="flex flex-col gap-[8px] text-13 text-muted">
               <p>ยังไม่มีข้อมูลขอเบิกของพนักงานที่เลือก</p>
               <p>เลือกพนักงานและช่วงเวลาเพื่อดูสถิติและรายการของคนนั้น</p>
             </div>
@@ -143,11 +143,11 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
               {filtered.map((claim) => (
                 <li key={claim.id} className="flex items-center justify-between gap-[12px] py-[10px] first:pt-[0px] last:pb-[0px]">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-ink">{claim.benefit}</p>
-                    <p className="text-[12px] text-muted">{formatThaiDate(claim.date)}</p>
+                    <p className="truncate text-13 font-medium text-ink">{claim.benefit}</p>
+                    <p className="text-12 text-muted">{formatThaiDate(claim.date)}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-[4px]">
-                    <span className="text-[13px] font-semibold text-ink tabular-nums">{formatBaht(claim.amount)}</span>
+                    <span className="text-13 font-semibold text-ink tabular-nums">{formatBaht(claim.amount)}</span>
                     <StatusBadge status={claim.status} />
                   </div>
                 </li>

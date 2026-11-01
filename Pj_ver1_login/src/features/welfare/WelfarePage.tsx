@@ -10,7 +10,7 @@ import { HistoryTab } from './HistoryTab';
 import { ImportPanel } from './ImportPanel';
 import { WelfareCatalog } from './WelfareCatalog';
 
-type TabId = 'catalog' | 'claims' | 'history' | 'import';
+export type TabId = 'catalog' | 'claims' | 'history' | 'import';
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'catalog', label: 'สวัสดิการที่มีอยู่' },
@@ -25,11 +25,13 @@ interface WelfarePageProps {
   claims: Claim[];
   employees: Employee[];
   history: AuditEntry[];
+  /** Tab to open first, e.g. from a dashboard shortcut (?tab=import). */
+  initialTab?: TabId;
 }
 
 // Layout follows Figma "Admin / จัดการสวัสดิการและนำเข้าประวัติ" (node 163:180).
-export function WelfarePage({ initialItems, importPreview, claims, employees, history }: WelfarePageProps) {
-  const [tab, setTab] = useState<TabId>('catalog');
+export function WelfarePage({ initialItems, importPreview, claims, employees, history, initialTab = 'catalog' }: WelfarePageProps) {
+  const [tab, setTab] = useState<TabId>(initialTab);
   const [items, setItems] = useState(initialItems);
   const [selectedCode, setSelectedCode] = useState(initialItems[0]?.code ?? '');
   const [importedCount, setImportedCount] = useState(0);
@@ -53,7 +55,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
               aria-controls={`panel-${id}`}
               onClick={() => setTab(id)}
               className={cx(
-                '-mb-px border-b-2 px-[18px] py-[12px] text-[14px] whitespace-nowrap transition-colors motion-reduce:transition-none',
+                '-mb-px border-b-2 px-[18px] py-[12px] text-14 whitespace-nowrap transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                 active ? 'border-primary-600 font-semibold text-primary-700' : 'border-transparent text-muted hover:text-ink',
               )}
@@ -95,9 +97,9 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
 function StatCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
     <div className="flex min-h-[118px] flex-col gap-[6px] rounded-[6px] border border-line bg-white p-[16px]">
-      <p className="text-[12px] text-muted">{label}</p>
-      <p className="text-[24px] font-semibold text-ink tabular-nums">{value}</p>
-      <p className="truncate text-[11px] text-muted">{note}</p>
+      <p className="text-12 text-muted">{label}</p>
+      <p className="text-24 font-semibold text-ink tabular-nums">{value}</p>
+      <p className="truncate text-11 text-muted">{note}</p>
     </div>
   );
 }

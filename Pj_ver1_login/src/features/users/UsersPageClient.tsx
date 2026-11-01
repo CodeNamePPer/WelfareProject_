@@ -128,7 +128,7 @@ export function UsersPageClient({ initialUsers }: UsersPageClientProps) {
             </button>
           )}
         </div>
-        <p className="text-[13px] text-muted">
+        <p className="text-13 text-muted">
           แสดง {filteredUsers.length} จากทั้งหมด {users.length} รายการ
         </p>
       </div>
