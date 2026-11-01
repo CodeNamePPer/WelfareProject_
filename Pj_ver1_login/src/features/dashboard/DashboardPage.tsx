@@ -47,20 +47,29 @@ export function DashboardPage({
         <p className="text-13 text-muted">Admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก</p>
       </header>
 
-      <SummaryCards stats={stats} />
-
-      <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-[602fr_464fr]">
+      {/* Bento grid on 6 columns: stat cards (2×2) | notifications, then a narrow users tile | wide log table,
+          then the full-width stats table. Tiles in the same row stretch to equal height. */}
+      <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-6">
+        <div className="min-w-0 xl:col-span-3">
+          <SummaryCards stats={stats} />
+        </div>
         <NotificationPanel
+          className="xl:col-span-3"
           items={notifications}
           onReview={go('/admin/notifications')}
           onViewAll={go('/admin/notifications')}
         />
-        <UsersByRolePanel roles={roleCounts} onViewAll={go('/admin/users')} onRetry={() => router.refresh()} />
+        <UsersByRolePanel
+          className="xl:col-span-2"
+          roles={roleCounts}
+          onViewAll={go('/admin/users')}
+          onRetry={() => router.refresh()}
+        />
+        <ActivityLogPanel className="xl:col-span-4" entries={logEntries} onViewAll={go('/admin/logs')} />
+        <div className="min-w-0 xl:col-span-6">
+          <EmployeeClaimStats employees={employees} periods={periods} claims={claims} />
+        </div>
       </div>
-
-      <ActivityLogPanel entries={logEntries} onViewAll={go('/admin/logs')} />
-
-      <EmployeeClaimStats employees={employees} periods={periods} claims={claims} />
     </div>
   );
 }

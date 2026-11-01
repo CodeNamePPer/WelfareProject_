@@ -11,6 +11,7 @@ const icons: Record<NotificationKind, LucideIcon> = {
 };
 
 interface NotificationPanelProps {
+  className?: string;
   items: NotificationItem[];
   /** How many items to preview on the dashboard (Figma shows 2). */
   limit?: number;
@@ -19,11 +20,11 @@ interface NotificationPanelProps {
 }
 
 // Figma 163:1169 – "Notification" panel.
-export function NotificationPanel({ items, limit = 2, onReview, onViewAll }: NotificationPanelProps) {
+export function NotificationPanel({ className, items, limit = 2, onReview, onViewAll }: NotificationPanelProps) {
   const visible = items.slice(0, limit);
 
   return (
-    <Panel aria-labelledby="noti-title">
+    <Panel className={className} aria-labelledby="noti-title">
       <div className="flex items-start justify-between gap-[14px]">
         <PanelTitle id="noti-title">Notification</PanelTitle>
         <OutlineButton onClick={onViewAll}>ดูทั้งหมด</OutlineButton>

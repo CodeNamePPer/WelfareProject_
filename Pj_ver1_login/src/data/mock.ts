@@ -9,17 +9,8 @@ import type {
   NotificationItem,
   Period,
   RoleCount,
-  SummaryStats,
   SystemUser,
 } from '../types';
-
-export const summaryStats: SummaryStats = {
-  totalUsers: 128,
-  newUsersThisCycle: 3,
-  hrRequests: 2,
-  notifications: 12,
-  systemErrors: 0,
-};
 
 export const notifications: NotificationItem[] = [
   {
@@ -269,7 +260,7 @@ export const auditEntries: AuditEntry[] = [
   },
   {
     id: 'g9', at: '2026-09-28T14:00', actor: 'AdminE0002', actorRole: 'Admin',
-    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ไฟล์ import_aug.xlsx · 12 รายการ',
+    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ไฟล์ import_aug.csv · 12 รายการ',
     category: 'import', action: 'import',
   },
   {

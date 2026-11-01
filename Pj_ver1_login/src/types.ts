@@ -42,12 +42,36 @@ export interface RoleCount {
 }
 
 /** null = โหลดไม่สำเร็จ – แสดง "—" แทน 0 เพื่อไม่ให้ดูเหมือนข้อมูลจริง */
+/** สถิติการ์ดสรุปบนหน้าแรก Admin – แต่ละส่วนเป็น null เมื่อโหลดไม่สำเร็จ */
 export interface SummaryStats {
-  totalUsers: number | null;
-  newUsersThisCycle: number | null;
-  hrRequests: number | null;
-  notifications: number | null;
-  systemErrors: number | null;
+  users: {
+    active: number;
+    /** ลาออก/เสียชีวิต */
+    inactive: number;
+    /** null = โหลดวันเริ่มงานไม่สำเร็จ */
+    newThisMonth: number | null;
+  } | null;
+  hrQueue: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    /** อายุคำขอที่รอนานที่สุด (วัน) – null เมื่อไม่มีคำขอรอ */
+    oldestPendingDays: number | null;
+  } | null;
+  logins: {
+    /** จำนวนคน (ไม่ซ้ำ) ที่ล็อกอินสำเร็จวันนี้ */
+    today: number;
+    /** 7 วันล่าสุด เก่าสุดก่อน – วันสุดท้ายคือวันนี้ */
+    daily: number[];
+  } | null;
+  loginErrors: {
+    failed: number;
+    blocked: number;
+    /** 7 วันล่าสุด เก่าสุดก่อน */
+    daily: number[];
+    /** ISO เวลาที่เกิดล่าสุด */
+    lastAt: string | null;
+  } | null;
 }
 
 // ─── ตั้งค่าผู้ใช้งานระบบ ───────────────────────────────────────────────────

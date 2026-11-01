@@ -3,7 +3,12 @@ function escapeCell(value: string | number): string {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-/** Builds a UTF-8 CSV (with BOM so Excel shows Thai correctly) and triggers a browser download. */
+/** True when the picked file is a .csv. Imports accept CSV only. */
+export function isCsvFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.csv');
+}
+
+/** Builds a UTF-8 CSV (with BOM so spreadsheet apps show Thai correctly) and triggers a browser download. */
 export function downloadCsv(filename: string, header: string[], rows: Array<Array<string | number>>): void {
   const body = [header, ...rows].map((row) => row.map(escapeCell).join(',')).join('\n');
   const blob = new Blob(['﻿', body], { type: 'text/csv;charset=utf-8' });

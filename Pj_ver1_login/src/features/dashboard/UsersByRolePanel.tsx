@@ -2,6 +2,7 @@ import { ItemCard, OutlineButton, Panel, PanelError, PanelTitle } from './ui';
 import type { RoleCount } from '../../types';
 
 interface UsersByRolePanelProps {
+  className?: string;
   /** null = โหลดรายชื่อผู้ใช้ไม่สำเร็จ */
   roles: RoleCount[] | null;
   onViewAll: () => void;
@@ -9,11 +10,11 @@ interface UsersByRolePanelProps {
 }
 
 // Figma 163:1197 – "Users ในระบบ" panel.
-export function UsersByRolePanel({ roles, onViewAll, onRetry }: UsersByRolePanelProps) {
+export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: UsersByRolePanelProps) {
   const total = roles?.reduce((sum, role) => sum + role.count, 0) ?? null;
 
   return (
-    <Panel aria-labelledby="users-title">
+    <Panel className={className} aria-labelledby="users-title">
       {/* หัวข้อ + จำนวนรวมเป็นบรรทัดรอง แบบเดียวกับ ActivityLogPanel – ไม่ชนปุ่มเมื่อจอแคบ */}
       <div className="flex items-start justify-between gap-[14px]">
         <div className="flex min-w-0 flex-col gap-[4px]">
