@@ -54,7 +54,6 @@ begin
     select * from (values
       -- anon: เข้าไม่ได้เลย
       ('anon', 'ดูพนักงาน',                 'rows', 'select * from public.employee', 'ERR:42501'),
-      ('anon', 'ดู audit_log',              'rows', 'select * from public.audit_log', 'ERR:42501'),
       ('anon', 'ดูหน่วยงาน',                'rows', 'select * from public.department', 'ERR:42501'),
       ('anon', 'เรียก my_permissions()',     'rows', 'select 1 where public.my_permissions() is not null', 'ERR:42501'),  -- ต้องอยู่ใน where: ถ้าอยู่ใน select list ที่ count(*) ครอบ planner ตัดทิ้งโดยไม่ตรวจสิทธิ์
 
@@ -67,14 +66,12 @@ begin
       ('EMPLOYEE', 'ดูพนักงาน',              'rows', 'select * from public.employee', '0'),
       ('EMPLOYEE', 'ดูหน่วยงาน/ตำแหน่ง/ระดับ', 'rows', 'select id from public.department union all select id from public.position union all select id from public.job_level', '0'),
       ('EMPLOYEE', 'ดูประวัติการทำงาน',       'rows', 'select * from public.work_history', '0'),
-      ('EMPLOYEE', 'ดู audit_log',           'rows', 'select * from public.audit_log', '0'),
       ('EMPLOYEE', 'ดูบทบาทของตัวเอง',        'rows', 'select * from public.user_role', '1'),
       ('EMPLOYEE', 'สิทธิ์ว่าง',              'rows', 'select 1 where public.my_permissions() = ''{}''::text[]', '1'),
       ('EMPLOYEE', 'แก้ข้อมูลพนักงานทุกคน',   'exec', 'update public.employee set phone = ''000''', '0'),
       ('EMPLOYEE', 'เพิ่มพนักงาน',            'exec', 'insert into public.employee (employee_code, first_name_th, last_name_th, email, hire_date) values (''X1'', ''ก'', ''ข'', ''x1@welfare.test'', current_date)', 'ERR:42501'),
       ('EMPLOYEE', 'มอบบทบาท HR ให้ตัวเอง',   'exec', 'insert into public.user_role (employee_id, role_id) values ({E00015}, {ROLE:HR})', 'ERR:42501'),
       ('EMPLOYEE', 'ลบพนักงาน',              'exec', 'delete from public.employee', 'ERR:42501'),
-      ('EMPLOYEE', 'เขียน audit_log ตรง',     'exec', 'insert into public.audit_log (table_name, record_id, action, changes, actor_db_role) values (''x'', ''x'', ''INSERT'', ''{}'', ''x'')', 'ERR:42501'),
 
       -- FINANCE (ยังไม่มีสิทธิ์ใดๆ รอทีมยืนยัน)
       ('FINANCE', 'ดูพนักงาน',               'rows', 'select * from public.employee', '0'),
@@ -95,7 +92,6 @@ begin
       ('HR', 'ลูกน้องของ E00014 (1:N)',      'rows', 'select e.* from public.employee e join public.employee m on m.id = e.manager_employee_id where m.employee_code = ''E00014''', '2'),
       ('HR', 'ดูประวัติการทำงาน',             'rows', 'select * from public.work_history where employee_id = (select id from public.employee where employee_code = ''E00017'')', '2'),
       ('HR', 'สิทธิ์ 6 รายการ',               'rows', 'select 1 where cardinality(public.my_permissions()) = 6 and not (''role.grant'' = any (public.my_permissions()))', '1'),
-      ('HR', 'ดู audit_log',                 'rows', 'select 1 where exists (select 1 from public.audit_log)', '1'),
 
       -- HR: แก้ไข
       ('HR', 'แก้ชื่อ/ติดต่อ/ที่อยู่',          'exec', 'update public.employee set first_name_th = ''ภูมิ'', phone = ''089-111-1111'', province = ''ปทุมธานี'', postal_code = ''12000'' where employee_code = ''E00015''', '1'),
@@ -124,7 +120,6 @@ begin
       ('HR', 'soft delete',                   'exec', 'update public.employee set deleted_at = now() where employee_code = ''E00016''', '1'),
       ('HR', 'ลบจริง',                        'exec', 'delete from public.employee where employee_code = ''E00016''', 'ERR:42501'),
       ('HR', 'แก้ประวัติการทำงานตรง',          'exec', 'update public.work_history set note = ''x''', 'ERR:42501'),
-      ('HR', 'แก้ audit_log',                 'exec', 'update public.audit_log set action = ''INSERT''', 'ERR:42501'),
 
       -- HR: งานของ SUPER_ADMIN
       ('HR', 'มอบบทบาท',                      'exec', 'insert into public.user_role (employee_id, role_id) values ({E00015}, {ROLE:HR})', 'ERR:42501'),
@@ -144,9 +139,7 @@ begin
       ('SUPER_ADMIN', 'แก้ตัวบุคคลใน user_role', 'exec', 'update public.user_role set employee_id = (select id from public.employee where employee_code = ''E00013'') where employee_id = (select id from public.employee where employee_code = ''E00011'') and revoked_at is null and role_id = (select id from public.app_role where code = ''HR'')', 'ERR:P0001'),
       ('SUPER_ADMIN', 'ลบ user_role',          'exec', 'delete from public.user_role', 'ERR:42501'),
       ('SUPER_ADMIN', 'ผูกบัญชีล็อกอิน',         'exec', 'update public.employee set auth_user_id = null where employee_code = ''E00015''', '1'),
-      ('SUPER_ADMIN', 'แก้ค่าตั้งค่า',          'exec', 'update public.system_setting set value = ''true'' where key = ''allow_rehire''', '1'),
-      ('SUPER_ADMIN', 'แก้ audit_log',         'exec', 'update public.audit_log set action = ''INSERT''', 'ERR:42501'),
-      ('SUPER_ADMIN', 'ลบ audit_log',          'exec', 'delete from public.audit_log', 'ERR:42501')
+      ('SUPER_ADMIN', 'แก้ค่าตั้งค่า',          'exec', 'update public.system_setting set value = ''true'' where key = ''allow_rehire''', '1')
     ) as v(who, label, kind, sql, expect)
   loop
     v_actual := null;
@@ -189,7 +182,7 @@ begin
   -- ข้อทดสอบที่ต้องตรวจผลข้างเคียง (ดูผลด้วย postgres ภายใน subtransaction เดียวกัน)
   -- ---------------------------------------------------------------------------
 
-  -- S1: audit_log บันทึกใครแก้ ค่าเดิม→ค่าใหม่ และแอปปลอม updated_by ไม่ได้
+  -- S1: แอปปลอม updated_by ไม่ได้ (trigger ตั้งเป็นผู้แก้จริงเสมอ)
   begin
     perform set_config('request.jwt.claims', jsonb_build_object('sub', c_uid ->> 'HR', 'role', 'authenticated')::text, true);
     execute 'set local role authenticated';
@@ -199,19 +192,8 @@ begin
      where id = v_emp7;
     execute 'reset role';
 
-    select a.* into v_row from public.audit_log a
-     where a.table_name = 'employee' and a.record_id = v_emp7::text
-     order by a.id desc limit 1;
-
-    v_ok := v_row.action = 'UPDATE'
-        and v_row.changes = '{"phone": {"old": "081-000-0007", "new": "089-999-9999"}}'::jsonb
-        and v_row.created_by = v_hr_id
-        and v_row.related_employee_id = v_emp7
-        and v_row.actor_roles = array['EMPLOYEE', 'HR']
-        and v_row.actor_db_role = 'authenticated'
-        and (select updated_by from public.employee where id = v_emp7) = v_hr_id;
-    v_actual := format('action=%s changes=%s by_hr=%s roles=%s db_role=%s',
-                       v_row.action, v_row.changes, v_row.created_by = v_hr_id, v_row.actor_roles, v_row.actor_db_role);
+    v_ok := (select updated_by from public.employee where id = v_emp7) = v_hr_id;
+    v_actual := format('updated_by เป็น HR=%s', v_ok);
     raise exception using errcode = 'TSTRB';
   exception
     when sqlstate 'TSTRB' then null;
@@ -219,7 +201,7 @@ begin
   end;
   execute 'reset role';
   if v_ok then v_pass := v_pass + 1; else v_fail := v_fail + 1; end if;
-  v_lines := v_lines || format(E'\n%s [HR] S1 audit_log ค่าเดิม→ค่าใหม่ ผู้แก้ และกันปลอม updated_by: %s',
+  v_lines := v_lines || format(E'\n%s [HR] S1 กันปลอม updated_by: %s',
                                case when v_ok then 'PASS' else 'FAIL' end, v_actual);
 
   -- S2: ย้ายแผนกแล้ว work_history ปิดช่วงเดิมและเปิดช่วงใหม่อัตโนมัติ
@@ -266,10 +248,8 @@ begin
     get diagnostics v_n = row_count;
     execute 'reset role';
 
-    v_ok := v_actual = 'แก้เบอร์ไม่ได้' and v_n = 1
-        and exists (select 1 from public.audit_log where table_name = 'role_permission' and action = 'DELETE');
-    v_actual := format('%s, เปลี่ยนสถานะได้ %s แถว, audit การถอดสิทธิ์=%s', v_actual, v_n,
-                       exists (select 1 from public.audit_log where table_name = 'role_permission' and action = 'DELETE'));
+    v_ok := v_actual = 'แก้เบอร์ไม่ได้' and v_n = 1;
+    v_actual := format('%s, เปลี่ยนสถานะได้ %s แถว', v_actual, v_n);
     raise exception using errcode = 'TSTRB';
   exception
     when sqlstate 'TSTRB' then null;
@@ -278,33 +258,6 @@ begin
   execute 'reset role';
   if v_ok then v_pass := v_pass + 1; else v_fail := v_fail + 1; end if;
   v_lines := v_lines || format(E'\n%s [HR] S3 โอนสิทธิ์ผ่าน role_permission: %s',
-                               case when v_ok then 'PASS' else 'FAIL' end, v_actual);
-
-  -- S4: service_role ก็แก้/ลบ audit_log ไม่ได้
-  begin
-    execute 'set local role service_role';
-    begin
-      update public.audit_log set action = 'INSERT';
-      v_actual := 'แก้ได้ (ผิด)';
-    exception when others then
-      v_actual := 'แก้ไม่ได้ (' || sqlstate || ')';
-    end;
-    begin
-      delete from public.audit_log;
-      v_actual := v_actual || ', ลบได้ (ผิด)';
-    exception when others then
-      v_actual := v_actual || ', ลบไม่ได้ (' || sqlstate || ')';
-    end;
-    execute 'reset role';
-    v_ok := v_actual not like '%(ผิด)%';
-    raise exception using errcode = 'TSTRB';
-  exception
-    when sqlstate 'TSTRB' then null;
-    when others then v_ok := false; v_actual := 'ERR:' || sqlstate || ' ' || sqlerrm;
-  end;
-  execute 'reset role';
-  if v_ok then v_pass := v_pass + 1; else v_fail := v_fail + 1; end if;
-  v_lines := v_lines || format(E'\n%s [service_role] S4 audit_log: %s',
                                case when v_ok then 'PASS' else 'FAIL' end, v_actual);
 
   raise exception 'ROLLBACK passed=% failed=% %', v_pass, v_fail, v_lines;

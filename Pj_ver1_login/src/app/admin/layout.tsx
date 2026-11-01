@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
-import { summaryStats } from "@/data/mock";
+import { countUnread, getAdminAlerts } from "@/lib/admin/alerts";
 
 // Shared by every Admin page: sidebar + toast.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <ToastProvider>
-      <AppShell notificationCount={summaryStats.notifications}>{children}</AppShell>
+      <AppShell notificationCount={countUnread(getAdminAlerts())}>{children}</AppShell>
     </ToastProvider>
   );
 }

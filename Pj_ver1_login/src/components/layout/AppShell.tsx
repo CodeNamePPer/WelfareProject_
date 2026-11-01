@@ -51,7 +51,7 @@ export function AppShell({ notificationCount, children }: AppShellProps) {
           >
             <Menu className="size-5" aria-hidden="true" />
           </button>
-          <span className="text-[15px] font-semibold">ระบบพนักงานและสวัสดิการ</span>
+          <span className="text-15 font-semibold">ระบบพนักงานและสวัสดิการ</span>
         </header>
 
         <main className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

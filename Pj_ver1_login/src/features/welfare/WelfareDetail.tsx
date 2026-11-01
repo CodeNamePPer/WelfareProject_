@@ -63,30 +63,30 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="welfare-detail-title" className="text-[17px] font-semibold text-ink">
+          <h2 id="welfare-detail-title" className="text-17 font-semibold text-ink">
             รายละเอียดสวัสดิการ
           </h2>
-          <p className="mt-[4px] text-[12px] text-muted">
+          <p className="mt-[4px] text-12 text-muted">
             {item.code} · แก้ไขล่าสุด {formatShortThaiDate(item.updatedAt)}
           </p>
-          <p className="text-[12px] text-muted">ผู้ดูแล: {item.owner}</p>
+          <p className="text-12 text-muted">ผู้ดูแล: {item.owner}</p>
         </div>
         <Tag tone={item.status === 'active' ? 'success' : 'neutral'}>{item.status === 'active' ? 'ใช้งาน' : 'หยุดใช้'}</Tag>
       </header>
 
       <div className="flex flex-col gap-[8px] rounded-[8px] bg-surface p-[12px]">
-        <p className="text-[11px] text-muted">สวัสดิการที่เลือก</p>
+        <p className="text-11 text-muted">สวัสดิการที่เลือก</p>
         {editing ? (
           <Field label="ชื่อสวัสดิการ">
             <input className={inputClass} value={form.name} onChange={(event) => set('name', event.target.value)} autoFocus />
           </Field>
         ) : (
-          <p className="text-[15px] font-semibold text-ink">{item.name}</p>
+          <p className="text-15 font-semibold text-ink">{item.name}</p>
         )}
 
         <dl className="flex flex-col gap-[6px]">
           {rows.map(({ label, value, field }) => (
-            <div key={label} className="flex items-center justify-between gap-3 text-[12px]">
+            <div key={label} className="flex items-center justify-between gap-3 text-12">
               <dt className="shrink-0 text-muted">{label}</dt>
               <dd className="min-w-0 text-right font-medium text-ink">
                 {editing && field ? <EditInput field={field} form={form} set={set} label={label} /> : value}
@@ -97,15 +97,15 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
       </div>
 
       <section aria-labelledby="welfare-docs-title" className="flex flex-col gap-[8px]">
-        <h3 id="welfare-docs-title" className="text-[13px] font-medium text-ink">
+        <h3 id="welfare-docs-title" className="text-13 font-medium text-ink">
           เอกสารประกอบ ({item.documents.length})
         </h3>
         {item.documents.length === 0 ? (
-          <p className="text-[12px] text-muted">ยังไม่มีเอกสารแนบ</p>
+          <p className="text-12 text-muted">ยังไม่มีเอกสารแนบ</p>
         ) : (
           <ul className="flex flex-col gap-[8px]">
             {item.documents.map((doc) => (
-              <li key={doc} className="flex items-center gap-[8px] rounded-[6px] border border-line px-[10px] py-[6px] text-[12px] text-ink">
+              <li key={doc} className="flex items-center gap-[8px] rounded-[6px] border border-line px-[10px] py-[6px] text-12 text-ink">
                 <FileText className="size-4 shrink-0 text-muted" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{doc}</span>
                 <button type="button" onClick={() => notifyPending(`ดูไฟล์ ${doc}`)} className="shrink-0 text-primary-700 hover:underline">
@@ -118,7 +118,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
       </section>
 
       <section aria-labelledby="welfare-steps-title" className="flex flex-col gap-[12px]">
-        <h3 id="welfare-steps-title" className="text-[13px] font-medium text-ink">
+        <h3 id="welfare-steps-title" className="text-13 font-medium text-ink">
           ขั้นตอนการจัดการสวัสดิการ
         </h3>
         <ol className="grid grid-cols-4">
@@ -138,8 +138,8 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
                 >
                   {done ? <Check className="size-[10px]" strokeWidth={3} aria-hidden="true" /> : null}
                 </span>
-                <span className={cx('text-[12px]', current || done ? 'font-medium text-ink' : 'text-muted')}>{step.label}</span>
-                <span className="text-[10px] text-muted">{step.by}</span>
+                <span className={cx('text-12', current || done ? 'font-medium text-ink' : 'text-muted')}>{step.label}</span>
+                <span className="text-10 text-muted">{step.by}</span>
               </li>
             );
           })}
@@ -147,7 +147,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
       </section>
 
       {error ? (
-        <p role="alert" className="text-[12px] text-danger">
+        <p role="alert" className="text-12 text-danger">
           {error}
         </p>
       ) : null}
@@ -184,11 +184,11 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
 }
 
 const inputClass =
-  'h-8 w-full rounded-[6px] border border-line bg-white px-2 text-[12px] text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
+  'h-8 w-full rounded-[6px] border border-line bg-white px-2 text-12 text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500';
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-[4px] text-[11px] text-muted">
+    <label className="flex flex-col gap-[4px] text-11 text-muted">
       {label}
       {children}
     </label>

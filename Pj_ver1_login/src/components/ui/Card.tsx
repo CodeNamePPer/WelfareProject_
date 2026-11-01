@@ -28,7 +28,7 @@ export function CardHeader({ title, titleId, description, action }: CardHeaderPr
         <h2 id={titleId} className="text-base font-semibold text-ink">
           {title}
         </h2>
-        {description ? <p className="mt-1 text-[13px] text-muted">{description}</p> : null}
+        {description ? <p className="mt-1 text-13 text-muted">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>

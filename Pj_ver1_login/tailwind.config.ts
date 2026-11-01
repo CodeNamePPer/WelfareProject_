@@ -21,7 +21,8 @@ const config: Config = {
         },
         surface: "#f8fafc",
         line: "#e2e8f0",
-        muted: "#64748b",
+        // ≥4.5:1 บน paper / surface / primary-50 (เดิม #64748b ได้แค่ 4.44:1 บน paper)
+        muted: "#5b6b82",
         status: {
           draft: "#64748b",
           pending: "#d97706",
@@ -37,7 +38,13 @@ const config: Config = {
       },
       boxShadow: {
         card: "0 1px 2px rgba(15, 23, 42, 0.06)",
+        popover: "0 8px 24px -6px rgba(15, 23, 42, 0.18)",
       },
+      // ขนาดตัวอักษรเป็น rem เทียบกับ root 14px (html = 0.875rem) – เช่น text-13 = 13px ที่ค่าเริ่มต้น
+      // แต่จะขยายตามขนาดตัวอักษรที่ผู้ใช้ตั้งไว้ในเบราว์เซอร์
+      fontSize: Object.fromEntries(
+        [10, 11, 12, 13, 14, 15, 16, 17, 18, 22, 24].map((px) => [String(px), `calc(${px}rem / 14)`]),
+      ),
       fontFamily: {
         sans: ["var(--font-plex-thai)", "system-ui", "sans-serif"],
       },

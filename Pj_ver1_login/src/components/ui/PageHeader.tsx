@@ -5,8 +5,8 @@ export function PageHeader({ title, description, action }: { title: string; desc
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-[4px]">
-        <h1 className="text-[22px] font-semibold text-ink">{title}</h1>
-        {description ? <p className="text-[13px] text-muted">{description}</p> : null}
+        <h1 className="text-22 font-semibold text-ink">{title}</h1>
+        {description ? <p className="text-13 text-muted">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </header>

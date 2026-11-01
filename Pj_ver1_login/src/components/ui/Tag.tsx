@@ -17,7 +17,7 @@ export function Tag({ tone, children, className }: { tone: TagTone; children: Re
   return (
     <span
       className={cx(
-        'inline-flex h-[22px] items-center rounded-[4px] px-[8px] text-[12px] font-medium whitespace-nowrap',
+        'inline-flex h-[22px] items-center rounded-[4px] px-[8px] text-12 font-medium whitespace-nowrap',
         tones[tone],
         className,
       )}

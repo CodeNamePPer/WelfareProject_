@@ -62,10 +62,10 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
     <section aria-labelledby="import-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <h2 id="import-title" className="text-[17px] font-semibold text-ink">
+          <h2 id="import-title" className="text-17 font-semibold text-ink">
             นำเข้าประวัติย้อนหลัง
           </h2>
-          <p className="mt-[4px] text-[12px] text-muted">เลือกไฟล์ CSV หรือ Excel แล้วตรวจสอบข้อมูลก่อนยืนยัน</p>
+          <p className="mt-[4px] text-12 text-muted">เลือกไฟล์ CSV หรือ Excel แล้วตรวจสอบข้อมูลก่อนยืนยัน</p>
         </div>
         <Tag tone={tag.tone}>{tag.label}</Tag>
       </header>
@@ -95,7 +95,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
           ยืนยันการนำเข้า
         </Button>
         {fileName ? (
-          <p className="text-[12px] text-muted">
+          <p className="text-12 text-muted">
             ไฟล์: <span className="font-medium text-ink">{fileName}</span>
             {phase === 'done' ? (
               <button
@@ -114,14 +114,14 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
       </div>
 
       <div className="rounded-[8px] bg-surface px-[12px] py-[10px]">
-        <p className="text-[12px] font-medium text-ink">หมายเหตุการนำเข้า</p>
-        <p className="mt-[2px] text-[11px] text-muted">
+        <p className="text-12 font-medium text-ink">หมายเหตุการนำเข้า</p>
+        <p className="mt-[2px] text-11 text-muted">
           ระบบจะนำเข้าข้อมูลเบิกย้อนหลังโดยไม่เปลี่ยนสถานะอนุมัติเดิม และไม่ส่งผลต่อการอนุมัติคำขอใหม่
         </p>
       </div>
 
       {phase === 'idle' ? (
-        <p className="rounded-[8px] border border-dashed border-line px-[16px] py-[32px] text-center text-[13px] text-muted">
+        <p className="rounded-[8px] border border-dashed border-line px-[16px] py-[32px] text-center text-13 text-muted">
           เลือกไฟล์เพื่อดูตัวอย่างข้อมูลก่อนนำเข้า
         </p>
       ) : (

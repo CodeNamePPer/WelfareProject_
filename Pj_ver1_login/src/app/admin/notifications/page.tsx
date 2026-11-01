@@ -1,6 +1,6 @@
 import { NotificationsPage } from "@/features/notifications/NotificationsPage";
-import { adminAlerts } from "@/data/mock";
+import { getAdminAlerts } from "@/lib/admin/alerts";
 
 export default function AdminNotificationsPage() {
-  return <NotificationsPage initialAlerts={adminAlerts} />;
+  return <NotificationsPage initialAlerts={getAdminAlerts()} />;
 }
