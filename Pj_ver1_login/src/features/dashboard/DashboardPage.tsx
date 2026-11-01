@@ -6,11 +6,12 @@ import { EmployeeClaimStats } from './EmployeeClaimStats';
 import { NotificationPanel } from './NotificationPanel';
 import { SummaryCards } from './SummaryCards';
 import { UsersByRolePanel } from './UsersByRolePanel';
+import { reviewHref } from '../notifications/alertVisuals';
 import type {
+  AdminAlert,
   AuditEntry,
   Claim,
   Employee,
-  NotificationItem,
   Period,
   RoleCount,
   SummaryStats,
@@ -18,7 +19,7 @@ import type {
 
 interface DashboardPageProps {
   stats: SummaryStats;
-  notifications: NotificationItem[];
+  alerts: AdminAlert[];
   roleCounts: RoleCount[] | null;
   logEntries: AuditEntry[];
   employees: Employee[];
@@ -30,7 +31,7 @@ interface DashboardPageProps {
 // Colours follow the project Style Guide (white–blue theme).
 export function DashboardPage({
   stats,
-  notifications,
+  alerts,
   roleCounts,
   logEntries,
   employees,
@@ -55,8 +56,8 @@ export function DashboardPage({
         </div>
         <NotificationPanel
           className="xl:col-span-3"
-          items={notifications}
-          onReview={go('/admin/notifications')}
+          alerts={alerts}
+          onReview={(alert) => router.push(reviewHref[alert.category] ?? '/admin/notifications')}
           onViewAll={go('/admin/notifications')}
         />
         <UsersByRolePanel

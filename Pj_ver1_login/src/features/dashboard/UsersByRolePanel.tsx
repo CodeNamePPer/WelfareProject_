@@ -1,4 +1,5 @@
-import { ItemCard, OutlineButton, Panel, PanelError, PanelTitle } from './ui';
+import { OutlineButton, Panel, PanelError, PanelTitle } from './ui';
+import { cx } from '../../lib/cx';
 import type { RoleCount } from '../../types';
 
 interface UsersByRolePanelProps {
@@ -9,9 +10,15 @@ interface UsersByRolePanelProps {
   onRetry: () => void;
 }
 
-// Figma 163:1197 – "Users ในระบบ" panel.
+// สีตามลำดับบทบาท (Admin → พนักงาน) ไล่จากเข้มไปอ่อน ใช้ร่วมกันระหว่างแถบสัดส่วนและจุดใน legend
+// สีอ่อนสุดมีเส้นขอบบางเพื่อไม่ให้กลืนกับพื้นขาว
+const ROLE_SWATCHES = ['bg-ink', 'bg-primary-700', 'bg-primary-500', 'bg-primary-100 ring-1 ring-inset ring-primary-500/40'];
+
+// Figma 163:1197 – "Users ในระบบ" panel: แถบสัดส่วนเส้นเดียว + รายการบทบาทแบบ legend
 export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: UsersByRolePanelProps) {
   const total = roles?.reduce((sum, role) => sum + role.count, 0) ?? null;
+  const share = (count: number) => (!total ? 0 : (count / total) * 100);
+  const swatch = (index: number) => ROLE_SWATCHES[index % ROLE_SWATCHES.length];
 
   return (
     <Panel className={className} aria-labelledby="users-title">
@@ -27,36 +34,35 @@ export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: Users
       {roles === null ? (
         <PanelError onRetry={onRetry} />
       ) : (
-        <ul className="flex flex-col gap-[10px]">
-          {roles.map((role) => {
-            const percent = !total ? 0 : (role.count / total) * 100;
-            return (
-              <li key={role.id}>
-                <ItemCard>
-                  <div className="grid w-full grid-cols-[minmax(0,8.5rem)_minmax(3rem,1fr)_auto] items-center gap-[12px] sm:gap-[16px]">
-                    <span className="truncate text-15 font-semibold text-ink">{role.role}</span>
-                    <div
-                      role="progressbar"
-                      aria-label={`สัดส่วน ${role.role}`}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={Math.round(percent)}
-                      className="h-[6px] overflow-hidden rounded-[3px] bg-mist"
-                    >
-                      <div
-                        className="h-full rounded-[3px] bg-primary-500"
-                        style={{ width: `${role.count === 0 ? 0 : Math.max(percent, 2)}%` }}
-                      />
-                    </div>
-                    <span className="whitespace-nowrap text-right text-15 font-semibold text-ink tabular-nums">
-                      {role.count.toLocaleString('th-TH')} คน
-                    </span>
-                  </div>
-                </ItemCard>
+        <div className="flex flex-col gap-[14px]">
+          {/* ตัวเลขจริงอยู่ในรายการด้านล่าง แถบนี้จึงเป็นภาพสรุปสำหรับผู้ใช้ screen reader แบบข้อความเดียว */}
+          <div
+            role="img"
+            aria-label={`สัดส่วนผู้ใช้: ${roles.map((r) => `${r.role} ${r.count} คน`).join(', ')}`}
+            className="flex h-[12px] gap-[2px] overflow-hidden rounded-[6px] bg-mist"
+          >
+            {roles.map((role, index) =>
+              role.count === 0 ? null : (
+                <div key={role.id} className={cx('h-full', swatch(index))} style={{ width: `${share(role.count)}%` }} />
+              ),
+            )}
+          </div>
+
+          <ul className="flex flex-col divide-y divide-line">
+            {roles.map((role, index) => (
+              <li key={role.id} className="flex items-center gap-[10px] py-[12px] first:pt-[4px] last:pb-0">
+                <span aria-hidden="true" className={cx('size-[10px] shrink-0 rounded-full', swatch(index))} />
+                <span className="min-w-0 flex-1 truncate text-14 text-ink" title={role.role}>
+                  {role.role}
+                </span>
+                <span className="w-[3.5rem] text-right text-13 text-muted tabular-nums">{Math.round(share(role.count))}%</span>
+                <span className="min-w-[3.5rem] whitespace-nowrap text-right text-15 font-semibold text-ink tabular-nums">
+                  {role.count.toLocaleString('th-TH')} <span className="text-13 font-normal text-muted">คน</span>
+                </span>
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </div>
       )}
     </Panel>
   );
