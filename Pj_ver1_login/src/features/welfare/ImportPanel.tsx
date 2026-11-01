@@ -7,6 +7,7 @@ import { Pagination, paginate } from '../../components/ui/Pagination';
 import { Tag } from '../../components/ui/Tag';
 import type { TagTone } from '../../components/ui/Tag';
 import { table } from '../../components/ui/table';
+import { isCsvFile } from '../../lib/csv';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { ImportRecord, ImportStatus } from '../../types';
@@ -36,8 +37,8 @@ interface ImportPanelProps {
 // Figma 163:180 – "นำเข้าประวัติย้อนหลัง" card.
 export function ImportPanel({ preview, onImported }: ImportPanelProps) {
   const csvRef = useRef<HTMLInputElement>(null);
-  const excelRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
+  const [fileError, setFileError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [page, setPage] = useState(1);
 
@@ -45,6 +46,11 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
+    if (!isCsvFile(file)) {
+      setFileError(`ไม่รองรับไฟล์ "${file.name}" ระบบนำเข้าได้เฉพาะไฟล์ .csv เท่านั้น`);
+      return;
+    }
+    setFileError('');
     setFileName(file.name);
     setPhase('review');
     setPage(1);
@@ -65,26 +71,15 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
           <h2 id="import-title" className="text-17 font-semibold text-ink">
             นำเข้าประวัติย้อนหลัง
           </h2>
-          <p className="mt-[4px] text-12 text-muted">เลือกไฟล์ CSV หรือ Excel แล้วตรวจสอบข้อมูลก่อนยืนยัน</p>
+          <p className="mt-[4px] text-12 text-muted">เลือกไฟล์ CSV แล้วตรวจสอบข้อมูลก่อนยืนยัน</p>
         </div>
         <Tag tone={tag.tone}>{tag.label}</Tag>
       </header>
 
       <div className="flex flex-wrap items-center gap-[10px]">
         <input ref={csvRef} type="file" accept=".csv,text/csv" className="sr-only" tabIndex={-1} onChange={onPick} />
-        <input
-          ref={excelRef}
-          type="file"
-          accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-          className="sr-only"
-          tabIndex={-1}
-          onChange={onPick}
-        />
         <Button variant="tonal" className="w-[160px]" onClick={() => csvRef.current?.click()} disabled={phase === 'done'}>
           เลือกไฟล์ CSV
-        </Button>
-        <Button className="w-[160px]" onClick={() => excelRef.current?.click()} disabled={phase === 'done'}>
-          เลือกไฟล์ Excel
         </Button>
         <Button
           variant="primary"
@@ -112,6 +107,12 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
           </p>
         ) : null}
       </div>
+
+      {fileError ? (
+        <p role="alert" className="-mt-[6px] text-12 text-danger">
+          {fileError}
+        </p>
+      ) : null}
 
       <div className="rounded-[8px] bg-surface px-[12px] py-[10px]">
         <p className="text-12 font-medium text-ink">หมายเหตุการนำเข้า</p>
