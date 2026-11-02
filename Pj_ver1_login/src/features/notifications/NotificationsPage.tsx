@@ -2,43 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellOff, Check, CheckCheck, CircleAlert, ClockAlert, Gift, ListChecks, Settings2, ShieldAlert } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { BellOff, Check, CheckCheck, Settings2 } from 'lucide-react';
 import { FilterChips } from '../../components/ui/FilterChips';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Select } from '../../components/ui/Select';
 import { cx } from '../../lib/cx';
-import type { AdminAlert, AlertCategory } from '../../types';
+import { CategoryIcon, reviewButtonClass, reviewHref, toneOf } from './alertVisuals';
+import type { AdminAlert } from '../../types';
 
 type Filter = 'all' | 'unread' | 'actionable' | 'access' | 'expiring' | 'security' | 'system';
 type Range = 'all' | '0' | '7' | '30';
-type Tone = 'primary' | 'danger' | 'warning';
-
-const icons: Record<AlertCategory, LucideIcon> = {
-  access: ListChecks,
-  security: ShieldAlert,
-  system: CircleAlert,
-  welfare: Gift,
-  expiring: ClockAlert,
-};
-
-// สีเน้นเฉพาะที่สำคัญ: แดง = ความปลอดภัย, ส้ม = ใกล้หมดอายุ, ที่เหลือใช้ฟ้าตามธีม
-const toneOf = (category: AlertCategory): Tone =>
-  category === 'security' ? 'danger' : category === 'expiring' ? 'warning' : 'primary';
-
-const iconTone: Record<Tone, string> = {
-  primary: 'bg-primary-50 text-primary-600',
-  danger: 'bg-status-rejected-soft text-danger',
-  warning: 'bg-status-pending-soft text-status-pending-ink',
-};
-
-/** Where "ตรวจสอบ" takes the admin for each kind of alert. */
-const reviewHref: Partial<Record<AlertCategory, string>> = {
-  access: '/admin/users',
-  security: '/admin/logs',
-  welfare: '/admin/benefits',
-};
 
 const PAGE_STEP = 6;
 
@@ -255,22 +229,6 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
   );
 }
 
-function CategoryIcon({ category, size = 'md' }: { category: AlertCategory; size?: 'md' | 'sm' }) {
-  const Icon = icons[category];
-  return (
-    <span
-      className={cx(
-        'flex shrink-0 items-center justify-center rounded-[8px]',
-        size === 'md' ? 'size-[40px]' : 'size-[34px]',
-        iconTone[toneOf(category)],
-      )}
-      aria-hidden="true"
-    >
-      <Icon className={size === 'md' ? 'size-[20px]' : 'size-[18px]'} strokeWidth={1.75} />
-    </span>
-  );
-}
-
 function ActionRow({ alert, onReview }: { alert: AdminAlert; onReview: (alert: AdminAlert) => void }) {
   return (
     <article className="flex flex-wrap items-center gap-x-[14px] gap-y-[10px] px-[16px] py-[14px] sm:flex-nowrap">
@@ -288,13 +246,7 @@ function ActionRow({ alert, onReview }: { alert: AdminAlert; onReview: (alert: A
       <button
         type="button"
         onClick={() => onReview(alert)}
-        className={cx(
-          'ml-[54px] inline-flex h-[40px] shrink-0 sm:h-[32px] items-center justify-center rounded-[6px] px-[14px] text-13 font-medium whitespace-nowrap text-white transition-colors sm:ml-0',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none',
-          toneOf(alert.category) === 'danger'
-            ? 'bg-danger hover:bg-status-rejected-ink focus-visible:ring-danger'
-            : 'bg-primary-600 hover:bg-primary-700 focus-visible:ring-primary-500',
-        )}
+        className={cx('ml-[54px] sm:ml-0', reviewButtonClass(alert.category))}
       >
         ตรวจสอบ
         <span className="sr-only"> {alert.title}</span>
