@@ -50,7 +50,6 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           open={exporting}
           rowCount={sorted.length}
           unit="รายการ"
-          filters={[]}
           columns={CSV_COLUMNS}
           personalData="ชื่อพนักงาน ยอดเงิน และประเภทสวัสดิการที่อาจบ่งบอกข้อมูลสุขภาพ"
           onCancel={() => setExporting(false)}

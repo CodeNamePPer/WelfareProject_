@@ -8,8 +8,6 @@ interface ExportCsvDialogProps {
   rowCount: number;
   /** Counting word for the rows, e.g. "คน", "รายการ", "บันทึก". */
   unit: string;
-  /** Active filters in plain words. Empty means the whole list is exported. */
-  filters: string[];
   columns: string[];
   /** What personal data the file holds, e.g. "อีเมลและเบอร์โทร". Omit when there is none. */
   personalData?: string;
@@ -17,9 +15,9 @@ interface ExportCsvDialogProps {
   onCancel: () => void;
 }
 
-// Summary shown before every CSV download: how many rows, which filters, which columns, and a PDPA note
+// Summary shown before every CSV download: how many rows, which columns, and a PDPA note
 // when the file carries personal data – so nobody takes data out of the system without seeing what it is.
-export function ExportCsvDialog({ open, rowCount, unit, filters, columns, personalData, onConfirm, onCancel }: ExportCsvDialogProps) {
+export function ExportCsvDialog({ open, rowCount, unit, columns, personalData, onConfirm, onCancel }: ExportCsvDialogProps) {
   return (
     <ConfirmDialog
       open={open}
@@ -29,10 +27,6 @@ export function ExportCsvDialog({ open, rowCount, unit, filters, columns, person
       onCancel={onCancel}
       description={
         <dl className="flex flex-col gap-[12px]">
-          <div className="flex flex-col gap-[2px]">
-            <dt className="text-12 font-medium text-ink">ตัวกรอง</dt>
-            <dd>{filters.length > 0 ? filters.join(' · ') : 'ไม่มีตัวกรอง · ข้อมูลทั้งหมด'}</dd>
-          </div>
           <div className="flex flex-col gap-[6px]">
             <dt className="text-12 font-medium text-ink">คอลัมน์ ({columns.length})</dt>
             <dd className="flex flex-wrap gap-[4px]">

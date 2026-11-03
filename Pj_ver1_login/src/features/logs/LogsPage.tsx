@@ -56,13 +56,6 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
 
   const resetPage = () => setPage(1);
 
-  const exportFilters = [
-    `ปี ${Number(year) + 543}`,
-    month === 'all' ? 'ทุกเดือน' : months[Number(month) - 1],
-    ...(filter === 'all' ? [] : [`ประเภท: ${CATEGORY_LABELS[filter]}`]),
-    ...(query.trim() ? [`ค้นหา "${query.trim()}"`] : []),
-  ];
-
   const exportCsv = () =>
     downloadCsv(
       `audit-log-${year}${month === 'all' ? '' : `-${month.padStart(2, '0')}`}.csv`,
@@ -138,7 +131,6 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
             open={exporting}
             rowCount={filtered.length}
             unit="บันทึก"
-            filters={exportFilters}
             columns={CSV_COLUMNS}
             personalData="ชื่อผู้ดำเนินการ รวมถึงอีเมลและ IP address ในรายละเอียด"
             onCancel={() => setExporting(false)}

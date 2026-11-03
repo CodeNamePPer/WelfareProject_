@@ -34,8 +34,6 @@ const PAGE_SIZE = 20;
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
 
-const FILTER_LABELS: Record<Filter, string> = { all: "ทั้งหมด", ACTIVE: "ใช้งานอยู่", RESIGNED: "ลาออก" };
-
 const CSV_COLUMNS = [
   "รหัสพนักงาน",
   "ชื่อ",
@@ -101,11 +99,6 @@ export default function AdminUsersClient({
     revealDetail("user-panel");
   };
 
-  const exportFilters = [
-    ...(filter === "all" ? [] : [`สถานะ: ${FILTER_LABELS[filter]}`]),
-    ...(searchQuery.trim() ? [`ค้นหา "${searchQuery.trim()}"`] : []),
-  ];
-
   const exportCsv = () =>
     downloadCsv(
       "users.csv",
@@ -146,7 +139,6 @@ export default function AdminUsersClient({
             open={exporting}
             rowCount={filteredUsers.length}
             unit="คน"
-            filters={exportFilters}
             columns={CSV_COLUMNS}
             personalData="ชื่อ อีเมล เบอร์โทร และข้อมูลการจ้างงาน"
             onCancel={() => setExporting(false)}
