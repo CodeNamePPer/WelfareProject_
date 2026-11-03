@@ -7,7 +7,7 @@ import { FilterChips } from '../../components/ui/FilterChips';
 import { Pagination, paginate } from '../../components/ui/Pagination';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Tag } from '../../components/ui/Tag';
-import { table } from '../../components/ui/table';
+import { revealDetail, table } from '../../components/ui/table';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { WelfareItem } from '../../types';
@@ -68,6 +68,23 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
   const rows = paginate(filtered, page, PAGE_SIZE);
   const selected = items.find((item) => item.code === selectedCode);
 
+  const pick = (code: string) => {
+    onSelect(code);
+    revealDetail('welfare-detail');
+  };
+
+  const rowMenu = (item: WelfareItem) => (
+    <RowMenu
+      active={item.status === 'active'}
+      onClose={() => setMenuCode(null)}
+      onEdit={() => {
+        pick(item.code);
+        setEditingCode(item.code);
+      }}
+      onToggle={() => update(item.code, { status: item.status === 'active' ? 'inactive' : 'active' })}
+    />
+  );
+
   const update = (code: string, patch: Partial<WelfareItem>) =>
     onItemsChange(items.map((item) => (item.code === code ? { ...item, ...patch, updatedAt: todayIso() } : item)));
 
@@ -99,7 +116,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
 
   return (
     <div className="grid grid-cols-1 gap-[20px] xl:grid-cols-[minmax(0,1fr)_350px]">
-      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
         <div className="flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
           <h2 id="welfare-list-title" className="text-17 font-semibold text-ink">
             รายการสวัสดิการที่มีอยู่
@@ -164,7 +181,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
                   return (
                     <tr
                       key={item.code}
-                      onClick={() => onSelect(item.code)}
+                      onClick={() => pick(item.code)}
                       aria-selected={isSelected}
                       className={cx(table.row, 'cursor-pointer', isSelected ? table.rowSelected : table.rowHover)}
                     >
@@ -173,7 +190,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            onSelect(item.code);
+                            pick(item.code);
                           }}
                           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         >
@@ -198,17 +215,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
                         >
                           <MoreVertical className="size-4" aria-hidden="true" />
                         </button>
-                        {menuCode === item.code ? (
-                          <RowMenu
-                            active={item.status === 'active'}
-                            onClose={() => setMenuCode(null)}
-                            onEdit={() => {
-                              onSelect(item.code);
-                              setEditingCode(item.code);
-                            }}
-                            onToggle={() => update(item.code, { status: item.status === 'active' ? 'inactive' : 'active' })}
-                          />
-                        ) : null}
+                        {menuCode === item.code ? rowMenu(item) : null}
                       </td>
                     </tr>
                   );
@@ -217,6 +224,56 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
             </tbody>
           </table>
         </div>
+
+        {rows.length === 0 ? (
+          <p className={table.cardEmpty}>ไม่พบสวัสดิการที่ตรงกับเงื่อนไข</p>
+        ) : (
+          <ul className={table.cards}>
+            {rows.map((item) => {
+              const isSelected = item.code === selectedCode;
+              return (
+                <li
+                  key={item.code}
+                  className={cx(
+                    'flex items-start gap-[4px] rounded-[8px] border border-line text-13 text-ink',
+                    table.cardButton,
+                    isSelected ? table.cardSelected : table.cardHover,
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => pick(item.code)}
+                    aria-pressed={isSelected}
+                    className="min-w-0 flex-1 rounded-[8px] p-[12px] pr-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  >
+                    <span className="block font-semibold">{item.name}</span>
+                    <span className="block text-12 text-muted">
+                      {item.code} · {item.owner}
+                    </span>
+                    <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+                      <span className="font-semibold tabular-nums">{formatBahtWhole(item.amount)}</span>
+                      <Tag tone={item.status === 'active' ? 'success' : 'neutral'}>{item.status === 'active' ? 'ใช้งาน' : 'หยุดใช้'}</Tag>
+                      <span className="ml-auto text-11 text-muted tabular-nums">แก้ไข {formatShortThaiDate(item.updatedAt)}</span>
+                    </span>
+                  </button>
+                  <div className="relative shrink-0 p-[6px]">
+                    <button
+                      type="button"
+                      onClick={() => setMenuCode(menuCode === item.code ? null : item.code)}
+                      aria-haspopup="menu"
+                      aria-expanded={menuCode === item.code}
+                      aria-label={`ตัวเลือกสำหรับ ${item.name}`}
+                      className="inline-flex size-9 items-center justify-center rounded-md text-muted hover:bg-primary-50 hover:text-ink"
+                    >
+                      <MoreVertical className="size-4" aria-hidden="true" />
+                    </button>
+                    {menuCode === item.code ? rowMenu(item) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         <div className="mt-auto pt-[8px]">
           <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />

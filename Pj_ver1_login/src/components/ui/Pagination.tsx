@@ -31,7 +31,7 @@ export function Pagination({ page, pageSize, total, unit = 'รายการ',
       <p className="text-12 text-muted tabular-nums">
         แสดง {from}–{to} จาก {total} {unit}
       </p>
-      <div className="flex items-center gap-[6px]">
+      <div className="flex flex-wrap items-center gap-[6px]">
         <button
           type="button"
           className={cx(square, 'border-line bg-white text-ink hover:bg-primary-50')}

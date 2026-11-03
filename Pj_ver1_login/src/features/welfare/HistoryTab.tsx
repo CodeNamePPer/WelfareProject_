@@ -7,7 +7,7 @@ import type { AuditEntry } from '../../types';
 // Welfare-related entries from the audit log; the full log lives at /admin/logs.
 export function HistoryTab({ entries }: { entries: AuditEntry[] }) {
   return (
-    <section aria-labelledby="history-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+    <section aria-labelledby="history-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 id="history-title" className="text-17 font-semibold text-ink">
@@ -50,6 +50,24 @@ export function HistoryTab({ entries }: { entries: AuditEntry[] }) {
           </table>
         </div>
       )}
+      {entries.length > 0 ? (
+        <ul className={table.cards}>
+          {entries.map((entry) => (
+            <li key={entry.id} className={table.card}>
+              <p className="font-semibold">{entry.title}</p>
+              <p className="text-12 text-muted">{entry.detail}</p>
+              {entry.change ? (
+                <p className="mt-[6px] break-words text-12 text-muted">
+                  {entry.change.before} → <span className="font-medium text-ink">{entry.change.after}</span>
+                </p>
+              ) : null}
+              <p className="mt-[8px] text-11 text-muted">
+                <span className="tabular-nums">{formatShortThaiDate(entry.at)}</span> · {entry.actor}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </section>
   );
 }

@@ -120,7 +120,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
         </div>
       </div>
 
-      <section aria-label="รายการ Log" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <section aria-label="รายการ Log" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
         <FilterChips
           label="กรองตามประเภท"
           value={filter}

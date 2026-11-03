@@ -65,7 +65,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
   const tag = phaseTag[phase];
 
   return (
-    <section aria-labelledby="import-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+    <section aria-labelledby="import-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 id="import-title" className="text-17 font-semibold text-ink">
@@ -78,12 +78,12 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
 
       <div className="flex flex-wrap items-center gap-[10px]">
         <input ref={csvRef} type="file" accept=".csv,text/csv" className="sr-only" tabIndex={-1} onChange={onPick} />
-        <Button variant="tonal" className="w-[160px]" onClick={() => csvRef.current?.click()} disabled={phase === 'done'}>
+        <Button variant="tonal" className="flex-1 sm:w-[160px] sm:flex-none" onClick={() => csvRef.current?.click()} disabled={phase === 'done'}>
           เลือกไฟล์ CSV
         </Button>
         <Button
           variant="primary"
-          className="w-[160px] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 sm:w-[160px] sm:flex-none disabled:cursor-not-allowed disabled:opacity-50"
           onClick={confirm}
           disabled={phase !== 'review'}
         >
@@ -156,6 +156,25 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
               </tbody>
             </table>
           </div>
+          <ul className={table.cards} aria-label="ตัวอย่างข้อมูลที่จะนำเข้า">
+            {rows.map((record) => (
+              <li key={record.id} className={table.card}>
+                <div className="flex items-start justify-between gap-[8px]">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{record.benefit}</p>
+                    <p className="text-12 text-muted">
+                      {record.id} · {record.claimant}
+                    </p>
+                  </div>
+                  <Tag tone={statusTag[record.status].tone}>{statusTag[record.status].label}</Tag>
+                </div>
+                <div className="mt-[8px] flex items-center justify-between gap-[8px]">
+                  <span className="font-semibold tabular-nums">{formatBahtWhole(record.amount)}</span>
+                  <span className="text-11 text-muted tabular-nums">{formatShortThaiDate(record.date)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
           <Pagination page={page} pageSize={PAGE_SIZE} total={preview.length} onChange={setPage} />
         </>
       )}
