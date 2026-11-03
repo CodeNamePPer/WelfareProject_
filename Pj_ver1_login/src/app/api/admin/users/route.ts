@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit, type AuditChanges } from "@/lib/auth/audit";
+import { createAdminAlert } from "@/lib/admin/alerts";
+import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import {
   findEmployeeCodeByUuid,
   findEmployeeUuidByCode,
@@ -104,6 +106,7 @@ export async function PUT(req: NextRequest) {
         changes,
         reason,
       });
+      await alertAccessChange(session.name, employeeId, changes);
     }
 
     const user = await getUserWithProfileById(employeeId);
@@ -126,6 +129,24 @@ export async function PUT(req: NextRequest) {
     }
     return NextResponse.json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" }, { status: 500 });
   }
+}
+
+const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก" };
+
+/** เปลี่ยนบทบาทหรือสถานะบัญชี = เปลี่ยนสิทธิ์เข้าระบบ จึงแจ้ง admin ทุกคน */
+async function alertAccessChange(actorName: string, employeeId: string, changes: AuditChanges) {
+  const label = (field: "role" | "status", value: unknown) =>
+    field === "role" ? (ROLE_LABELS[value as Role] ?? String(value)) : (STATUS_LABELS[String(value)] ?? String(value));
+  const parts = (["role", "status"] as const)
+    .filter((field) => changes[field])
+    .map((field) => `${field === "role" ? "บทบาท" : "สถานะ"}จาก ${label(field, changes[field].old)} เป็น ${label(field, changes[field].new)}`);
+  if (parts.length === 0) return;
+
+  await createAdminAlert({
+    category: "access",
+    title: "ปรับสิทธิ์ผู้ใช้งานแล้ว",
+    description: `${actorName} เปลี่ยน${parts.join(" และ")} ของ ${employeeId}`,
+  });
 }
 
 /** บัญชีเข้าใช้งาน: ชื่อล็อกอิน / บทบาท / สถานะ (employeeId เป็นรหัสพนักงาน — ไม่อนุญาตให้แก้ไข) */

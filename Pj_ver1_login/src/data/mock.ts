@@ -1,6 +1,5 @@
 // Mock data only. Replace with API calls when the database is connected.
 import type {
-  AdminAlert,
   AuditEntry,
   Claim,
   ImportRecord,
@@ -146,20 +145,6 @@ export const systemUsers: SystemUser[] = [
     lastLoginAt: '2026-10-31T09:00:00Z',
     updatedAt: '2026-10-15T14:00:00Z',
   },
-];
-
-// ─── การแจ้งเตือน (Mock) ────────────────────────────────────────────────────
-export const adminAlerts: AdminAlert[] = [
-  { id: 'a1', category: 'welfare', title: 'เพิ่มสวัสดิการแล้ว', description: 'สมชาย ใจดี เพิ่มสวัสดิการ AI ให้แผนกต่าง ๆ', time: '5 นาทีที่แล้ว', daysAgo: 0, unread: true, actionable: true },
-  { id: 'a2', category: 'security', title: 'ล็อกอินผิดซ้ำ 5 ครั้ง', description: 'บัญชี hr.payroll', time: '32 นาทีที่แล้ว', daysAgo: 0, unread: true, actionable: true },
-  { id: 'a3', category: 'expiring', title: 'สิทธิ์รักษาการใกล้หมดอายุ', description: 'เหลือ 2 วัน', time: '1 ชั่วโมงที่แล้ว', daysAgo: 0, unread: true, actionable: false },
-  { id: 'a4', category: 'access', title: 'คำขอสิทธิ์ HR Recruiter', description: 'ธนากร แสงทอง ขอสิทธิ์เข้าถึงโมดูลสรรหา', time: '3 ชั่วโมงที่แล้ว', daysAgo: 0, unread: true, actionable: true },
-  { id: 'a5', category: 'access', title: 'ปรับสิทธิ์ผู้ใช้งานแล้ว', description: 'Admin สมชาย มอบหมาย HR Manager ให้ วิภา สุขสันต์', time: 'เมื่อวาน', daysAgo: 1, unread: false, actionable: false },
-  { id: 'a6', category: 'system', title: 'ประกาศจากระบบ', description: 'มีการปรับปรุงระบบคืนวันเสาร์', time: 'เมื่อวาน', daysAgo: 1, unread: false, actionable: false },
-  { id: 'a7', category: 'expiring', title: 'สิทธิ์ผู้อนุมัติชั่วคราวใกล้หมดอายุ', description: 'สุพัตรา ใจเย็น · เหลือ 5 วัน', time: 'เมื่อวาน', daysAgo: 1, unread: true, actionable: false },
-  { id: 'a8', category: 'welfare', title: 'แก้ไขวงเงินสวัสดิการ', description: 'ค่าออกกำลังกาย / ฟิตเนส ปรับเป็น ฿12,000 ต่อปี', time: '3 วันที่แล้ว', daysAgo: 3, unread: true, actionable: false },
-  { id: 'a9', category: 'system', title: 'นำเข้าประวัติเบิกย้อนหลังสำเร็จ', description: '7 รายการจากไฟล์ import_sep.csv', time: '5 วันที่แล้ว', daysAgo: 5, unread: true, actionable: false },
-  { id: 'a10', category: 'security', title: 'เข้าสู่ระบบจากอุปกรณ์ใหม่', description: 'บัญชี admin.it · กรุงเทพฯ', time: '12 วันที่แล้ว', daysAgo: 12, unread: true, actionable: false },
 ];
 
 // ─── สวัสดิการ (Mock) ──────────────────────────────────────────────────────

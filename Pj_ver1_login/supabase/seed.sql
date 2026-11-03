@@ -166,3 +166,23 @@ where not exists (
 select setval('public.employee_code_seq',
               greatest(1, coalesce((select max(substr(employee_code, 2)::int) from public.employee), 0)),
               exists (select 1 from public.employee));
+
+
+-- -----------------------------------------------------------------------------
+-- การแจ้งเตือนของ Admin (ตัวอย่าง) — ใส่เฉพาะตอนที่ตารางยังว่าง จึงรันซ้ำได้
+-- -----------------------------------------------------------------------------
+
+insert into public.admin_notifications (category, title, description, actionable, created_at)
+select v.category, v.title, v.description, v.actionable, now() - v.age
+from (values
+  ('security', 'ล็อกอินผิดซ้ำ 5 ครั้ง',             'บัญชี demo.hr@welfare.test ถูกล็อก 15 นาที',                         true,  interval '20 minutes'),
+  ('access',   'คำขอสิทธิ์ฝ่ายบุคคล (HR)',           'E00011 ขอสิทธิ์เข้าถึงโมดูลจัดการพนักงาน',                           true,  interval '2 hours'),
+  ('welfare',  'เพิ่มสวัสดิการใหม่',                 'ค่าตรวจสุขภาพประจำปี วงเงิน ฿5,000 ต่อปี รอตรวจสอบก่อนเปิดใช้',      true,  interval '4 hours'),
+  ('expiring', 'สิทธิ์รักษาการใกล้หมดอายุ',          'E00010 สิทธิ์ผู้อนุมัติชั่วคราว · เหลือ 2 วัน',                        false, interval '5 hours'),
+  ('access',   'ปรับสิทธิ์ผู้ใช้งานแล้ว',             'E00009 เปลี่ยนบทบาทของ E00011 จาก พนักงาน เป็น ฝ่ายบุคคล (HR)',       false, interval '1 day'),
+  ('system',   'ประกาศจากระบบ',                     'มีการปรับปรุงระบบคืนวันเสาร์ 22:00–02:00 น.',                         false, interval '1 day 3 hours'),
+  ('welfare',  'แก้ไขวงเงินสวัสดิการ',               'ค่าออกกำลังกาย / ฟิตเนส ปรับเป็น ฿12,000 ต่อปี',                      false, interval '3 days'),
+  ('system',   'นำเข้าประวัติเบิกย้อนหลังสำเร็จ',     '7 รายการจากไฟล์ import_sep.csv',                                    false, interval '5 days'),
+  ('security', 'เข้าสู่ระบบจากอุปกรณ์ใหม่',           'บัญชี E00009 · กรุงเทพฯ',                                            false, interval '12 days')
+) as v(category, title, description, actionable, age)
+where not exists (select 1 from public.admin_notifications);

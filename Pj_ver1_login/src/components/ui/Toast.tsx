@@ -6,6 +6,8 @@ import type { ReactNode } from 'react';
 interface ToastContextValue {
   /** Shows a short message for actions whose destination page is not built yet. */
   notifyPending: (label: string) => void;
+  /** Shows a short message, e.g. when saving failed. */
+  notify: (message: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -29,7 +31,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [message]);
 
-  const value = useMemo(() => ({ notifyPending }), [notifyPending]);
+  const notify = useCallback((text: string) => setMessage(text), []);
+
+  const value = useMemo(() => ({ notifyPending, notify }), [notifyPending, notify]);
 
   return (
     <ToastContext.Provider value={value}>

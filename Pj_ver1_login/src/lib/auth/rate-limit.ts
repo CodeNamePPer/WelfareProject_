@@ -18,7 +18,8 @@ export function checkLock(key: string): { locked: boolean; retryAfterSec: number
   return { locked: true, retryAfterSec: Math.ceil((e.lockedUntil - Date.now()) / 1000) };
 }
 
-export function registerFailure(key: string): void {
+/** คืนค่า true เมื่อครั้งนี้ทำให้บัญชีเพิ่งถูกล็อก (ใช้แจ้งเตือน admin ครั้งเดียวต่อการล็อก) */
+export function registerFailure(key: string): boolean {
   const now = Date.now();
   const e = store.get(key);
   const count = e && e.lockedUntil > now - LOCK_MS ? e.count + 1 : 1;
@@ -26,7 +27,11 @@ export function registerFailure(key: string): void {
     count,
     lockedUntil: count >= MAX_ATTEMPTS ? now + LOCK_MS : 0,
   });
+  return count === MAX_ATTEMPTS;
 }
+
+export const LOCK_ATTEMPTS = MAX_ATTEMPTS;
+export const LOCK_MINUTES = LOCK_MS / 60_000;
 
 export function clearFailures(key: string): void {
   store.delete(key);
