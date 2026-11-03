@@ -41,9 +41,19 @@ const addressLabel = (p: EmployeeProfile) =>
   [p.addressLine, p.subdistrict, p.district, p.province, p.postalCode].filter(Boolean).join(" ") || null;
 
 // Layout follows Figma "Admin / ผู้ใช้งาน" (node 163:643): user list + account detail card.
-export default function AdminUsersClient({ initialUsers, orgOptions }: { initialUsers: User[]; orgOptions: OrgOptions }) {
+export default function AdminUsersClient({
+  initialUsers,
+  orgOptions,
+  initialSelectedId,
+}: {
+  initialUsers: User[];
+  orgOptions: OrgOptions;
+  initialSelectedId?: string;
+}) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [selectedId, setSelectedId] = useState<string | null>(initialUsers[0]?.employeeId ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    initialUsers.find((u) => u.employeeId === initialSelectedId)?.employeeId ?? initialUsers[0]?.employeeId ?? null,
+  );
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);

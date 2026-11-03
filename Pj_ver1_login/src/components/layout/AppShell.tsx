@@ -1,25 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
+import type { SidebarUser } from './Sidebar';
 import { useToast } from '../ui/Toast';
 import { cx } from '../../lib/cx';
 
 interface AppShellProps {
   notificationCount: number;
+  user: SidebarUser;
   children: ReactNode;
 }
 
-export function AppShell({ notificationCount, children }: AppShellProps) {
+export function AppShell({ notificationCount, user, children }: AppShellProps) {
   const pathname = usePathname();
   const { notifyPending } = useToast();
   // 768-1023px: collapsed by default (Style Guide). Below 768px the sidebar is a drawer.
-  const [collapsed, setCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches,
-  );
+  // Read the viewport after mount so the server HTML and first client render match (no hydration mismatch).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 1023px)').matches) setCollapsed(true);
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -27,6 +31,7 @@ export function AppShell({ notificationCount, children }: AppShellProps) {
       <Sidebar
         activeId={pathname === '/admin' ? 'home' : (pathname?.match(/^\/admin\/([^/]+)/)?.[1] ?? '')}
         notificationCount={notificationCount}
+        user={user}
         collapsed={collapsed}
         mobileOpen={mobileOpen}
         onToggleCollapse={() => setCollapsed((value) => !value)}
