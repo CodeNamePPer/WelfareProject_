@@ -54,9 +54,27 @@ function DetailRow({ label, value, muted }: { label: string; value: string; mute
 }
 
 // Figma 163:1276 – "สถิติการขอเบิกรายบุคคล".
+/** พนักงานที่ขอเบิกมากที่สุดในช่วงเวลานั้น ใช้เป็นค่าเริ่มต้นแทนคนแรกในรายชื่อ ซึ่งมักไม่มีรายการและทำให้แผงเปิดมาเป็น ฿0 */
+function busiestEmployeeId(employees: Employee[], claims: Claim[], period: Period | undefined): string {
+  const counts = new Map<string, number>();
+  for (const claim of claims) {
+    if (period && (claim.date < period.from || claim.date > period.to)) continue;
+    counts.set(claim.employeeId, (counts.get(claim.employeeId) ?? 0) + 1);
+  }
+  let best = employees[0]?.id ?? '';
+  for (const employee of employees) {
+    if ((counts.get(employee.id) ?? 0) > (counts.get(best) ?? 0)) best = employee.id;
+  }
+  return best;
+}
+
 export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaimStatsProps) {
-  const [employeeId, setEmployeeId] = useState(employees[0]?.id ?? '');
-  const [periodId, setPeriodId] = useState(periods[0]?.id ?? '');
+  // ช่วงเวลาเริ่มต้น = ช่วงล่าสุดที่มีคำขอเบิก (periods เรียงล่าสุดก่อน) ถ้าไม่มีเลยค่อยใช้ช่วงแรก
+  const [initialPeriod] = useState(
+    () => periods.find((p) => claims.some((c) => c.date >= p.from && c.date <= p.to)) ?? periods[0],
+  );
+  const [periodId, setPeriodId] = useState(initialPeriod?.id ?? '');
+  const [employeeId, setEmployeeId] = useState(() => busiestEmployeeId(employees, claims, initialPeriod));
 
   const employee = employees.find((item) => item.id === employeeId);
   const period = periods.find((item) => item.id === periodId);
@@ -71,7 +89,7 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
   const totals = useMemo(() => summarize(filtered), [filtered]);
 
   const isEmpty = filtered.length === 0;
-  const status = isEmpty ? 'ว่าง' : totals.pending.count > 0 ? 'มีรายการรอตรวจสอบ' : 'ตรวจสอบครบแล้ว';
+  const status = totals.pending.count > 0 ? 'มีรายการรอตรวจสอบ' : 'ตรวจสอบครบแล้ว';
   const employeeLabel = employee ? `${employee.name} · ${employee.code}` : '-';
 
   return (
@@ -81,7 +99,7 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
           <PanelTitle id="claim-stats-title">สถิติการขอเบิกรายบุคคล</PanelTitle>
           <p className="text-13 text-muted">
             ยอดรวมเป็นของพนักงานที่เลือกเท่านั้น ·{' '}
-            {isEmpty ? 'ไม่มีข้อมูลแสดง 0' : `แสดง ${filtered.length.toLocaleString('th-TH')} รายการ`}
+            {isEmpty ? 'ไม่มีรายการในช่วงนี้' : `แสดง ${filtered.length.toLocaleString('th-TH')} รายการ`}
           </p>
         </div>
         <div className="flex flex-col gap-[8px] sm:flex-row">
@@ -114,48 +132,50 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="ยอดขอเบิกทั้งหมด" amount={totals.all.amount} caption={`${totals.all.count} รายการในรอบนี้`} />
-        <StatCard label="รอตรวจสอบ" amount={totals.pending.amount} caption={`${totals.pending.count} รายการรออนุมัติ`} />
-        <StatCard label="อนุมัติแล้ว" amount={totals.approved.amount} caption={`${totals.approved.count} รายการอนุมัติ`} />
-        <StatCard label="ปฏิเสธ" amount={totals.rejected.amount} caption={`${totals.rejected.count} รายการปฏิเสธ`} />
-      </div>
+      {/* ไม่มีรายการ = บรรทัดเดียว แทนการ์ด ฿0.00 สี่ใบและกล่องรายละเอียดว่าง */}
+      {isEmpty ? (
+        <p className="rounded-[8px] border border-dashed border-line px-[16px] py-[20px] text-center text-13 text-muted">
+          {employee?.name ?? 'พนักงานที่เลือก'} ยังไม่มีคำขอเบิกในช่วง {period?.label ?? 'ที่เลือก'} — ลองเลือกพนักงานหรือช่วงเวลาอื่น
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="ยอดขอเบิกทั้งหมด" amount={totals.all.amount} caption={`${totals.all.count} รายการในรอบนี้`} />
+            <StatCard label="รอตรวจสอบ" amount={totals.pending.amount} caption={`${totals.pending.count} รายการรออนุมัติ`} />
+            <StatCard label="อนุมัติแล้ว" amount={totals.approved.amount} caption={`${totals.approved.count} รายการอนุมัติ`} />
+            <StatCard label="ปฏิเสธ" amount={totals.rejected.amount} caption={`${totals.rejected.count} รายการปฏิเสธ`} />
+          </div>
 
-      <div className="grid items-start gap-[12px] lg:grid-cols-2">
-        <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
-          <h3 className="text-14 font-semibold text-ink">รายละเอียด</h3>
-          <dl className="flex flex-col gap-[10px]">
-            <DetailRow label="พนักงานที่เลือก" value={employeeLabel} />
-            <DetailRow label="ช่วงเวลา" value={period?.label ?? '-'} />
-            <DetailRow label="สถานะ" value={status} muted={isEmpty} />
-          </dl>
-        </div>
-
-        <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
-          <h3 className="text-14 font-semibold text-ink">รายการของพนักงาน</h3>
-          {isEmpty ? (
-            <div className="flex flex-col gap-[8px] text-13 text-muted">
-              <p>ยังไม่มีข้อมูลขอเบิกของพนักงานที่เลือก</p>
-              <p>เลือกพนักงานและช่วงเวลาเพื่อดูสถิติและรายการของคนนั้น</p>
+          <div className="grid items-start gap-[12px] lg:grid-cols-2">
+            <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
+              <h3 className="text-14 font-semibold text-ink">รายละเอียด</h3>
+              <dl className="flex flex-col gap-[10px]">
+                <DetailRow label="พนักงานที่เลือก" value={employeeLabel} />
+                <DetailRow label="ช่วงเวลา" value={period?.label ?? '-'} />
+                <DetailRow label="สถานะ" value={status} />
+              </dl>
             </div>
-          ) : (
-            <ul className="-mr-[4px] flex max-h-[240px] flex-col divide-y divide-line overflow-y-auto pr-[4px]">
-              {filtered.map((claim) => (
-                <li key={claim.id} className="flex items-center justify-between gap-[12px] py-[10px] first:pt-[0px] last:pb-[0px]">
-                  <div className="min-w-0">
-                    <p className="truncate text-13 font-medium text-ink">{claim.benefit}</p>
-                    <p className="text-12 text-muted">{formatThaiDate(claim.date)}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-[4px]">
-                    <span className="text-13 font-semibold text-ink tabular-nums">{formatBaht(claim.amount)}</span>
-                    <StatusBadge status={claim.status} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+
+            <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
+              <h3 className="text-14 font-semibold text-ink">รายการของพนักงาน</h3>
+              <ul className="-mr-[4px] flex max-h-[240px] flex-col divide-y divide-line overflow-y-auto pr-[4px]">
+                {filtered.map((claim) => (
+                  <li key={claim.id} className="flex items-center justify-between gap-[12px] py-[10px] first:pt-[0px] last:pb-[0px]">
+                    <div className="min-w-0">
+                      <p className="truncate text-13 font-medium text-ink">{claim.benefit}</p>
+                      <p className="text-12 text-muted">{formatThaiDate(claim.date)}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-[4px]">
+                      <span className="text-13 font-semibold text-ink tabular-nums">{formatBaht(claim.amount)}</span>
+                      <StatusBadge status={claim.status} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </>
+      )}
     </Panel>
   );
 }

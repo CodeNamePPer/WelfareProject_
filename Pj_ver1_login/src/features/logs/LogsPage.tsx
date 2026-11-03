@@ -14,7 +14,7 @@ import { LogTable, actionTag } from './LogTable';
 
 type Filter = 'all' | AuditCategory;
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 20;
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 

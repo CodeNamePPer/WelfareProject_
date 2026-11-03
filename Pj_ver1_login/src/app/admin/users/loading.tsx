@@ -2,7 +2,7 @@ import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { table } from "@/components/ui/table";
 
-const ROW_COUNT = 7;
+const ROW_COUNT = 10;
 const COLUMNS = ["รหัส", "ชื่อ", "Email", "บทบาท", "สถานะ", "ใช้งานล่าสุด"];
 
 // โครงหน้าผู้ใช้งานระหว่างรอโหลดรายชื่อ (sidebar มาจาก admin/layout อยู่แล้ว)

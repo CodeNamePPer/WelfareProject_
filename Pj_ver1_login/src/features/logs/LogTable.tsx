@@ -30,6 +30,7 @@ interface LogTableProps {
 }
 
 // Log table from Figma "Admin / Log" (node 163:896), shared by the Log page and the dashboard.
+// ประเภทอยู่ถัดจากเวลา ให้สแกนหาแท็กได้ทางซ้าย ส่วนปุ่มดูรายละเอียดการเปลี่ยนแปลงอยู่คอลัมน์ขวาสุด ตำแหน่งเดียวกับปุ่มคำสั่งของแถวในตารางอื่น
 export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไม่พบ Log ที่ตรงกับเงื่อนไข' }: LogTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(defaultExpandedId);
 
@@ -39,15 +40,18 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
         <thead>
           <tr>
             <th scope="col" className={cx(table.th, 'w-[90px]')}>เวลา</th>
-            <th scope="col" className={cx(table.th, 'w-[170px]')}>ผู้ดำเนินการ</th>
-            <th scope="col" className={table.th}>รายละเอียด</th>
-            <th scope="col" className={cx(table.th, 'w-[250px]')}>ประเภท</th>
+            <th scope="col" className={cx(table.th, 'w-[200px]')}>ประเภท</th>
+            <th scope="col" className={cx(table.th, 'w-[190px]')}>ผู้ดำเนินการ</th>
+            <th scope="col" className={cx(table.th, 'w-full')}>รายละเอียด</th>
+            <th scope="col" className={table.th}>
+              <span className="sr-only">การเปลี่ยนแปลง</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {entries.length === 0 ? (
             <tr>
-              <td colSpan={4} className={cx(table.td, 'py-[40px] text-center text-muted')}>
+              <td colSpan={5} className={cx(table.td, 'py-[40px] text-center text-muted')}>
                 {emptyText}
               </td>
             </tr>
@@ -58,14 +62,17 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
               return (
                 <Fragment key={entry.id}>
                   <tr className={cx(table.row, expanded ? 'bg-surface' : table.rowHover)}>
-                    <td className={cx(table.td, 'text-12 text-muted tabular-nums', expanded && 'border-b-0')}>
+                    <td className={cx(table.td, 'whitespace-nowrap text-12 text-muted tabular-nums', expanded && 'border-b-0')}>
                       <time dateTime={entry.at}>
                         {formatShortThaiDate(entry.at)}
                         <br />
                         {timeOf(entry.at)}
                       </time>
                     </td>
-                    <td className={cx(table.td, expanded && 'border-b-0')}>
+                    <td className={cx(table.td, 'whitespace-nowrap', expanded && 'border-b-0')}>
+                      <Tag tone={tag.tone}>{tag.label}</Tag>
+                    </td>
+                    <td className={cx(table.td, 'whitespace-nowrap', expanded && 'border-b-0')}>
                       <div className="flex items-center gap-[8px]">
                         <span className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[4px] bg-surface text-muted ring-1 ring-line" aria-hidden="true">
                           <UserRound className="size-4" />
@@ -80,27 +87,24 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
                       <p>{entry.title}</p>
                       <p className="text-12 text-muted">{entry.detail}</p>
                     </td>
-                    <td className={cx(table.td, expanded && 'border-b-0')}>
-                      <div className="flex flex-wrap items-center gap-[8px]">
-                        <Tag tone={tag.tone}>{tag.label}</Tag>
-                        {entry.change ? (
-                          <button
-                            type="button"
-                            onClick={() => setExpandedId(expanded ? null : entry.id)}
-                            aria-expanded={expanded}
-                            aria-controls={`log-detail-${entry.id}`}
-                            className="inline-flex h-[26px] items-center gap-[4px] rounded-[4px] border border-line bg-white px-[8px] text-12 text-ink hover:border-primary-500 hover:bg-primary-50"
-                          >
-                            รายละเอียด
-                            <ChevronDown className={cx('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} aria-hidden="true" />
-                          </button>
-                        ) : null}
-                      </div>
+                    <td className={cx(table.td, 'whitespace-nowrap text-right', expanded && 'border-b-0')}>
+                      {entry.change ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(expanded ? null : entry.id)}
+                          aria-expanded={expanded}
+                          aria-controls={`log-detail-${entry.id}`}
+                          className="inline-flex h-[30px] items-center gap-[4px] rounded-[6px] border border-primary-600/40 bg-white px-[10px] text-12 font-medium text-primary-700 transition-colors hover:border-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
+                        >
+                          {expanded ? 'ซ่อนรายละเอียดการเปลี่ยนแปลง' : 'ดูรายละเอียดการเปลี่ยนแปลง'}
+                          <ChevronDown className={cx('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} aria-hidden="true" />
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                   {expanded && entry.change ? (
                     <tr id={`log-detail-${entry.id}`}>
-                      <td colSpan={4} className={cx(table.td, 'border-b-ink/60 pt-[4px]')}>
+                      <td colSpan={5} className={cx(table.td, 'border-b-ink/60 pt-[4px]')}>
                         <p className="text-12 text-muted">รายละเอียดการเปลี่ยนแปลง</p>
                         <div className="mt-[10px] grid max-w-[460px] grid-cols-2 gap-[8px]">
                           <ChangeBox label="ก่อน" value={entry.change.before} />
