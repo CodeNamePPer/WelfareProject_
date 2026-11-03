@@ -39,10 +39,11 @@ function formatDateTime(iso: string): string {
 }
 
 // โปรไฟล์อ่านอย่างเดียว: หัวโปรไฟล์ + 4 หมวด (ส่วนตัว / ติดต่อ / การทำงาน / บัญชี) เรียง 2 คอลัมน์บนจอกว้าง
+// ชิดซ้ายเหมือนหน้า Admin อื่น หัวข้อหน้าจะได้อยู่ตำแหน่งเดิมเมื่อสลับเมนู
 export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | null; fallbackName: string }) {
   if (!user) {
     return (
-      <div className="mx-auto flex w-full max-w-[960px] flex-col gap-[20px]">
+      <div className="flex w-full max-w-[960px] flex-col gap-[20px]">
         <PageHeader title="โปรไฟล์ของฉัน" />
         <p className="rounded-[10px] border border-line bg-white p-[20px] text-13 text-muted">
           ไม่พบข้อมูลพนักงานของบัญชี {fallbackName} ในระบบ ลองออกจากระบบแล้วเข้าใหม่ หรือติดต่อผู้ดูแลฐานข้อมูล
@@ -113,7 +114,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-[960px] flex-col gap-[20px]">
+    <div className="flex w-full max-w-[960px] flex-col gap-[20px]">
       <PageHeader
         title="โปรไฟล์ของฉัน"
         description="ข้อมูลของบัญชีที่เข้าระบบอยู่"
@@ -156,7 +157,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
         <div className="grid gap-px border-t border-line bg-line lg:grid-cols-2">
           {sections.map((s) => (
             <section key={s.id} aria-labelledby={`profile-${s.id}`} className="flex flex-col gap-[12px] bg-white p-[20px]">
-              <h3 id={`profile-${s.id}`} className="text-13 font-semibold text-ink">
+              <h3 id={`profile-${s.id}`} className="text-14 font-semibold text-ink">
                 {s.title}
               </h3>
               <InfoList rows={s.rows} />
