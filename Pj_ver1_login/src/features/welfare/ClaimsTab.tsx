@@ -1,5 +1,8 @@
-import { StatusBadge } from '../../components/ui/StatusBadge';
+import { FileDown } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { StatusBadge, statusLabel } from '../../components/ui/StatusBadge';
 import { table } from '../../components/ui/table';
+import { downloadCsv } from '../../lib/csv';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { Claim, Employee } from '../../types';
@@ -9,13 +12,33 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
   const nameOf = new Map(employees.map((employee) => [employee.id, `${employee.name} (${employee.code})`]));
   const sorted = [...claims].sort((a, b) => b.date.localeCompare(a.date));
 
+  const exportCsv = () =>
+    downloadCsv(
+      `welfare-claims-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['วันที่', 'รหัสพนักงาน', 'ผู้เบิก', 'สวัสดิการ', 'จำนวนเงิน', 'สถานะ'],
+      sorted.map((claim) => [
+        claim.date,
+        claim.employeeId,
+        nameOf.get(claim.employeeId) ?? claim.employeeId,
+        claim.benefit,
+        claim.amount,
+        statusLabel(claim.status),
+      ]),
+    );
+
   return (
     <section aria-labelledby="claims-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
-      <header>
-        <h2 id="claims-title" className="text-17 font-semibold text-ink">
-          คำขอเบิกล่าสุด
-        </h2>
-        <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
+      <header className="flex flex-col gap-[12px] sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 id="claims-title" className="text-17 font-semibold text-ink">
+            คำขอเบิกล่าสุด
+          </h2>
+          <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
+        </div>
+        <Button onClick={exportCsv} disabled={sorted.length === 0} className="sm:w-[180px] disabled:opacity-50">
+          <FileDown className="size-4" aria-hidden="true" />
+          ส่งออก CSV
+        </Button>
       </header>
       <div className={table.wrapper}>
         <table className={table.table}>

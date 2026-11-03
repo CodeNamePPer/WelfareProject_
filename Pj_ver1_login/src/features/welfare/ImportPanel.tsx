@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Button } from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Pagination, paginate } from '../../components/ui/Pagination';
 import { Tag } from '../../components/ui/Tag';
 import type { TagTone } from '../../components/ui/Tag';
@@ -41,6 +42,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
   const [fileError, setFileError] = useState('');
   const [phase, setPhase] = useState<Phase>('idle');
   const [page, setPage] = useState(1);
+  const [confirming, setConfirming] = useState(false);
 
   const onPick = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -57,6 +59,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
   };
 
   const confirm = () => {
+    setConfirming(false);
     onImported(preview.length);
     setPhase('done');
   };
@@ -84,7 +87,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
         <Button
           variant="primary"
           className="flex-1 sm:w-[160px] sm:flex-none disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={confirm}
+          onClick={() => setConfirming(true)}
           disabled={phase !== 'review'}
         >
           ยืนยันการนำเข้า
@@ -178,6 +181,20 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
           <Pagination page={page} pageSize={PAGE_SIZE} total={preview.length} onChange={setPage} />
         </>
       )}
+
+      <ConfirmDialog
+        open={confirming}
+        title={`นำเข้า ${preview.length.toLocaleString('th-TH')} รายการ?`}
+        description={
+          <>
+            จากไฟล์ <span className="font-medium text-ink">{fileName}</span> เมื่อนำเข้าแล้วจะยกเลิกจากหน้านี้ไม่ได้
+            กรุณาตรวจตัวอย่างข้อมูลให้ครบก่อนยืนยัน
+          </>
+        }
+        confirmLabel="ยืนยันการนำเข้า"
+        onCancel={() => setConfirming(false)}
+        onConfirm={confirm}
+      />
     </section>
   );
 }
