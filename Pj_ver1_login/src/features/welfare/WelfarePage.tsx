@@ -42,7 +42,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
     <div className="flex flex-col gap-[20px]">
       <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขได้โดยตรง · ไม่อนุมัติคำขอเบิก · ข้อมูลตัวอย่าง" />
 
-      <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="flex gap-[4px] overflow-x-auto border-b border-line">
+      <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="scrollbar-none -mx-4 flex gap-[4px] overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
         {tabs.map(({ id, label }) => {
           const active = id === tab;
           return (
@@ -55,7 +55,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
               aria-controls={`panel-${id}`}
               onClick={() => setTab(id)}
               className={cx(
-                '-mb-px border-b-2 px-[18px] py-[12px] text-14 whitespace-nowrap transition-colors motion-reduce:transition-none',
+                '-mb-px shrink-0 border-b-2 px-[12px] py-[12px] text-14 sm:px-[18px] whitespace-nowrap transition-colors motion-reduce:transition-none',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
                 active ? 'border-primary-600 font-semibold text-primary-700' : 'border-transparent text-muted hover:text-ink',
               )}
@@ -96,7 +96,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
 
 function StatCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="flex min-h-[118px] flex-col gap-[6px] rounded-[6px] border border-line bg-white p-[16px]">
+    <div className="flex flex-col gap-[6px] rounded-[6px] border border-line bg-white p-[16px] sm:min-h-[118px]">
       <p className="text-12 text-muted">{label}</p>
       <p className="text-24 font-semibold text-ink tabular-nums">{value}</p>
       <p className="truncate text-11 text-muted">{note}</p>

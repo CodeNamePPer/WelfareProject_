@@ -57,9 +57,10 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
 
   return (
     <form
+      id="welfare-detail"
       onSubmit={submit}
       aria-labelledby="welfare-detail-title"
-      className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px] xl:sticky xl:top-[24px] xl:self-start"
+      className="flex scroll-mt-[72px] flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:self-start"
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">

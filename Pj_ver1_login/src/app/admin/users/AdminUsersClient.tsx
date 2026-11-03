@@ -10,7 +10,7 @@ import { Pagination, paginate } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Tag } from "@/components/ui/Tag";
-import { table } from "@/components/ui/table";
+import { revealDetail, table } from "@/components/ui/table";
 import { downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
@@ -73,6 +73,12 @@ export default function AdminUsersClient({
 
   const rows = paginate(filteredUsers, page, PAGE_SIZE);
   const selected = users.find((u) => u.employeeId === selectedId);
+  const emptyText = users.length === 0 ? "ยังไม่มีข้อมูลผู้ใช้งาน" : "ไม่พบผู้ใช้ที่ตรงกับเงื่อนไข";
+
+  const pick = (employeeId: string) => {
+    setSelectedId(employeeId);
+    revealDetail("user-panel");
+  };
 
   const exportCsv = () =>
     downloadCsv(
@@ -116,7 +122,7 @@ export default function AdminUsersClient({
 
   return (
     <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
           <h2 id="user-list-title" className="text-17 font-semibold text-ink">
             รายชื่อผู้ใช้งานระบบ
@@ -168,8 +174,8 @@ export default function AdminUsersClient({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7}className={cx(table.td, "py-[40px] text-center text-muted")}>
-                    {users.length === 0 ? "ยังไม่มีข้อมูลผู้ใช้งาน" : "ไม่พบผู้ใช้ที่ตรงกับเงื่อนไข"}
+                  <td colSpan={7} className={cx(table.td, "py-[40px] text-center text-muted")}>
+                    {emptyText}
                   </td>
                 </tr>
               ) : (
@@ -178,7 +184,7 @@ export default function AdminUsersClient({
                   return (
                     <tr
                       key={u.employeeId}
-                      onClick={() => setSelectedId(u.employeeId)}
+                      onClick={() => pick(u.employeeId)}
                       aria-selected={isSelected}
                       className={cx(table.row, "cursor-pointer", isSelected ? table.rowSelected : table.rowHover)}
                     >
@@ -187,7 +193,7 @@ export default function AdminUsersClient({
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            setSelectedId(u.employeeId);
+                            pick(u.employeeId);
                           }}
                           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         >
@@ -221,6 +227,50 @@ export default function AdminUsersClient({
             </tbody>
           </table>
         </div>
+
+        {rows.length === 0 ? (
+          <p className={table.cardEmpty}>{emptyText}</p>
+        ) : (
+          <ul className={table.cards}>
+            {rows.map((u) => {
+              const isSelected = u.employeeId === selectedId;
+              return (
+                <li key={u.employeeId}>
+                  <button
+                    type="button"
+                    onClick={() => pick(u.employeeId)}
+                    aria-pressed={isSelected}
+                    className={cx(table.card, table.cardButton, isSelected ? table.cardSelected : table.cardHover)}
+                  >
+                    <span className="flex items-start justify-between gap-[8px]">
+                      <span className="min-w-0">
+                        <span className="block font-semibold">
+                          {u.name}
+                          {u.profile.nickname ? <span className="font-normal text-muted"> ({u.profile.nickname})</span> : null}
+                        </span>
+                        <span className="block text-12 text-muted">
+                          {u.employeeId}
+                          {u.profile.departmentName ? ` · ${u.profile.departmentName}` : ""}
+                          {u.profile.positionName ? ` · ${u.profile.positionName}` : ""}
+                        </span>
+                      </span>
+                      <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
+                    </span>
+                    <span className="mt-[6px] block break-all text-12 text-muted">{u.email}</span>
+                    <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
+                      <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"} className="rounded-full">
+                        {roleLabel(u.role)}
+                      </Tag>
+                      <span className="ml-auto text-11 text-muted tabular-nums">
+                        ใช้งานล่าสุด {u.lastLoginAt ? formatShortThaiDate(u.lastLoginAt) : "—"}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         <div className="mt-auto pt-[8px]">
           <Pagination page={page} pageSize={PAGE_SIZE} total={filteredUsers.length} onChange={setPage} />
@@ -576,8 +626,9 @@ function UserPanel({
 
   return (
     <aside
+      id="user-panel"
       aria-labelledby="user-panel-title"
-      className="flex min-w-0 flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[20px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-48px)] xl:self-start xl:overflow-y-auto"
+      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-48px)] xl:self-start xl:overflow-y-auto"
     >
       <header className="flex items-start gap-[12px]">
         <div

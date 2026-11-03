@@ -10,7 +10,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
   const sorted = [...claims].sort((a, b) => b.date.localeCompare(a.date));
 
   return (
-    <section aria-labelledby="claims-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+    <section aria-labelledby="claims-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
       <header>
         <h2 id="claims-title" className="text-17 font-semibold text-ink">
           คำขอเบิกล่าสุด
@@ -43,6 +43,23 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           </tbody>
         </table>
       </div>
+      <ul className={table.cards}>
+        {sorted.map((claim) => (
+          <li key={claim.id} className={table.card}>
+            <div className="flex items-start justify-between gap-[8px]">
+              <div className="min-w-0">
+                <p className="font-semibold">{claim.benefit}</p>
+                <p className="text-12 text-muted">{nameOf.get(claim.employeeId) ?? claim.employeeId}</p>
+              </div>
+              <StatusBadge status={claim.status} />
+            </div>
+            <div className="mt-[8px] flex items-center justify-between gap-[8px]">
+              <span className="font-semibold tabular-nums">{formatBahtWhole(claim.amount)}</span>
+              <span className="text-11 text-muted tabular-nums">{formatShortThaiDate(claim.date)}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

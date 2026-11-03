@@ -34,7 +34,10 @@ interface LogTableProps {
 export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไม่พบ Log ที่ตรงกับเงื่อนไข' }: LogTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(defaultExpandedId);
 
+  const toggle = (id: string) => setExpandedId(expandedId === id ? null : id);
+
   return (
+    <>
     <div className={table.wrapper}>
       <table className={table.table}>
         <thead>
@@ -89,30 +92,14 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
                     </td>
                     <td className={cx(table.td, 'whitespace-nowrap text-right', expanded && 'border-b-0')}>
                       {entry.change ? (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedId(expanded ? null : entry.id)}
-                          aria-expanded={expanded}
-                          aria-controls={`log-detail-${entry.id}`}
-                          className="inline-flex h-[30px] items-center gap-[4px] rounded-[6px] border border-primary-600/40 bg-white px-[10px] text-12 font-medium text-primary-700 transition-colors hover:border-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
-                        >
-                          {expanded ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'}
-                          <ChevronDown className={cx('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} aria-hidden="true" />
-                        </button>
+                        <DetailToggle expanded={expanded} controls={`log-detail-${entry.id}`} onClick={() => toggle(entry.id)} />
                       ) : null}
                     </td>
                   </tr>
                   {expanded && entry.change ? (
                     <tr id={`log-detail-${entry.id}`}>
                       <td colSpan={5} className={cx(table.td, 'border-b-ink/60 pt-[4px]')}>
-                        <p className="text-12 text-muted">รายละเอียดการเปลี่ยนแปลง</p>
-                        <div className="mt-[10px] grid max-w-[460px] grid-cols-2 gap-[8px]">
-                          <ChangeBox label="ก่อน" value={entry.change.before} />
-                          <ChangeBox label="หลัง" value={entry.change.after} highlight />
-                        </div>
-                        {entry.change.reason ? (
-                          <p className="mt-[12px] text-12 text-muted">เหตุผล: {entry.change.reason}</p>
-                        ) : null}
+                        <ChangeDetail change={entry.change} />
                       </td>
                     </tr>
                   ) : null}
@@ -123,6 +110,73 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
         </tbody>
       </table>
     </div>
+
+    {entries.length === 0 ? (
+      <p className={table.cardEmpty}>{emptyText}</p>
+    ) : (
+      <ul className={table.cards}>
+        {entries.map((entry) => {
+          const expanded = expandedId === entry.id;
+          const tag = actionTag[entry.action];
+          return (
+            <li key={entry.id} className={cx(table.card, expanded && 'bg-surface')}>
+              <div className="flex items-center justify-between gap-[8px]">
+                <Tag tone={tag.tone}>{tag.label}</Tag>
+                <time dateTime={entry.at} className="text-11 text-muted tabular-nums">
+                  {formatShortThaiDate(entry.at)} {timeOf(entry.at)}
+                </time>
+              </div>
+              <p className="mt-[8px] break-words">{entry.title}</p>
+              <p className="break-words text-12 text-muted">{entry.detail}</p>
+              <p className="mt-[6px] truncate text-12 text-muted">
+                <span className="font-semibold text-ink">{entry.actor}</span> · {entry.actorRole}
+              </p>
+              {entry.change ? (
+                <>
+                  <div className="mt-[10px]">
+                    <DetailToggle expanded={expanded} controls={`log-card-detail-${entry.id}`} onClick={() => toggle(entry.id)} />
+                  </div>
+                  {expanded ? (
+                    <div id={`log-card-detail-${entry.id}`} className="mt-[10px]">
+                      <ChangeDetail change={entry.change} />
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    )}
+    </>
+  );
+}
+
+function DetailToggle({ expanded, controls, onClick }: { expanded: boolean; controls: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      className="inline-flex h-[30px] items-center gap-[4px] rounded-[6px] border border-primary-600/40 bg-white px-[10px] text-12 font-medium text-primary-700 transition-colors hover:border-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
+    >
+      {expanded ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'}
+      <ChevronDown className={cx('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} aria-hidden="true" />
+    </button>
+  );
+}
+
+function ChangeDetail({ change }: { change: NonNullable<AuditEntry['change']> }) {
+  return (
+    <>
+      <p className="text-12 text-muted">รายละเอียดการเปลี่ยนแปลง</p>
+      <div className="mt-[10px] grid max-w-[460px] grid-cols-2 gap-[8px]">
+        <ChangeBox label="ก่อน" value={change.before} />
+        <ChangeBox label="หลัง" value={change.after} highlight />
+      </div>
+      {change.reason ? <p className="mt-[12px] text-12 text-muted">เหตุผล: {change.reason}</p> : null}
+    </>
   );
 }
 
@@ -130,7 +184,7 @@ function ChangeBox({ label, value, highlight }: { label: string; value: string; 
   return (
     <div className={cx('flex min-h-[80px] flex-col gap-[8px] rounded-[6px] border bg-white p-[12px]', highlight ? 'border-primary-500' : 'border-line')}>
       <p className="text-12 text-muted">{label}</p>
-      <p className="text-13 font-medium text-ink">{value}</p>
+      <p className="break-words text-13 font-medium text-ink">{value}</p>
     </div>
   );
 }

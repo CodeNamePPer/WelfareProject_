@@ -28,3 +28,13 @@ body {
     font-size: 0.875rem;
   }
 }
+
+@layer utilities {
+  /* Swipeable rows (tab bars) that should not show a scrollbar track. */
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
