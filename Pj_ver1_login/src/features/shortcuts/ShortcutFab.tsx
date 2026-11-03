@@ -44,14 +44,16 @@ export function ShortcutFab({ notificationCount }: { notificationCount: number |
   return (
     <div
       ref={rootRef}
-      className="fixed bottom-[16px] right-[16px] z-[25] flex flex-col items-end gap-[12px] sm:bottom-[24px] sm:right-[24px]"
+      // pointer-events-none: กล่องนี้กว้างเท่าเมนู แม้เมนูปิดอยู่ก็จะบังปุ่มที่อยู่ข้างใต้ (เช่น ปุ่มหน้าถัดไป) จึงให้คลิกทะลุ
+      // แล้วเปิดรับคลิกเฉพาะเมนูกับปุ่ม
+      className="pointer-events-none fixed bottom-[16px] right-[16px] z-[25] flex flex-col items-end gap-[12px] sm:bottom-[24px] sm:right-[24px]"
     >
       <nav
         id={menuId}
         aria-labelledby={titleId}
         inert={!open}
         className={cx(
-          'w-[min(320px,calc(100vw-32px))] origin-bottom-right rounded-[10px] border border-line bg-white p-[8px] shadow-popover',
+          'w-[min(320px,calc(100vw-32px))] origin-bottom-right pointer-events-auto rounded-[10px] border border-line bg-white p-[8px] shadow-popover',
           'duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
           // เปิด: visible ทันทีเพื่อให้ย้าย focus เข้าเมนูได้ · ปิด: คง visible จนจางหายแล้วจึงซ่อน
           open
@@ -118,7 +120,7 @@ export function ShortcutFab({ notificationCount }: { notificationCount: number |
         aria-controls={menuId}
         aria-label={open ? 'ปิดเมนูทางลัด' : 'เปิดเมนูทางลัด'}
         className={cx(
-          'relative inline-flex size-[56px] items-center justify-center rounded-full text-white shadow-popover',
+          'pointer-events-auto relative inline-flex size-[56px] items-center justify-center rounded-full text-white shadow-popover',
           'transition-[background-color,box-shadow,transform] duration-200 ease-out hover:shadow-[0_12px_28px_-6px_rgba(15,23,42,0.28)] active:scale-95',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 motion-reduce:transition-none',
           open ? 'bg-primary-700' : 'bg-primary-600 hover:bg-primary-700',
