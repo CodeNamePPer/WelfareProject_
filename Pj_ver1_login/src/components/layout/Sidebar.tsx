@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {
   Bell,
+  ChevronRight,
   FilePlus2,
   Gift,
   History,
@@ -24,9 +25,15 @@ interface NavItem {
   href?: string;
 }
 
+export interface SidebarUser {
+  name: string;
+  roleLabel: string;
+}
+
 interface SidebarProps {
   activeId: string;
   notificationCount: number;
+  user: SidebarUser;
   collapsed: boolean;
   mobileOpen: boolean;
   onToggleCollapse: () => void;
@@ -37,6 +44,7 @@ interface SidebarProps {
 export function Sidebar({
   activeId,
   notificationCount,
+  user,
   collapsed,
   mobileOpen,
   onToggleCollapse,
@@ -53,6 +61,8 @@ export function Sidebar({
   ];
 
   const hideWhenCollapsed = collapsed ? 'md:hidden' : '';
+  const profileActive = activeId === 'profile';
+  const userInitial = Array.from(user.name.trim())[0] ?? '?';
 
   const handleLogout = async () => {
     try {
@@ -161,18 +171,51 @@ export function Sidebar({
 
         <div className="flex-1" />
 
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={collapsed ? 'ออกจากระบบ' : undefined}
-          className={cx(
-            'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 text-muted hover:bg-danger/10 hover:text-danger cursor-pointer',
-            collapsed && 'md:justify-center',
-          )}
-        >
-          <LogOut className="size-4 shrink-0" aria-hidden="true" />
-          <span className={hideWhenCollapsed}>ออกจากระบบ</span>
-        </button>
+        {/* ผู้ที่เข้าระบบอยู่ – กดเพื่อดูโปรไฟล์ */}
+        <div className="flex flex-col gap-1 border-t border-line pt-3">
+          <Link
+            href="/admin/profile"
+            aria-current={profileActive ? 'page' : undefined}
+            aria-label={`โปรไฟล์ของฉัน: ${user.name}, ${user.roleLabel}`}
+            title={collapsed ? `${user.name} · ${user.roleLabel}` : undefined}
+            onClick={onCloseMobile}
+            className={cx(
+              'group flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors motion-reduce:transition-none',
+              collapsed && 'md:justify-center md:px-0',
+              profileActive ? 'bg-primary-100' : 'hover:bg-primary-50',
+            )}
+          >
+            <span
+              aria-hidden="true"
+              className={cx(
+                'flex size-8 shrink-0 items-center justify-center rounded-full text-13 font-semibold',
+                profileActive ? 'bg-white text-primary-700' : 'bg-primary-50 text-primary-700 group-hover:bg-white',
+              )}
+            >
+              {userInitial}
+            </span>
+            <span className={cx('min-w-0 flex-1 leading-tight', hideWhenCollapsed)}>
+              <span className={cx('block truncate text-13 font-semibold', profileActive ? 'text-primary-700' : 'text-ink')}>
+                {user.name}
+              </span>
+              <span className="block truncate text-11 text-muted">{user.roleLabel}</span>
+            </span>
+            <ChevronRight className={cx('size-4 shrink-0 text-muted', hideWhenCollapsed)} aria-hidden="true" />
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={collapsed ? 'ออกจากระบบ' : undefined}
+            className={cx(
+              'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 text-muted hover:bg-danger/10 hover:text-danger cursor-pointer',
+              collapsed && 'md:justify-center',
+            )}
+          >
+            <LogOut className="size-4 shrink-0" aria-hidden="true" />
+            <span className={hideWhenCollapsed}>ออกจากระบบ</span>
+          </button>
+        </div>
       </aside>
     </>
   );
