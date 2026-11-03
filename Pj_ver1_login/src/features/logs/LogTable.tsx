@@ -30,7 +30,7 @@ interface LogTableProps {
 }
 
 // Log table from Figma "Admin / Log" (node 163:896), shared by the Log page and the dashboard.
-// ประเภทอยู่ถัดจากเวลา ให้สแกนหาแท็กได้ทางซ้าย ส่วนปุ่มดูรายละเอียดการเปลี่ยนแปลงอยู่คอลัมน์ขวาสุด ตำแหน่งเดียวกับปุ่มคำสั่งของแถวในตารางอื่น
+// ประเภทอยู่ถัดจากเวลา ให้สแกนหาแท็กได้ทางซ้าย ส่วนปุ่มดูรายละเอียดอยู่คอลัมน์ขวาสุด ตำแหน่งเดียวกับปุ่มคำสั่งของแถวในตารางอื่น
 export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไม่พบ Log ที่ตรงกับเงื่อนไข' }: LogTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(defaultExpandedId);
 
@@ -96,7 +96,7 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
                           aria-controls={`log-detail-${entry.id}`}
                           className="inline-flex h-[30px] items-center gap-[4px] rounded-[6px] border border-primary-600/40 bg-white px-[10px] text-12 font-medium text-primary-700 transition-colors hover:border-primary-600 hover:bg-primary-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
                         >
-                          {expanded ? 'ซ่อนรายละเอียดการเปลี่ยนแปลง' : 'ดูรายละเอียดการเปลี่ยนแปลง'}
+                          {expanded ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'}
                           <ChevronDown className={cx('size-3.5 transition-transform motion-reduce:transition-none', expanded && 'rotate-180')} aria-hidden="true" />
                         </button>
                       ) : null}
