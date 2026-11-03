@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/access-denied?reason=role");
   }
 
-  const unread = countUnread(getAdminAlerts());
+  const unread = countUnread(await getAdminAlerts(session.sub));
 
   return (
     <ToastProvider>

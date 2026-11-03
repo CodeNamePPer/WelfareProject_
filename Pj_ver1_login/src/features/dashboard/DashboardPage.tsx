@@ -6,6 +6,8 @@ import { EmployeeClaimStats } from './EmployeeClaimStats';
 import { NotificationPanel } from './NotificationPanel';
 import { SummaryCards } from './SummaryCards';
 import { UsersByRolePanel } from './UsersByRolePanel';
+import { useToast } from '../../components/ui/Toast';
+import { updateAlert } from '../notifications/api';
 import { reviewHref } from '../notifications/alertVisuals';
 import type {
   AdminAlert,
@@ -39,7 +41,16 @@ export function DashboardPage({
   claims,
 }: DashboardPageProps) {
   const router = useRouter();
+  const { notify } = useToast();
   const go = (href: string) => () => router.push(href);
+
+  // กดตรวจสอบ = ปิดงานนั้นในฐานข้อมูล แล้วรีเฟรชตัวเลขแจ้งเตือนใน sidebar
+  const review = (alert: AdminAlert) => {
+    updateAlert({ action: 'resolve', id: alert.id })
+      .then(() => router.refresh())
+      .catch((err: Error) => notify(err.message));
+    router.push(reviewHref[alert.category] ?? '/admin/notifications');
+  };
 
   return (
     <div className="flex flex-col gap-[24px]">
@@ -57,7 +68,7 @@ export function DashboardPage({
         <NotificationPanel
           className="xl:col-span-3"
           alerts={alerts}
-          onReview={(alert) => router.push(reviewHref[alert.category] ?? '/admin/notifications')}
+          onReview={review}
           onViewAll={go('/admin/notifications')}
         />
         <UsersByRolePanel

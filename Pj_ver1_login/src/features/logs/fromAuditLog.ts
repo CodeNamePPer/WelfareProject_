@@ -64,6 +64,18 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
       ];
     }
 
+    if (row.action === 'NOTIFICATION_RESOLVE') {
+      return [
+        {
+          ...base,
+          title: 'ตรวจสอบการแจ้งเตือนแล้ว',
+          detail: row.detail ?? `แจ้งเตือน #${row.targetId ?? ''}`,
+          category: 'settings' as AuditCategory,
+          action: 'system',
+        },
+      ];
+    }
+
     const securityTitle = SECURITY_TITLES[row.action];
     if (securityTitle) {
       return [

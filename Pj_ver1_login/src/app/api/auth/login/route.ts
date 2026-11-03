@@ -2,9 +2,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { findUserByIdentifier, markLogin, verifyPassword } from "@/lib/auth/users";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
 import { verifyRecaptcha } from "@/lib/auth/recaptcha";
-import { checkLock, clearFailures, registerFailure } from "@/lib/auth/rate-limit";
+import { checkLock, clearFailures, LOCK_ATTEMPTS, LOCK_MINUTES, registerFailure } from "@/lib/auth/rate-limit";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
+import { createAdminAlert } from "@/lib/admin/alerts";
 
 export const runtime = "nodejs";
 
@@ -51,8 +52,16 @@ export async function POST(req: NextRequest) {
   const passwordOk = await verifyPassword(user, password);
 
   if (!user || !passwordOk) {
-    registerFailure(lockKey);
+    const justLocked = registerFailure(lockKey);
     await writeAudit({ action: "LOGIN_FAILED", userId: user?.employeeId ?? null, identifier, ip });
+    if (justLocked) {
+      await createAdminAlert({
+        category: "security",
+        title: `ล็อกอินผิดซ้ำ ${LOCK_ATTEMPTS} ครั้ง`,
+        description: `บัญชี ${identifier} ถูกล็อก ${LOCK_MINUTES} นาที${ip ? ` · IP ${ip}` : ""}`,
+        actionable: true,
+      });
+    }
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 401 });
   }
 

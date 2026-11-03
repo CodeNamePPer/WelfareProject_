@@ -7,8 +7,10 @@ import { FilterChips } from '../../components/ui/FilterChips';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Select } from '../../components/ui/Select';
+import { useToast } from '../../components/ui/Toast';
 import { cx } from '../../lib/cx';
 import { CategoryIcon, reviewButtonClass, reviewHref, toneOf } from './alertVisuals';
+import { updateAlert, type AlertUpdate } from './api';
 import type { AdminAlert } from '../../types';
 
 type Filter = 'all' | 'unread' | 'actionable' | 'access' | 'expiring' | 'security' | 'system';
@@ -45,6 +47,7 @@ function matchesFilter(alert: AdminAlert, filter: Filter): boolean {
 // Inbox layout: งานที่ต้องดำเนินการอยู่บนสุด ตามด้วยรายการทั้งหมดเรียงตามวัน
 export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert[] }) {
   const router = useRouter();
+  const { notify } = useToast();
   const [alerts, setAlerts] = useState(initialAlerts);
   const [filter, setFilter] = useState<Filter>('all');
   const [range, setRange] = useState<Range>('all');
@@ -80,16 +83,34 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
     setVisibleCount(PAGE_STEP);
   };
 
+  // แสดงผลทันที แล้วบันทึกลงฐานข้อมูล – ถ้าบันทึกไม่สำเร็จให้คืนค่าเดิมและแจ้งผู้ใช้
+  // สำเร็จแล้ว refresh เพื่อให้ตัวเลขใน sidebar / ปุ่มทางลัดตรงกับหน้านี้
+  const persist = (update: AlertUpdate, change: (items: AdminAlert[]) => AdminAlert[]) => {
+    const before = alerts;
+    setAlerts(change);
+    return updateAlert(update)
+      .then(() => router.refresh())
+      .catch((err: Error) => {
+        setAlerts(before);
+        notify(err.message);
+      });
+  };
+
   const review = (alert: AdminAlert) => {
-    setAlerts((prev) => prev.map((item) => (item.id === alert.id ? { ...item, unread: false, actionable: false } : item)));
+    persist({ action: 'resolve', id: alert.id }, (prev) =>
+      prev.map((item) => (item.id === alert.id ? { ...item, unread: false, actionable: false } : item)),
+    );
     const href = reviewHref[alert.category];
     if (href) router.push(href);
   };
 
   const toggleRead = (alert: AdminAlert) =>
-    setAlerts((prev) => prev.map((item) => (item.id === alert.id ? { ...item, unread: !item.unread } : item)));
+    persist({ action: alert.unread ? 'read' : 'unread', id: alert.id }, (prev) =>
+      prev.map((item) => (item.id === alert.id ? { ...item, unread: !item.unread } : item)),
+    );
 
-  const markAllRead = () => setAlerts((prev) => prev.map((item) => ({ ...item, unread: false })));
+  const markAllRead = () =>
+    persist({ action: 'read_all' }, (prev) => prev.map((item) => ({ ...item, unread: false })));
 
   return (
     <div className="flex flex-col gap-[20px]">
