@@ -1,5 +1,9 @@
+'use client';
+
+import { useState } from 'react';
 import { FileDown } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ExportCsvDialog } from '../../components/ui/ExportCsvDialog';
 import { StatusBadge, statusLabel } from '../../components/ui/StatusBadge';
 import { table } from '../../components/ui/table';
 import { downloadCsv } from '../../lib/csv';
@@ -7,15 +11,18 @@ import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { Claim, Employee } from '../../types';
 
+const CSV_COLUMNS = ['วันที่', 'รหัสพนักงาน', 'ผู้เบิก', 'สวัสดิการ', 'จำนวนเงิน', 'สถานะ'];
+
 // Admin sees claims read-only: approval belongs to HR / Finance.
 export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: Employee[] }) {
   const nameOf = new Map(employees.map((employee) => [employee.id, `${employee.name} (${employee.code})`]));
   const sorted = [...claims].sort((a, b) => b.date.localeCompare(a.date));
+  const [exporting, setExporting] = useState(false);
 
   const exportCsv = () =>
     downloadCsv(
       `welfare-claims-${new Date().toISOString().slice(0, 10)}.csv`,
-      ['วันที่', 'รหัสพนักงาน', 'ผู้เบิก', 'สวัสดิการ', 'จำนวนเงิน', 'สถานะ'],
+      CSV_COLUMNS,
       sorted.map((claim) => [
         claim.date,
         claim.employeeId,
@@ -35,10 +42,23 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           </h2>
           <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
         </div>
-        <Button onClick={exportCsv} disabled={sorted.length === 0} className="sm:w-[180px] disabled:opacity-50">
+        <Button onClick={() => setExporting(true)} disabled={sorted.length === 0} className="sm:w-[180px] disabled:opacity-50">
           <FileDown className="size-4" aria-hidden="true" />
           ส่งออก CSV
         </Button>
+        <ExportCsvDialog
+          open={exporting}
+          rowCount={sorted.length}
+          unit="รายการ"
+          filters={[]}
+          columns={CSV_COLUMNS}
+          personalData="ชื่อพนักงาน ยอดเงิน และประเภทสวัสดิการที่อาจบ่งบอกข้อมูลสุขภาพ"
+          onCancel={() => setExporting(false)}
+          onConfirm={() => {
+            exportCsv();
+            setExporting(false);
+          }}
+        />
       </header>
       <div className={table.wrapper}>
         <table className={table.table}>

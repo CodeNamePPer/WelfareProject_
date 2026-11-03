@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { FileDown } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ExportCsvDialog } from '../../components/ui/ExportCsvDialog';
 import { FilterChips } from '../../components/ui/FilterChips';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination, paginate } from '../../components/ui/Pagination';
@@ -15,6 +16,14 @@ import { LogTable, actionTag } from './LogTable';
 type Filter = 'all' | AuditCategory;
 
 const PAGE_SIZE = 20;
+
+const CATEGORY_LABELS: Record<AuditCategory, string> = {
+  settings: 'การตั้งค่าระบบ',
+  import: 'การนำเข้าข้อมูล',
+  issue: 'แจ้งปัญหาเว็บไซต์',
+};
+
+const CSV_COLUMNS = ['วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'รายการ', 'รายละเอียด', 'ประเภท', 'ก่อน', 'หลัง', 'เหตุผล'];
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -29,6 +38,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   // Year, month and search narrow the set; the chips then split it by category (counts follow the narrowed set).
   const scoped = useMemo(() => {
@@ -46,10 +56,17 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
 
   const resetPage = () => setPage(1);
 
+  const exportFilters = [
+    `ปี ${Number(year) + 543}`,
+    month === 'all' ? 'ทุกเดือน' : months[Number(month) - 1],
+    ...(filter === 'all' ? [] : [`ประเภท: ${CATEGORY_LABELS[filter]}`]),
+    ...(query.trim() ? [`ค้นหา "${query.trim()}"`] : []),
+  ];
+
   const exportCsv = () =>
     downloadCsv(
       `audit-log-${year}${month === 'all' ? '' : `-${month.padStart(2, '0')}`}.csv`,
-      ['วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'รายการ', 'รายละเอียด', 'ประเภท', 'ก่อน', 'หลัง', 'เหตุผล'],
+      CSV_COLUMNS,
       filtered.map((entry) => [
         entry.at.replace('T', ' '),
         entry.actor,
@@ -113,10 +130,23 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
               </option>
             ))}
           </Select>
-          <Button onClick={exportCsv} disabled={filtered.length === 0} className="col-span-2 sm:w-[180px] disabled:opacity-50">
+          <Button onClick={() => setExporting(true)} disabled={filtered.length === 0} className="col-span-2 sm:w-[180px] disabled:opacity-50">
             <FileDown className="size-4" aria-hidden="true" />
             ส่งออก CSV
           </Button>
+          <ExportCsvDialog
+            open={exporting}
+            rowCount={filtered.length}
+            unit="บันทึก"
+            filters={exportFilters}
+            columns={CSV_COLUMNS}
+            personalData="ชื่อผู้ดำเนินการ รวมถึงอีเมลและ IP address ในรายละเอียด"
+            onCancel={() => setExporting(false)}
+            onConfirm={() => {
+              exportCsv();
+              setExporting(false);
+            }}
+          />
         </div>
       </div>
 
@@ -130,9 +160,9 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
           }}
           options={[
             { id: 'all', label: 'ทั้งหมด', count: scoped.length },
-            { id: 'settings', label: 'การตั้งค่าระบบ', count: count('settings') },
-            { id: 'import', label: 'การนำเข้าข้อมูล', count: count('import') },
-            { id: 'issue', label: 'แจ้งปัญหาเว็บไซต์', count: count('issue') },
+            { id: 'settings', label: CATEGORY_LABELS.settings, count: count('settings') },
+            { id: 'import', label: CATEGORY_LABELS.import, count: count('import') },
+            { id: 'issue', label: CATEGORY_LABELS.issue, count: count('issue') },
           ]}
         />
 

@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import { FileDown, Pencil } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
+import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -33,6 +34,25 @@ const PAGE_SIZE = 20;
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
 
+const FILTER_LABELS: Record<Filter, string> = { all: "ทั้งหมด", ACTIVE: "ใช้งานอยู่", RESIGNED: "ลาออก" };
+
+const CSV_COLUMNS = [
+  "รหัสพนักงาน",
+  "ชื่อ",
+  "ชื่อเล่น",
+  "ชื่อล็อกอิน",
+  "อีเมลติดต่อ",
+  "เบอร์โทร",
+  "แผนก",
+  "ตำแหน่ง",
+  "ระดับ",
+  "หัวหน้า",
+  "วันเริ่มงาน",
+  "บทบาท",
+  "สถานะ",
+  "ใช้งานล่าสุด",
+];
+
 const roleLabel = (role: string) => ROLE_LABELS[role as Role] ?? role;
 const statusLabel = (status: string) => STATUS_LABELS[status] ?? status;
 
@@ -57,6 +77,7 @@ export default function AdminUsersClient({
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   // กรองตามสถานะ + รหัสพนักงาน ชื่อ ชื่อเล่น อีเมล แผนก หรือตำแหน่ง
   const filteredUsers = useMemo(() => {
@@ -80,25 +101,15 @@ export default function AdminUsersClient({
     revealDetail("user-panel");
   };
 
+  const exportFilters = [
+    ...(filter === "all" ? [] : [`สถานะ: ${FILTER_LABELS[filter]}`]),
+    ...(searchQuery.trim() ? [`ค้นหา "${searchQuery.trim()}"`] : []),
+  ];
+
   const exportCsv = () =>
     downloadCsv(
       "users.csv",
-      [
-        "รหัสพนักงาน",
-        "ชื่อ",
-        "ชื่อเล่น",
-        "ชื่อล็อกอิน",
-        "อีเมลติดต่อ",
-        "เบอร์โทร",
-        "แผนก",
-        "ตำแหน่ง",
-        "ระดับ",
-        "หัวหน้า",
-        "วันเริ่มงาน",
-        "บทบาท",
-        "สถานะ",
-        "ใช้งานล่าสุด",
-      ],
+      CSV_COLUMNS,
       filteredUsers.map((u) => {
         const p = u.profile;
         return [
@@ -127,10 +138,23 @@ export default function AdminUsersClient({
           <h2 id="user-list-title" className="text-17 font-semibold text-ink">
             รายชื่อผู้ใช้งานระบบ
           </h2>
-          <Button onClick={exportCsv} disabled={filteredUsers.length === 0} className="sm:w-[200px] disabled:opacity-50">
+          <Button onClick={() => setExporting(true)} disabled={filteredUsers.length === 0} className="sm:w-[200px] disabled:opacity-50">
             <FileDown className="size-4" aria-hidden="true" />
             ส่งออก CSV
           </Button>
+          <ExportCsvDialog
+            open={exporting}
+            rowCount={filteredUsers.length}
+            unit="คน"
+            filters={exportFilters}
+            columns={CSV_COLUMNS}
+            personalData="ชื่อ อีเมล เบอร์โทร และข้อมูลการจ้างงาน"
+            onCancel={() => setExporting(false)}
+            onConfirm={() => {
+              exportCsv();
+              setExporting(false);
+            }}
+          />
         </div>
 
         <SearchInput

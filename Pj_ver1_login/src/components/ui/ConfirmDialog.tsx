@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { Button } from './Button';
 
@@ -18,6 +18,7 @@ interface ConfirmDialogProps {
 // Native <dialog> + showModal(): focus stays inside, Escape closes, focus returns to the opener on close.
 export function ConfirmDialog({ open, title, description, confirmLabel, tone = 'primary', onConfirm, onCancel }: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     const dialog = ref.current;
@@ -33,7 +34,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, tone = '
   return (
     <dialog
       ref={ref}
-      aria-labelledby="confirm-dialog-title"
+      aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
         onCancel();
@@ -43,7 +44,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, tone = '
     >
       <div className="flex flex-col gap-[16px] p-[20px]">
         <div className="flex flex-col gap-[6px]">
-          <h2 id="confirm-dialog-title" className="text-17 font-semibold">
+          <h2 id={titleId} className="text-17 font-semibold">
             {title}
           </h2>
           <div className="text-14 text-muted">{description}</div>
