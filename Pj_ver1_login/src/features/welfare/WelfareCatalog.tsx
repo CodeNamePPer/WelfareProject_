@@ -1,8 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import { MoreVertical, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { FilterChips } from '../../components/ui/FilterChips';
 import { Pagination, paginate } from '../../components/ui/Pagination';
 import { SearchInput } from '../../components/ui/SearchInput';
@@ -40,6 +42,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
   const [page, setPage] = useState(1);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [menuCode, setMenuCode] = useState<string | null>(null);
+  const [disablingCode, setDisablingCode] = useState<string | null>(null);
 
   // "แก้ไขล่าสุด" = edited within RECENT_DAYS of the most recent edit.
   const recentFrom = useMemo(() => {
@@ -81,9 +84,10 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
         pick(item.code);
         setEditingCode(item.code);
       }}
-      onToggle={() => update(item.code, { status: item.status === 'active' ? 'inactive' : 'active' })}
+      onToggle={() => (item.status === 'active' ? setDisablingCode(item.code) : update(item.code, { status: 'active' }))}
     />
   );
+  const disabling = items.find((item) => item.code === disablingCode);
 
   const update = (code: string, patch: Partial<WelfareItem>) =>
     onItemsChange(items.map((item) => (item.code === code ? { ...item, ...patch, updatedAt: todayIso() } : item)));
@@ -297,6 +301,24 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
           เลือกสวัสดิการจากตารางเพื่อดูรายละเอียด
         </p>
       )}
+
+      <ConfirmDialog
+        open={Boolean(disabling)}
+        tone="danger"
+        title="หยุดใช้สวัสดิการนี้?"
+        description={
+          <>
+            <span className="font-medium text-ink">{disabling?.name}</span> ({disabling?.code}) จะไม่เปิดให้พนักงานยื่นคำขอใหม่
+            เปิดใช้งานอีกครั้งได้จากเมนูเดิม
+          </>
+        }
+        confirmLabel="หยุดใช้"
+        onCancel={() => setDisablingCode(null)}
+        onConfirm={() => {
+          if (disablingCode) update(disablingCode, { status: 'inactive' });
+          setDisablingCode(null);
+        }}
+      />
     </div>
   );
 }
@@ -313,13 +335,49 @@ function RowMenu({
   onToggle: () => void;
 }) {
   const itemClass = 'block w-full px-[12px] py-[8px] text-left text-13 text-ink hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none';
+
+  // ↑ ↓ Home End เลื่อนระหว่างรายการ (วนรอบ) · Escape ปิดแล้วคืนโฟกัสให้ปุ่ม ⋯ · Tab ปิดเมนู
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const menu = event.currentTarget;
+    const options = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    const current = options.indexOf(document.activeElement as HTMLElement);
+    const focusAt = (index: number) => options[(index + options.length) % options.length]?.focus();
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        focusAt(current + 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        focusAt(current - 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        focusAt(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        focusAt(options.length - 1);
+        break;
+      case 'Escape':
+        event.preventDefault();
+        menu.parentElement?.querySelector<HTMLElement>('[aria-haspopup="menu"]')?.focus();
+        onClose();
+        break;
+      case 'Tab':
+        onClose();
+        break;
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} aria-hidden="true" />
       <div
         role="menu"
         className="absolute top-[44px] right-[8px] z-20 w-[150px] overflow-hidden rounded-[8px] border border-line bg-white py-[4px] shadow-lg"
-        onKeyDown={(event) => event.key === 'Escape' && onClose()}
+        onKeyDown={onKeyDown}
       >
         <button
           type="button"
