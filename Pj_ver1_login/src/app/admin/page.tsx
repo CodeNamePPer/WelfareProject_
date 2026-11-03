@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
-// TODO: claims/periods รอตารางคำขอเบิกสวัสดิการ
-// mock claims อ้าง employeeId แบบเดิม (e3, e7, ...) จึงยังไม่ตรงกับรหัสพนักงานจริง
+// TODO: claims/periods รอตารางคำขอเบิกสวัสดิการ (ตอนนี้เป็นข้อมูลจำลองที่ผูกกับรหัสพนักงานจริงจาก seed)
 import { claims, periods } from "@/data/mock";
 import { getAdminAlerts } from "@/lib/admin/alerts";
 import { getSession } from "@/lib/auth/get-session";

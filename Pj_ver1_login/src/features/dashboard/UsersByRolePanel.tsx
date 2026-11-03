@@ -34,7 +34,8 @@ export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: Users
       {roles === null ? (
         <PanelError onRetry={onRetry} />
       ) : (
-        <div className="flex flex-col gap-[14px]">
+        // flex-1 ทั้งสายลงถึง li: เมื่อแผงถูกยืดให้สูงเท่าตาราง Log ข้างๆ แถวบทบาทจะกระจายเต็มแผงแทนการเหลือที่ว่างด้านล่าง
+        <div className="flex flex-1 flex-col gap-[14px]">
           {/* ตัวเลขจริงอยู่ในรายการด้านล่าง แถบนี้จึงเป็นภาพสรุปสำหรับผู้ใช้ screen reader แบบข้อความเดียว */}
           <div
             role="img"
@@ -48,9 +49,9 @@ export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: Users
             )}
           </div>
 
-          <ul className="flex flex-col divide-y divide-line">
+          <ul className="flex flex-1 flex-col divide-y divide-line">
             {roles.map((role, index) => (
-              <li key={role.id} className="flex items-center gap-[10px] py-[12px] first:pt-[4px] last:pb-0">
+              <li key={role.id} className="flex flex-1 items-center gap-[10px] py-[12px] first:pt-[4px] last:pb-0">
                 <span aria-hidden="true" className={cx('size-[10px] shrink-0 rounded-full', swatch(index))} />
                 <span className="min-w-0 flex-1 truncate text-14 text-ink" title={role.role}>
                   {role.role}

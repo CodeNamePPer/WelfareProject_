@@ -2,7 +2,7 @@ import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { table } from "@/components/ui/table";
 
-const ROW_COUNT = 6; // เท่ากับ PAGE_SIZE ใน LogsPage
+const ROW_COUNT = 10; // พอเต็มจอแรก – LogsPage แสดงหน้าละ 20
 const COLUMNS = ["วันเวลา", "ผู้ดำเนินการ", "รายการ", "รายละเอียด", "ประเภท"];
 
 // โครงหน้าประวัติการแก้ไข Log ระหว่างรอโหลด

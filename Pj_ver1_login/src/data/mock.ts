@@ -46,29 +46,45 @@ export const roleCounts: RoleCount[] = [
   { id: 'employee', role: 'พนักงานทั่วไป', count: 118 },
 ];
 
+// พนักงาน demo จาก supabase/seed.sql – id = รหัสพนักงาน ให้ตรงกับรายชื่อจริงที่ Dashboard ดึงจากตาราง users
 export const employees: Employee[] = [
-  { id: 'e3', code: 'E00003', name: 'สมชาย ใจดี' },
-  { id: 'e7', code: 'E00007', name: 'วิภา สุขสันต์' },
-  { id: 'e12', code: 'E00012', name: 'ธนากร แสงทอง' },
-  { id: 'e21', code: 'E00021', name: 'พิมพ์ชนก รัตนวงศ์' },
+  { id: 'E00011', code: 'E00011', name: 'กมลวรรณ แก้วมณี' },
+  { id: 'E00013', code: 'E00013', name: 'ณัฐธิดา บุญมา' },
+  { id: 'E00014', code: 'E00014', name: 'อนุชา ประเสริฐศรี' },
+  { id: 'E00015', code: 'E00015', name: 'ภูมิพัฒน์ จันทร์เพ็ญ' },
+  { id: 'E00016', code: 'E00016', name: 'ศิริพร มีสุข' },
 ];
 
 export const periods: Period[] = [
+  { id: '2026-11', label: '1 พ.ย. – 30 พ.ย. 2569', from: '2026-11-01', to: '2026-11-30' },
   { id: '2026-10', label: '1 ต.ค. – 31 ต.ค. 2569', from: '2026-10-01', to: '2026-10-31' },
   { id: '2026-09', label: '1 ก.ย. – 30 ก.ย. 2569', from: '2026-09-01', to: '2026-09-30' },
   { id: '2026', label: 'ทั้งปี 2569', from: '2026-01-01', to: '2026-12-31' },
 ];
 
+// TODO: แทนด้วยตารางคำขอเบิกจริง – ข้อมูลจำลอง 5 คน ช่วง ก.ย.–พ.ย. 2569 ครบทุกสถานะ
 export const claims: Claim[] = [
-  { id: 'c1', employeeId: 'e3', benefit: 'ผู้ป่วยนอก', amount: 1850, status: 'approved', date: '2026-10-08' },
-  { id: 'c2', employeeId: 'e3', benefit: 'สวัสดิการใช้จ่าย', amount: 1200, status: 'approved', date: '2026-10-14' },
-  { id: 'c3', employeeId: 'e3', benefit: 'ทันตกรรม', amount: 2400, status: 'pending', date: '2026-10-21' },
-  { id: 'c4', employeeId: 'e3', benefit: 'ผู้ป่วยนอก', amount: 650, status: 'rejected', date: '2026-10-27' },
-  { id: 'c5', employeeId: 'e3', benefit: 'ทุนการศึกษา', amount: 18000, status: 'approved', date: '2026-09-12' },
-  { id: 'c6', employeeId: 'e7', benefit: 'ผู้ป่วยใน', amount: 14500, status: 'approved', date: '2026-10-03' },
-  { id: 'c7', employeeId: 'e7', benefit: 'ค่าลิขสิทธิ์', amount: 9900, status: 'pending', date: '2026-10-25' },
-  { id: 'c8', employeeId: 'e12', benefit: 'สวัสดิการใช้จ่าย', amount: 3000, status: 'approved', date: '2026-10-02' },
-  { id: 'c9', employeeId: 'e12', benefit: 'ผู้ป่วยนอก', amount: 1200, status: 'pending', date: '2026-10-29' },
+  // ภูมิพัฒน์ – เบิกบ่อยสุด มีรอตรวจในเดือนนี้
+  { id: 'c1', employeeId: 'E00015', benefit: 'ผู้ป่วยนอก', amount: 1850, status: 'approved', date: '2026-09-08' },
+  { id: 'c2', employeeId: 'E00015', benefit: 'ค่าเดินทาง', amount: 1200, status: 'approved', date: '2026-10-06' },
+  { id: 'c3', employeeId: 'E00015', benefit: 'ทันตกรรม', amount: 2400, status: 'approved', date: '2026-10-14' },
+  { id: 'c4', employeeId: 'E00015', benefit: 'ผู้ป่วยนอก', amount: 650, status: 'rejected', date: '2026-10-27' },
+  { id: 'c5', employeeId: 'E00015', benefit: 'ค่าเล่าเรียนบุตร', amount: 12000, status: 'pending', date: '2026-11-02' },
+  { id: 'c6', employeeId: 'E00015', benefit: 'ค่าเดินทาง', amount: 980, status: 'pending', date: '2026-11-03' },
+  // ศิริพร – ผู้ป่วยในยอดสูง
+  { id: 'c7', employeeId: 'E00016', benefit: 'ผู้ป่วยใน', amount: 14500, status: 'approved', date: '2026-09-19' },
+  { id: 'c8', employeeId: 'E00016', benefit: 'ตรวจสุขภาพประจำปี', amount: 3500, status: 'approved', date: '2026-10-11' },
+  { id: 'c9', employeeId: 'E00016', benefit: 'ค่าแว่นสายตา', amount: 4200, status: 'pending', date: '2026-11-01' },
+  // กมลวรรณ
+  { id: 'c10', employeeId: 'E00011', benefit: 'ค่าเดินทาง', amount: 1500, status: 'approved', date: '2026-09-03' },
+  { id: 'c11', employeeId: 'E00011', benefit: 'ทันตกรรม', amount: 1800, status: 'approved', date: '2026-10-02' },
+  { id: 'c12', employeeId: 'E00011', benefit: 'ผู้ป่วยนอก', amount: 2200, status: 'pending', date: '2026-10-29' },
+  // ณัฐธิดา – มีรายการถูกปฏิเสธ
+  { id: 'c13', employeeId: 'E00013', benefit: 'ค่าแว่นสายตา', amount: 6500, status: 'rejected', date: '2026-09-22' },
+  { id: 'c14', employeeId: 'E00013', benefit: 'ค่าแว่นสายตา', amount: 5000, status: 'approved', date: '2026-10-05' },
+  { id: 'c15', employeeId: 'E00013', benefit: 'ผู้ป่วยนอก', amount: 900, status: 'approved', date: '2026-10-18' },
+  // อนุชา – เบิกน้อย
+  { id: 'c16', employeeId: 'E00014', benefit: 'ตรวจสุขภาพประจำปี', amount: 3500, status: 'approved', date: '2026-10-09' },
 ];
 
 // ─── ข้อมูลผู้ใช้งานระบบ (Mock) ────────────────────────────────────────────

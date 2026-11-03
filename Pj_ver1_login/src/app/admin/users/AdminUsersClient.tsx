@@ -29,7 +29,7 @@ type User = {
 
 type Filter = "all" | "ACTIVE" | "RESIGNED";
 
-const PAGE_SIZE = 7;
+const PAGE_SIZE = 20;
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
 
@@ -241,15 +241,24 @@ const inputClass =
 
 type InfoRow = [label: string, value: ReactNode];
 
+// แถวที่ยังไม่มีค่าไม่แสดงเป็น "—" ทีละบรรทัด แต่รวมชื่อไว้บรรทัดเดียวท้ายหมวด ให้แผงสั้นลงและรู้ว่าขาดอะไร
 function InfoRows({ rows }: { rows: InfoRow[] }) {
+  const filled = rows.filter(([, value]) => value);
+  const missing = rows.filter(([, value]) => !value).map(([label]) => label);
   return (
     <dl className="flex flex-col gap-[8px]">
-      {rows.map(([label, value]) => (
+      {filled.map(([label, value]) => (
         <div key={label} className="flex items-start justify-between gap-3 text-13">
           <dt className="shrink-0 text-muted">{label}</dt>
-          <dd className={cx("min-w-0 break-words text-right", value ? "font-medium text-ink" : "text-muted")}>{value || "—"}</dd>
+          <dd className="min-w-0 break-words text-right font-medium text-ink">{value}</dd>
         </div>
       ))}
+      {missing.length > 0 ? (
+        <div className="text-12 text-muted">
+          <dt className="sr-only">ยังไม่กรอก</dt>
+          <dd>ยังไม่กรอก: {missing.join(", ")}</dd>
+        </div>
+      ) : null}
     </dl>
   );
 }
