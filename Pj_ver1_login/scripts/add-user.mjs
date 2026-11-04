@@ -73,7 +73,17 @@ async function run() {
     process.exit(1);
   }
 
+  // คนสร้างบัญชีรู้รหัสแรก จึงบังคับให้เจ้าของบัญชีตั้งรหัสใหม่ตอนล็อกอินครั้งแรก
+  const { data: emp } = await supabase.from("employee").select("id").eq("employee_code", code).maybeSingle();
+  const { error: flagError } = emp
+    ? await supabase.from("employee_credential").update({ must_change_password: true }).eq("employee_id", emp.id)
+    : { error: new Error("ไม่พบพนักงานที่เพิ่งสร้าง") };
+  if (flagError) {
+    console.warn("⚠️ ตั้งค่าบังคับเปลี่ยนรหัสผ่านไม่สำเร็จ:", flagError.message);
+  }
+
   console.log(`✅ เพิ่ม ${loginName} (${role}) รหัสพนักงาน ${code} ลงใน Supabase สำเร็จแล้ว!`);
+  console.log("   เจ้าของบัญชีต้องตั้งรหัสผ่านใหม่ตอนล็อกอินครั้งแรก");
 }
 
 run();

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { FileDown, Pencil } from "lucide-react";
+import { Copy, FileDown, KeyRound, Pencil } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
@@ -63,10 +63,13 @@ export default function AdminUsersClient({
   initialUsers,
   orgOptions,
   initialSelectedId,
+  currentUserId,
 }: {
   initialUsers: User[];
   orgOptions: OrgOptions;
   initialSelectedId?: string;
+  /** ผู้ที่ล็อกอินอยู่ (รีเซ็ตรหัสของตัวเองจากหน้านี้ไม่ได้) */
+  currentUserId: string;
 }) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -297,6 +300,7 @@ export default function AdminUsersClient({
         <UserPanel
           key={selected.employeeId}
           user={selected}
+          isSelf={selected.employeeId === currentUserId}
           orgOptions={orgOptions}
           managerChoices={users
             .filter((u) => u.status === "ACTIVE" && u.employeeId !== selected.employeeId)
@@ -481,11 +485,13 @@ function toChoices(options: OrgOption[], currentId: string | null, currentName: 
 /** ข้อมูลผู้ใช้ในการ์ดเดียว แต่ละส่วนแก้ไขแยกกัน (แก้ได้ทีละส่วน) */
 function UserPanel({
   user,
+  isSelf,
   orgOptions,
   managerChoices,
   onSaved,
 }: {
   user: User;
+  isSelf: boolean;
   orgOptions: OrgOptions;
   managerChoices: Choice[];
   onSaved: (user: User) => void;
@@ -727,6 +733,181 @@ function UserPanel({
           </section>
         );
       })}
+
+      <ResetPasswordSection user={user} isSelf={isSelf} dimmed={editing !== null} />
     </aside>
+  );
+}
+
+/**
+ * รีเซ็ตรหัสผ่าน (พนักงานลืมรหัส → HR/IT ยืนยันตัวตนแล้ว → Admin ออกรหัสชั่วคราว)
+ * รหัสชั่วคราวแสดงครั้งเดียว ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
+ */
+function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: boolean; dimmed: boolean }) {
+  const [step, setStep] = useState<"idle" | "confirm" | "done">("idle");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const blocked = isSelf
+    ? "รหัสผ่านของตัวเองให้เปลี่ยนที่หน้าโปรไฟล์"
+    : user.status !== "ACTIVE"
+      ? "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่"
+      : null;
+
+  const close = () => {
+    setStep("idle");
+    setReason("");
+    setError(null);
+    setTempPassword(null);
+    setEmailedTo(null);
+    setEmailError(null);
+    setCopied(false);
+  };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!reason.trim()) {
+      setError("กรุณาระบุเหตุผลการรีเซ็ตรหัสผ่าน");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: user.employeeId, reason: reason.trim() }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || !(result.tempPassword || result.emailedTo)) {
+        setError(result.error || "รีเซ็ตรหัสผ่านไม่สำเร็จ");
+      } else {
+        setTempPassword(result.tempPassword ?? null);
+        setEmailedTo(result.emailedTo ?? null);
+        setEmailError(result.emailError ?? null);
+        setStep("done");
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน");
+    }
+    setSaving(false);
+  };
+
+  const copy = async () => {
+    if (!tempPassword) return;
+    try {
+      await navigator.clipboard.writeText(tempPassword);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <section
+      aria-label="รหัสผ่าน"
+      className={cx("flex flex-col gap-[10px] border-t border-line pt-[14px]", dimmed && step === "idle" && "opacity-60")}
+    >
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <h3 className="text-13 font-semibold text-ink">รหัสผ่าน</h3>
+        {step === "idle" ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setStep("confirm")}
+            disabled={dimmed || blocked !== null}
+            className="disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <KeyRound className="size-3.5" aria-hidden="true" />
+            รีเซ็ตรหัสผ่าน
+          </Button>
+        ) : null}
+      </div>
+
+      {step === "idle" ? (
+        <p className="text-12 text-muted">{blocked ?? "ใช้เมื่อพนักงานลืมรหัสผ่าน ยืนยันตัวตนกับพนักงานก่อนรีเซ็ตทุกครั้ง"}</p>
+      ) : null}
+
+      {step === "confirm" ? (
+        <form onSubmit={submit} className="flex flex-col gap-[12px]">
+          <ul className="list-disc space-y-[2px] pl-[18px] text-12 text-muted">
+            <li>
+              {user.profile.contactEmail && !user.profile.contactEmail.endsWith(".invalid")
+                ? `ระบบจะส่งรหัสชั่วคราวไปที่ ${user.profile.contactEmail}`
+                : "พนักงานไม่มีอีเมลติดต่อ ระบบจะแสดงรหัสชั่วคราวบนจอครั้งเดียว"}
+            </li>
+            <li>{user.name} ต้องตั้งรหัสใหม่ตอนล็อกอินครั้งถัดไป</li>
+            <li>ทุกเครื่องที่ล็อกอินค้างไว้จะถูกออกจากระบบ</li>
+          </ul>
+          <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
+            <span>
+              เหตุผลการรีเซ็ต <span className="text-danger">*</span>
+            </span>
+            <textarea
+              rows={2}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={500}
+              autoFocus
+              placeholder="เช่น พนักงานลืมรหัสผ่าน ยืนยันตัวตนด้วยบัตรพนักงานแล้ว"
+              className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-13 font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            />
+          </label>
+          {error ? (
+            <p role="alert" className="text-12 text-danger">
+              {error}
+            </p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-[8px]">
+            <Button onClick={close} disabled={saving}>
+              ยกเลิก
+            </Button>
+            <Button type="submit" variant="danger" disabled={saving} className="disabled:cursor-not-allowed disabled:opacity-50">
+              {saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
+      {step === "done" && emailedTo ? (
+        <div role="status" className="flex flex-col gap-[10px] rounded-lg border border-line bg-surface p-[12px]">
+          <p className="text-13 font-medium text-ink">ส่งรหัสผ่านชั่วคราวแล้ว</p>
+          <p className="break-words text-12 text-muted">
+            ส่งไปที่ <span className="font-medium text-ink">{emailedTo}</span> ให้ {user.name} เช็กอีเมล (รวมถึงโฟลเดอร์สแปม)
+            แล้วล็อกอินเพื่อตั้งรหัสใหม่ ถ้าไม่ได้รับอีเมล ให้รีเซ็ตอีกครั้ง
+          </p>
+          <Button variant="primary" onClick={close}>
+            เสร็จสิ้น
+          </Button>
+        </div>
+      ) : null}
+
+      {step === "done" && tempPassword ? (
+        <div role="status" className="flex flex-col gap-[10px] rounded-lg border border-line bg-surface p-[12px]">
+          <p className="text-13 font-medium text-ink">รหัสผ่านชั่วคราวของ {user.name}</p>
+          {emailError ? <p className="text-12 text-danger">{emailError} จึงแสดงรหัสบนจอแทน</p> : null}
+          <div className="flex items-center gap-[8px]">
+            <code className="min-w-0 flex-1 select-all break-all rounded-md border border-line bg-white px-3 py-2 font-mono text-14 tracking-wider text-ink">
+              {tempPassword}
+            </code>
+            <Button size="sm" onClick={copy} aria-label="คัดลอกรหัสผ่านชั่วคราว">
+              <Copy className="size-3.5" aria-hidden="true" />
+              {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+            </Button>
+          </div>
+          <p className="text-12 text-muted">
+            แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตใหม่
+          </p>
+          <Button variant="primary" onClick={close}>
+            เสร็จสิ้น
+          </Button>
+        </div>
+      ) : null}
+    </section>
   );
 }

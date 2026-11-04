@@ -9,6 +9,10 @@ export interface SessionPayload {
   name: string;
   email: string;
   role: Role;
+  /** employee_credential.password_changed_at (ms) ตอนออก session — ไม่ตรงกับในตาราง = session ใช้ไม่ได้แล้ว */
+  pwd: number;
+  /** ต้องตั้งรหัสผ่านใหม่ก่อนใช้งานหน้าอื่น */
+  mcp?: boolean;
 }
 
 function getKey(): Uint8Array {

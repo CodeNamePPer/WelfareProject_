@@ -39,6 +39,7 @@ const SECURITY_TITLES: Partial<Record<DbAuditAction, string>> = {
   LOGIN_BLOCKED_LOCKED: 'บล็อกการล็อกอิน: บัญชีถูกล็อก',
   LOGIN_BLOCKED_RECAPTCHA: 'บล็อกการล็อกอิน: reCAPTCHA ไม่ผ่าน',
   LOGIN_BLOCKED_INACTIVE: 'บล็อกการล็อกอิน: บัญชีไม่ได้ใช้งาน',
+  PASSWORD_CHANGE_FAILED: 'เปลี่ยนรหัสผ่านไม่สำเร็จ: รหัสปัจจุบันไม่ถูกต้อง',
 };
 
 const roleLabel = (role: string) => ROLE_LABELS[role as Role] ?? role;
@@ -113,6 +114,34 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
           category: 'settings' as AuditCategory,
           target: row.targetId ? { code: `แจ้งเตือน #${row.targetId}`, href: '/admin/notifications' } : undefined,
           action: 'system',
+        },
+      ];
+    }
+
+    if (row.action === 'PASSWORD_RESET') {
+      const targetName = (row.targetId && users.get(row.targetId)?.name) || undefined;
+      return [
+        {
+          ...base,
+          title: `รีเซ็ตรหัสผ่านของ ${targetName ?? row.targetId ?? ''}`,
+          detail: row.detail ?? 'ออกรหัสชั่วคราว ต้องตั้งรหัสใหม่ตอนล็อกอิน',
+          category: 'settings' as AuditCategory,
+          action: 'security',
+          target: row.targetId ? { code: row.targetId, name: targetName, href: `/admin/users?user=${row.targetId}` } : undefined,
+          change: { fields: [], reason: row.reason },
+        },
+      ];
+    }
+
+    if (row.action === 'PASSWORD_CHANGE') {
+      return [
+        {
+          ...base,
+          title: 'เปลี่ยนรหัสผ่านด้วยตนเอง',
+          detail: row.detail ?? '',
+          category: 'settings' as AuditCategory,
+          action: 'security',
+          target: row.userId ? { code: row.userId, name: actor?.name, href: `/admin/users?user=${row.userId}` } : undefined,
         },
       ];
     }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Tag } from "@/components/ui/Tag";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import type { EmployeeProfile, UserWithProfile } from "@/lib/auth/users";
@@ -165,6 +166,22 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
           ))}
         </div>
       </article>
+
+      <section aria-labelledby="profile-password" className="rounded-[10px] border border-line bg-white p-[20px]">
+        <div className="flex flex-col gap-[16px] lg:flex-row lg:gap-[40px]">
+          <div className="flex flex-col gap-[6px] lg:w-[280px] lg:shrink-0">
+            <h3 id="profile-password" className="text-14 font-semibold text-ink">
+              เปลี่ยนรหัสผ่าน
+            </h3>
+            <p className="text-13 text-muted">
+              เปลี่ยนแล้วเครื่องอื่นที่ล็อกอินค้างไว้จะถูกออกจากระบบ ถ้าลืมรหัสผ่าน ให้ Admin อีกคนรีเซ็ตให้
+            </p>
+          </div>
+          <div className="w-full max-w-[400px]">
+            <ChangePasswordForm employeeId={user.employeeId} loginName={user.email} />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

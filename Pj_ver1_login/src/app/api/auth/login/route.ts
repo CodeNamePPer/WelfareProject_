@@ -84,17 +84,21 @@ export async function POST(req: NextRequest) {
 
   // 5) สำเร็จ: ออก session ใน httpOnly cookie
   clearFailures(lockKey);
+  const mustChange = user.passwordState?.mustChange ?? false;
   const token = await createSessionToken({
     sub: user.employeeId,
     name: user.name,
     email: user.email,
     role: user.role,
+    pwd: user.passwordState?.changedAt ?? 0,
+    // บัญชีใหม่ / เพิ่งถูกรีเซ็ต: middleware พาไปหน้าตั้งรหัสผ่านใหม่ก่อน
+    ...(mustChange ? { mcp: true } : {}),
   });
 
   await markLogin(user.employeeId);
   await writeAudit({ action: "LOGIN_SUCCESS", userId: user.employeeId, identifier, ip });
 
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, mustChangePassword: mustChange });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return res;
 }

@@ -21,7 +21,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   return (
     <div className="flex flex-col gap-[24px]">
       <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
-      <AdminUsersClient initialUsers={users} orgOptions={orgOptions} initialSelectedId={initialSelectedId} />
+      <AdminUsersClient initialUsers={users} orgOptions={orgOptions} initialSelectedId={initialSelectedId} currentUserId={session.sub} />
     </div>
   );
 }
