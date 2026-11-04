@@ -31,6 +31,10 @@ function timeOf(iso: string): string {
   return iso.slice(11, 16);
 }
 
+/** การนำเข้าไม่มีเป้าหมายเป็นคน/สวัสดิการ ใช้ชื่อไฟล์แทน */
+const targetOf = (entry: AuditEntry): AuditTarget | undefined =>
+  entry.target ?? (entry.importSummary ? { code: entry.importSummary.file, name: `${entry.importSummary.total.toLocaleString('th-TH')} รายการ` } : undefined);
+
 const hasDetail = (entry: AuditEntry) => Boolean(entry.change || entry.importSummary || entry.ip);
 
 interface LogTableProps {
@@ -56,7 +60,7 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
             <th scope="col" className={cx(table.th, 'w-[90px]')}>เวลา</th>
             <th scope="col" className={cx(table.th, 'w-[150px]')}>ประเภท</th>
             <th scope="col" className={cx(table.th, 'w-[190px]')}>ผู้ดำเนินการ</th>
-            <th scope="col" className={cx(table.th, 'w-[190px]')}>เป้าหมาย</th>
+            <th scope="col" className={cx(table.th, 'min-w-[190px]')}>เป้าหมาย</th>
             <th scope="col" className={cx(table.th, 'w-full')}>รายละเอียด</th>
             <th scope="col" className={table.th}>
               <span className="sr-only">การเปลี่ยนแปลง</span>
@@ -103,7 +107,7 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
                       </div>
                     </td>
                     <td className={td()}>
-                      <TargetCell target={entry.target} />
+                      <TargetCell target={targetOf(entry)} />
                     </td>
                     <td className={td()}>
                       <p>{entry.title}</p>
@@ -149,9 +153,9 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
                 </time>
               </div>
               <p className="mt-[8px] break-words">{entry.title}</p>
-              {entry.target ? (
+              {targetOf(entry) ? (
                 <div className="mt-[2px] text-12">
-                  <TargetCell target={entry.target} inline />
+                  <TargetCell target={targetOf(entry)} inline />
                 </div>
               ) : null}
               {entry.detail ? <p className="break-words text-12 text-muted">{entry.detail}</p> : null}
@@ -233,16 +237,23 @@ function EntryDetail({ entry }: { entry: AuditEntry }) {
         <div>
           <p className="text-12 text-muted">รายละเอียดการเปลี่ยนแปลง</p>
           <div className="mt-[8px] max-w-[640px] overflow-hidden rounded-[6px] border border-line bg-white">
-            <div className="grid grid-cols-[minmax(90px,140px)_1fr_1fr] gap-x-[12px] border-b border-line bg-surface px-[12px] py-[8px] text-12 text-muted">
+            {/* จอเล็ก: ชื่อฟิลด์อยู่บรรทัดบน ก่อน/หลังเรียงคู่กันด้านล่าง */}
+            <div className="hidden grid-cols-[minmax(90px,140px)_1fr_1fr] gap-x-[12px] border-b border-line bg-surface px-[12px] py-[8px] text-12 text-muted sm:grid">
               <span>ฟิลด์</span>
               <span>ก่อน</span>
               <span>หลัง</span>
             </div>
             {change.fields.map((field) => (
-              <div key={field.label} className="grid grid-cols-[minmax(90px,140px)_1fr_1fr] gap-x-[12px] border-b border-line px-[12px] py-[10px] text-13 last:border-b-0">
-                <span className="text-muted">{field.label}</span>
-                <span className="break-words text-muted">{field.before}</span>
-                <span className="break-words font-medium text-ink">{field.after}</span>
+              <div key={field.label} className="grid grid-cols-2 gap-x-[12px] gap-y-[4px] border-b border-line px-[12px] py-[10px] text-13 last:border-b-0 sm:grid-cols-[minmax(90px,140px)_1fr_1fr]">
+                <span className="col-span-2 font-medium text-muted sm:col-span-1 sm:font-normal">{field.label}</span>
+                <span className="break-words text-muted">
+                  <span className="block text-11 sm:hidden">ก่อน</span>
+                  {field.before}
+                </span>
+                <span className="break-words font-medium text-ink">
+                  <span className="block text-11 font-normal text-muted sm:hidden">หลัง</span>
+                  {field.after}
+                </span>
               </div>
             ))}
           </div>

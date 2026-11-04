@@ -4,7 +4,34 @@ import type { AuditCategory, AuditEntry, AuditTarget } from '../../types';
 
 type UserInfo = { name: string; role: string };
 
-const FIELD_LABELS: Record<string, string> = { name: 'ชื่อ', email: 'อีเมล', role: 'บทบาท', status: 'สถานะ' };
+// ป้ายชื่อตรงกับ FieldSpec ใน src/app/api/admin/users/route.ts
+const FIELD_LABELS: Record<string, string> = {
+  name: 'ชื่อ',
+  // คอลัมน์ email ของบัญชีเก็บชื่อล็อกอิน (หน้าตั้งค่าผู้ใช้เรียกว่า "ชื่อล็อกอิน")
+  email: 'ชื่อล็อกอิน',
+  role: 'บทบาท',
+  status: 'สถานะ',
+  titleTh: 'คำนำหน้า',
+  firstNameTh: 'ชื่อ (ไทย)',
+  lastNameTh: 'นามสกุล (ไทย)',
+  firstNameEn: 'ชื่อ (อังกฤษ)',
+  lastNameEn: 'นามสกุล (อังกฤษ)',
+  nickname: 'ชื่อเล่น',
+  contactEmail: 'อีเมลติดต่อ',
+  phone: 'เบอร์โทร',
+  emergencyContactName: 'ผู้ติดต่อฉุกเฉิน',
+  emergencyContactPhone: 'เบอร์ผู้ติดต่อฉุกเฉิน',
+  addressLine: 'ที่อยู่',
+  subdistrict: 'ตำบล/แขวง',
+  district: 'อำเภอ/เขต',
+  province: 'จังหวัด',
+  postalCode: 'รหัสไปรษณีย์',
+  departmentId: 'แผนก',
+  positionId: 'ตำแหน่ง',
+  jobLevelId: 'ระดับ',
+  managerCode: 'หัวหน้า',
+  hireDate: 'วันเริ่มงาน',
+};
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'ทำงานอยู่', RESIGNED: 'ลาออก' };
 
 const SECURITY_TITLES: Partial<Record<DbAuditAction, string>> = {
@@ -31,10 +58,10 @@ function toBangkokLocal(iso: string): string {
     .replace(' ', 'T');
 }
 
-/** ล็อกอินด้วยรหัสพนักงานหรืออีเมล: ถ้าตรงกับผู้ใช้ในระบบให้ลิงก์ไปหาคนนั้น */
+/** ค่าที่พิมพ์ในช่องล็อกอิน: ถ้าตรงกับรหัสพนักงานในระบบให้ลิงก์ไปหาคนนั้น ไม่งั้นระบุว่าเป็นแค่ข้อความที่กรอก */
 function targetFromIdentifier(identifier: string, users: Map<string, UserInfo>): AuditTarget {
   const user = users.get(identifier);
-  return user ? { code: identifier, name: user.name, href: `/admin/users?user=${identifier}` } : { code: identifier };
+  return user ? { code: identifier, name: user.name, href: `/admin/users?user=${identifier}` } : { code: identifier, name: 'ชื่อที่ใช้ล็อกอิน' };
 }
 
 /**
@@ -99,7 +126,6 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
           detail: row.detail ?? '',
           category: 'issue',
           action: 'security',
-          result: 'failed',
           target: row.identifier ? targetFromIdentifier(row.identifier, users) : undefined,
         },
       ];

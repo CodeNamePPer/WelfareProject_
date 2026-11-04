@@ -335,7 +335,7 @@ export const auditEntries: AuditEntry[] = [
   {
     id: 'g3', at: '2026-10-10T17:15', actor: 'ระบบ', actorRole: 'ระบบ', ip: '203.0.113.48',
     title: 'ล็อกบัญชีอัตโนมัติ', detail: 'ล็อกอินผิด 5 ครั้ง',
-    category: 'issue', action: 'security', result: 'failed',
+    category: 'issue', action: 'security',
     target: { code: 'E00012', name: 'พิมพ์ชนก รัตนวงศ์', href: userHref('E00012') },
     change: { fields: [{ label: 'สถานะบัญชี', before: 'ใช้งาน', after: 'ถูกล็อก 30 นาที' }] },
   },
