@@ -1,6 +1,6 @@
 import type { AuditEntry as DbAuditEntry, AuditAction as DbAuditAction } from '../../lib/auth/audit';
 import { ROLE_LABELS, type Role } from '../../lib/auth/roles';
-import type { AuditCategory, AuditEntry } from '../../types';
+import type { AuditCategory, AuditEntry, AuditTarget } from '../../types';
 
 type UserInfo = { name: string; role: string };
 
@@ -31,6 +31,12 @@ function toBangkokLocal(iso: string): string {
     .replace(' ', 'T');
 }
 
+/** ล็อกอินด้วยรหัสพนักงานหรืออีเมล: ถ้าตรงกับผู้ใช้ในระบบให้ลิงก์ไปหาคนนั้น */
+function targetFromIdentifier(identifier: string, users: Map<string, UserInfo>): AuditTarget {
+  const user = users.get(identifier);
+  return user ? { code: identifier, name: user.name, href: `/admin/users?user=${identifier}` } : { code: identifier };
+}
+
 /**
  * แปลงแถวจาก Supabase `audit_logs` เป็นรายการที่หน้า Log แสดง
  * ล็อกอิน/ออกสำเร็จไม่ถือเป็นการแก้ไข จึงไม่แสดงในหน้านี้
@@ -43,23 +49,30 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
       at: toBangkokLocal(row.at),
       actor: row.userId ? (actor ? `${actor.name} (${row.userId})` : row.userId) : 'ระบบ',
       actorRole: actor ? roleLabel(actor.role) : 'ระบบ',
+      ip: row.ip ?? undefined,
     };
 
     if (row.action === 'USER_UPDATE') {
       const changes = row.changes ?? {};
       const fields = Object.keys(changes);
-      const targetName = (row.targetId && users.get(row.targetId)?.name) || row.targetId || '';
+      const targetName = (row.targetId && users.get(row.targetId)?.name) || undefined;
       const isRoleOnly = fields.length === 1 && fields[0] === 'role';
-      const line = (pick: 'old' | 'new') =>
-        fields.map((f) => `${FIELD_LABELS[f] ?? f}: ${fieldValue(f, changes[f][pick])}`).join(' · ');
       return [
         {
           ...base,
-          title: isRoleOnly ? `เปลี่ยนบทบาทของ ${targetName}` : `แก้ไขข้อมูลผู้ใช้ ${targetName}`,
-          detail: `${row.targetId ?? ''} · ${fields.map((f) => FIELD_LABELS[f] ?? f).join(', ')}`,
+          title: isRoleOnly ? `เปลี่ยนบทบาทของ ${targetName ?? row.targetId ?? ''}` : `แก้ไขข้อมูลผู้ใช้ ${targetName ?? row.targetId ?? ''}`,
+          detail: fields.map((f) => FIELD_LABELS[f] ?? f).join(', '),
           category: 'settings' as AuditCategory,
           action: fields.includes('role') ? 'role-change' : 'user-update',
-          change: { before: line('old'), after: line('new'), reason: row.reason },
+          target: row.targetId ? { code: row.targetId, name: targetName, href: `/admin/users?user=${row.targetId}` } : undefined,
+          change: {
+            fields: fields.map((f) => ({
+              label: FIELD_LABELS[f] ?? f,
+              before: fieldValue(f, changes[f].old),
+              after: fieldValue(f, changes[f].new),
+            })),
+            reason: row.reason,
+          },
         },
       ];
     }
@@ -69,8 +82,9 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
         {
           ...base,
           title: 'ตรวจสอบการแจ้งเตือนแล้ว',
-          detail: row.detail ?? `แจ้งเตือน #${row.targetId ?? ''}`,
+          detail: row.detail ?? '',
           category: 'settings' as AuditCategory,
+          target: row.targetId ? { code: `แจ้งเตือน #${row.targetId}`, href: '/admin/notifications' } : undefined,
           action: 'system',
         },
       ];
@@ -82,9 +96,11 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
         {
           ...base,
           title: securityTitle,
-          detail: [row.identifier, row.ip ? `IP ${row.ip}` : null, row.detail].filter(Boolean).join(' · '),
+          detail: row.detail ?? '',
           category: 'issue',
           action: 'security',
+          result: 'failed',
+          target: row.identifier ? targetFromIdentifier(row.identifier, users) : undefined,
         },
       ];
     }

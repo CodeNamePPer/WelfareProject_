@@ -1,11 +1,38 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { table } from '../../components/ui/table';
-import { cx } from '../../lib/cx';
-import { formatShortThaiDate } from '../../lib/format';
+import { FilterChips } from '../../components/ui/FilterChips';
+import { Pagination, paginate } from '../../components/ui/Pagination';
+import { SearchInput } from '../../components/ui/SearchInput';
+import { LogTable } from '../logs/LogTable';
 import type { AuditEntry } from '../../types';
 
-// Welfare-related entries from the audit log; the full log lives at /admin/logs.
+type Filter = 'all' | 'welfare' | 'import';
+
+const PAGE_SIZE = 10;
+
+const isImport = (entry: AuditEntry) => entry.category === 'import';
+
+// Welfare-related entries from the audit log, shown with the same table as /admin/logs.
 export function HistoryTab({ entries }: { entries: AuditEntry[] }) {
+  const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+
+  const scoped = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter((entry) =>
+      `${entry.actor} ${entry.target?.code ?? ''} ${entry.target?.name ?? ''} ${entry.title} ${entry.detail} ${entry.importSummary?.file ?? ''}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [entries, query]);
+
+  const filtered = filter === 'all' ? scoped : scoped.filter((entry) => (filter === 'import' ? isImport(entry) : !isImport(entry)));
+  const importCount = scoped.filter(isImport).length;
+
   return (
     <section aria-labelledby="history-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
       <header className="flex items-start justify-between gap-3">
@@ -13,61 +40,45 @@ export function HistoryTab({ entries }: { entries: AuditEntry[] }) {
           <h2 id="history-title" className="text-17 font-semibold text-ink">
             ประวัติการแก้ไขสวัสดิการ
           </h2>
-          <p className="mt-[4px] text-12 text-muted">การเพิ่ม แก้ไข และนำเข้าข้อมูลสวัสดิการ</p>
+          <p className="mt-[4px] text-12 text-muted">การเพิ่ม แก้ไข ปิดใช้ และนำเข้าข้อมูลสวัสดิการ</p>
         </div>
         <Link href="/admin/logs" className="shrink-0 text-13 font-medium text-primary-700 hover:underline">
           ดู Log ทั้งหมด
         </Link>
       </header>
-      {entries.length === 0 ? (
-        <p className="py-[32px] text-center text-13 text-muted">ยังไม่มีประวัติ</p>
-      ) : (
-        <div className={table.wrapper}>
-          <table className={table.table}>
-            <thead>
-              <tr>
-                <th scope="col" className={table.th}>วันที่</th>
-                <th scope="col" className={table.th}>ผู้ดำเนินการ</th>
-                <th scope="col" className={table.th}>รายการ</th>
-                <th scope="col" className={table.th}>ก่อน → หลัง</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id} className={cx(table.row, table.rowHover)}>
-                  <td className={cx(table.td, 'whitespace-nowrap text-muted tabular-nums')}>{formatShortThaiDate(entry.at)}</td>
-                  <td className={cx(table.td, 'whitespace-nowrap')}>{entry.actor}</td>
-                  <td className={table.td}>
-                    <p>{entry.title}</p>
-                    <p className="text-12 text-muted">{entry.detail}</p>
-                  </td>
-                  <td className={cx(table.td, 'text-muted')}>
-                    {entry.change ? `${entry.change.before} → ${entry.change.after}` : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {entries.length > 0 ? (
-        <ul className={table.cards}>
-          {entries.map((entry) => (
-            <li key={entry.id} className={table.card}>
-              <p className="font-semibold">{entry.title}</p>
-              <p className="text-12 text-muted">{entry.detail}</p>
-              {entry.change ? (
-                <p className="mt-[6px] break-words text-12 text-muted">
-                  {entry.change.before} → <span className="font-medium text-ink">{entry.change.after}</span>
-                </p>
-              ) : null}
-              <p className="mt-[8px] text-11 text-muted">
-                <span className="tabular-nums">{formatShortThaiDate(entry.at)}</span> · {entry.actor}
-              </p>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+
+      <div className="flex flex-col gap-[12px] lg:flex-row lg:items-end lg:justify-between">
+        <FilterChips
+          label="กรองตามประเภท"
+          value={filter}
+          onChange={(value) => {
+            setFilter(value);
+            setPage(1);
+          }}
+          options={[
+            { id: 'all', label: 'ทั้งหมด', count: scoped.length },
+            { id: 'welfare', label: 'แก้ไขสวัสดิการ', count: scoped.length - importCount },
+            { id: 'import', label: 'นำเข้าข้อมูล', count: importCount },
+          ]}
+        />
+        <SearchInput
+          label="ค้นหาประวัติ"
+          placeholder="ค้นหารหัส / ชื่อสวัสดิการ / ผู้ดำเนินการ / ไฟล์"
+          value={query}
+          onChange={(value) => {
+            setQuery(value);
+            setPage(1);
+          }}
+          className="lg:w-[340px]"
+        />
+      </div>
+
+      <LogTable
+        entries={paginate(filtered, page, PAGE_SIZE)}
+        emptyText={entries.length === 0 ? 'ยังไม่มีประวัติ' : 'ไม่พบประวัติที่ตรงกับเงื่อนไข'}
+      />
+
+      <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} unit="รายการ" onChange={setPage} />
     </section>
   );
 }

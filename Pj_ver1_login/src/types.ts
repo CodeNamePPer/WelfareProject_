@@ -175,6 +175,30 @@ export interface ImportRecord {
 
 export type AuditCategory = 'settings' | 'import' | 'issue';
 export type AuditAction = 'role-change' | 'welfare' | 'user-update' | 'security' | 'system' | 'import';
+/** ไม่ระบุ = สำเร็จ */
+export type AuditResult = 'success' | 'failed' | 'partial';
+
+/** ค่าก่อน/หลังของฟิลด์เดียว เช่น { label: 'วงเงิน', before: '฿10,000/ปี', after: '฿12,000/ปี' } */
+export interface AuditChangeField {
+  label: string;
+  before: string;
+  after: string;
+}
+
+/** สิ่งที่ถูกกระทำ เช่น พนักงาน E00004 หรือสวัสดิการ WEL-002 */
+export interface AuditTarget {
+  code: string;
+  name?: string;
+  /** ลิงก์ไปหน้าของเป้าหมาย (ถ้ามี) */
+  href?: string;
+}
+
+export interface AuditImportSummary {
+  file: string;
+  total: number;
+  success: number;
+  failed: number;
+}
 
 export interface AuditEntry {
   id: string;
@@ -186,5 +210,9 @@ export interface AuditEntry {
   detail: string;
   category: AuditCategory;
   action: AuditAction;
-  change?: { before: string; after: string; reason?: string };
+  target?: AuditTarget;
+  result?: AuditResult;
+  ip?: string;
+  change?: { fields: AuditChangeField[]; reason?: string };
+  importSummary?: AuditImportSummary;
 }

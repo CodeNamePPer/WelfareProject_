@@ -305,63 +305,96 @@ export const importPreview: ImportRecord[] = [
 ];
 
 // ─── ประวัติการแก้ไข Log (Mock) ────────────────────────────────────────────
+// หน้า /admin/logs อ่านจาก Supabase แล้ว · ชุดนี้ใช้เฉพาะแท็บประวัติในหน้าจัดการสวัสดิการ จนกว่าตารางสวัสดิการจะเขียน log จริง
+const ADMIN_SOMCHAI = 'สมชาย ใจดี (E00001)';
+const ADMIN_VIPA = 'วิภา สุขสันต์ (E00003)';
+const userHref = (code: string) => `/admin/users?user=${code}`;
+
 export const auditEntries: AuditEntry[] = [
   {
-    id: 'g1', at: '2026-10-10T19:00', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'เปลี่ยนบทบาทของ สมชาย ดีใจมาก', detail: 'Employee → HR Recruiter',
+    id: 'g1', at: '2026-10-10T19:00', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'เปลี่ยนบทบาทของ สมชาย ดีใจมาก', detail: 'บทบาท',
     category: 'settings', action: 'role-change',
-    change: { before: 'บทบาท: Employee', after: 'บทบาท: HR', reason: 'ย้ายทีม' },
+    target: { code: 'E00002', name: 'สมชาย ดีใจมาก', href: userHref('E00002') },
+    change: { fields: [{ label: 'บทบาท', before: 'พนักงาน', after: 'ฝ่ายบุคคล (HR)' }], reason: 'ย้ายทีม' },
   },
   {
-    id: 'g2', at: '2026-10-10T18:40', actor: 'AdminE0002', actorRole: 'Admin',
-    title: 'เพิ่มสวัสดิการ AI รายเดือนให้ IT', detail: 'แผนก : IT',
+    id: 'g2', at: '2026-10-10T18:40', actor: ADMIN_VIPA, actorRole: 'Admin', ip: '10.0.4.35',
+    title: 'เพิ่มสวัสดิการใหม่', detail: 'ใช้กับแผนก IT',
     category: 'settings', action: 'welfare',
-    change: { before: 'ไม่มีสวัสดิการ', after: 'ค่าเครื่องมือ AI · ฿500/เดือน', reason: 'นโยบายสนับสนุนการใช้ AI' },
+    target: { code: 'WEL-001', name: 'ค่าเครื่องมือ AI สำหรับพนักงาน' },
+    change: {
+      fields: [
+        { label: 'วงเงิน', before: '—', after: '฿500/เดือน' },
+        { label: 'ผู้มีสิทธิ์', before: '—', after: 'พนักงานประจำ แผนก IT' },
+        { label: 'มีผลตั้งแต่', before: '—', after: '1 พ.ย. 2569' },
+      ],
+      reason: 'นโยบายสนับสนุนการใช้ AI',
+    },
   },
   {
-    id: 'g3', at: '2026-10-10T17:15', actor: 'ระบบ', actorRole: 'ระบบ',
-    title: 'ล็อกบัญชีอัตโนมัติ', detail: 'E1234 : ล็อกอินผิด 5 ครั้ง',
-    category: 'issue', action: 'security',
-    change: { before: 'สถานะ: ใช้งาน', after: 'สถานะ: ถูกล็อก 30 นาที' },
+    id: 'g3', at: '2026-10-10T17:15', actor: 'ระบบ', actorRole: 'ระบบ', ip: '203.0.113.48',
+    title: 'ล็อกบัญชีอัตโนมัติ', detail: 'ล็อกอินผิด 5 ครั้ง',
+    category: 'issue', action: 'security', result: 'failed',
+    target: { code: 'E00012', name: 'พิมพ์ชนก รัตนวงศ์', href: userHref('E00012') },
+    change: { fields: [{ label: 'สถานะบัญชี', before: 'ใช้งาน', after: 'ถูกล็อก 30 นาที' }] },
   },
   {
-    id: 'g4', at: '2026-10-10T09:05', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'แจ้ง Error', detail: 'ระบบ : ระบบล่ม',
+    id: 'g4', at: '2026-10-10T09:05', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'แจ้ง Error', detail: 'ระบบล่ม',
     category: 'issue', action: 'system',
   },
   {
-    id: 'g5', at: '2026-10-09T15:30', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ไฟล์ import_sep.csv · 7 รายการ',
-    category: 'import', action: 'import',
+    id: 'g5', at: '2026-10-09T15:30', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ประวัติเบิก ก.ย. 2569',
+    category: 'import', action: 'import', result: 'partial',
+    importSummary: { file: 'import_sep.csv', total: 7, success: 5, failed: 2 },
   },
   {
-    id: 'g6', at: '2026-10-09T11:20', actor: 'AdminE0002', actorRole: 'Admin',
-    title: 'ปรับวงเงินค่าออกกำลังกาย / ฟิตเนส', detail: 'WEL-002',
+    id: 'g6', at: '2026-10-09T11:20', actor: ADMIN_VIPA, actorRole: 'Admin', ip: '10.0.4.35',
+    title: 'ปรับวงเงินสวัสดิการ', detail: 'วงเงิน, วันที่มีผล',
     category: 'settings', action: 'welfare',
-    change: { before: 'วงเงิน: ฿10,000/ปี', after: 'วงเงิน: ฿12,000/ปี', reason: 'ปรับตามอัตราตลาด' },
+    target: { code: 'WEL-002', name: 'ค่าออกกำลังกาย / ฟิตเนส' },
+    change: {
+      fields: [
+        { label: 'วงเงิน', before: '฿10,000/ปี', after: '฿12,000/ปี' },
+        { label: 'มีผลตั้งแต่', before: '1 ม.ค. 2569', after: '1 ม.ค. 2570' },
+      ],
+      reason: 'ปรับตามอัตราตลาด',
+    },
   },
   {
-    id: 'g7', at: '2026-10-08T16:45', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'แก้ไขอีเมลของ นันทพร เจริญสุข', detail: 'E00004',
+    id: 'g7', at: '2026-10-08T16:45', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'แก้ไขข้อมูลผู้ใช้ นันทพร เจริญสุข', detail: 'อีเมล',
     category: 'settings', action: 'user-update',
-    change: { before: 'อีเมล: nanthaporn@qmail.com', after: 'อีเมล: nannaporn@qmail.com', reason: 'สะกดผิด' },
+    target: { code: 'E00004', name: 'นันทพร เจริญสุข', href: userHref('E00004') },
+    change: { fields: [{ label: 'อีเมล', before: 'nanthaporn@qmail.com', after: 'nannaporn@qmail.com' }], reason: 'สะกดผิด' },
   },
   {
-    id: 'g8', at: '2026-10-07T10:10', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'เปลี่ยนสถานะ พงศกร วงศ์สวัสดิ์', detail: 'E00005',
+    id: 'g8', at: '2026-10-07T10:10', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'แก้ไขข้อมูลผู้ใช้ พงศกร วงศ์สวัสดิ์', detail: 'สถานะ',
     category: 'settings', action: 'user-update',
-    change: { before: 'สถานะ: ใช้งาน', after: 'สถานะ: ลาออก', reason: 'ลาออกมีผล 30 ก.ย. 69' },
+    target: { code: 'E00005', name: 'พงศกร วงศ์สวัสดิ์', href: userHref('E00005') },
+    change: { fields: [{ label: 'สถานะ', before: 'ทำงานอยู่', after: 'ลาออก' }], reason: 'ลาออกมีผล 30 ก.ย. 69' },
   },
   {
-    id: 'g9', at: '2026-09-28T14:00', actor: 'AdminE0002', actorRole: 'Admin',
-    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ไฟล์ import_aug.csv · 12 รายการ',
+    id: 'g9', at: '2026-09-28T14:00', actor: ADMIN_VIPA, actorRole: 'Admin', ip: '10.0.4.35',
+    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ประวัติเบิก ส.ค. 2569',
     category: 'import', action: 'import',
+    importSummary: { file: 'import_aug.csv', total: 12, success: 12, failed: 0 },
   },
   {
-    id: 'g10', at: '2026-09-15T09:30', actor: 'AdminE0001', actorRole: 'Admin',
-    title: 'ปิดใช้สวัสดิการค่าอาหารกลางวัน', detail: 'WEL-008',
+    id: 'g13', at: '2026-09-27T09:40', actor: ADMIN_VIPA, actorRole: 'Admin', ip: '10.0.4.35',
+    title: 'นำเข้าประวัติเบิกย้อนหลัง', detail: 'ไฟล์ไม่ตรงรูปแบบ (ไม่พบคอลัมน์ "รหัสพนักงาน")',
+    category: 'import', action: 'import', result: 'failed',
+    importSummary: { file: 'import_aug_v1.xlsx', total: 12, success: 0, failed: 12 },
+  },
+  {
+    id: 'g10', at: '2026-09-15T09:30', actor: ADMIN_SOMCHAI, actorRole: 'Admin', ip: '10.0.4.21',
+    title: 'ปิดใช้สวัสดิการ', detail: 'สถานะ',
     category: 'settings', action: 'welfare',
-    change: { before: 'สถานะ: ใช้งาน', after: 'สถานะ: หยุดใช้', reason: 'รวมเข้ากับค่าครองชีพ' },
+    target: { code: 'WEL-008', name: 'ค่าอาหารกลางวัน' },
+    change: { fields: [{ label: 'สถานะ', before: 'ใช้งาน', after: 'หยุดใช้' }], reason: 'รวมเข้ากับค่าครองชีพ' },
   },
   {
     id: 'g11', at: '2026-09-02T13:25', actor: 'ระบบ', actorRole: 'ระบบ',
@@ -369,8 +402,9 @@ export const auditEntries: AuditEntry[] = [
     category: 'issue', action: 'system',
   },
   {
-    id: 'g12', at: '2025-12-20T10:00', actor: 'AdminE0002', actorRole: 'Admin',
-    title: 'นำเข้ารายชื่อพนักงานใหม่', detail: 'ไฟล์ new_hires.csv · 3 คน',
+    id: 'g12', at: '2025-12-20T10:00', actor: ADMIN_VIPA, actorRole: 'Admin', ip: '10.0.4.35',
+    title: 'นำเข้ารายชื่อพนักงานใหม่', detail: 'พนักงานใหม่ 3 คน',
     category: 'import', action: 'import',
+    importSummary: { file: 'new_hires.csv', total: 3, success: 3, failed: 0 },
   },
 ];
