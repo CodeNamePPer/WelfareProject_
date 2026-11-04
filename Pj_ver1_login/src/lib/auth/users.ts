@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Role } from "./roles";
 import { supabaseAdmin } from "../supabase";
+import { toPasswordState, type PasswordState } from "./credential";
 
 /**
  * บัญชีผู้ใช้อ่านจาก view `v_app_user` (employee + employee_credential + user_role)
@@ -16,6 +17,8 @@ export interface User {
   role: Role;
   status: EmploymentStatus;
   passwordHash: string;
+  /** มีเฉพาะผลจาก findUserByIdentifier (ใช้ตอนล็อกอิน) */
+  passwordState?: PasswordState;
   lastLoginAt?: string;
   updatedAt?: string;
 }
@@ -51,7 +54,7 @@ export interface EmployeeProfile {
   statusReason: string | null;
 }
 
-export type UserWithProfile = Omit<User, "passwordHash"> & { profile: EmployeeProfile };
+export type UserWithProfile = Omit<User, "passwordHash" | "passwordState"> & { profile: EmployeeProfile };
 
 interface UserRow {
   employee_uuid: string;
@@ -176,12 +179,12 @@ export async function findUserByIdentifier(identifier: string): Promise<User | n
 
       const { data: cred, error: credError } = await supabaseAdmin
         .from("employee_credential")
-        .select("password_hash")
+        .select("password_hash, password_changed_at, must_change_password")
         .eq("employee_id", data.employee_uuid)
         .single();
       if (credError) throw credError;
 
-      return { ...toUser(data as UserRow), passwordHash: cred.password_hash };
+      return { ...toUser(data as UserRow), passwordHash: cred.password_hash, passwordState: toPasswordState(cred) };
     }
   } catch (err) {
     console.error("Supabase findUser error", err);

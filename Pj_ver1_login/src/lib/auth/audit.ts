@@ -12,7 +12,10 @@ export type AuditAction =
   | "LOGIN_BLOCKED_INACTIVE"
   | "LOGOUT"
   | "USER_UPDATE"
-  | "NOTIFICATION_RESOLVE";
+  | "NOTIFICATION_RESOLVE"
+  | "PASSWORD_RESET" // admin รีเซ็ตให้ (targetId = เจ้าของบัญชี)
+  | "PASSWORD_CHANGE" // เจ้าของบัญชีตั้งรหัสใหม่เอง
+  | "PASSWORD_CHANGE_FAILED"; // ใส่รหัสปัจจุบันผิดตอนเปลี่ยนรหัส
 
 /** เฉพาะคอลัมน์ที่เปลี่ยน: { คอลัมน์: { old, new } } */
 export type AuditChanges = Record<string, { old: unknown; new: unknown }>;

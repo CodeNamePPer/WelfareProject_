@@ -2,7 +2,7 @@ import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { table } from "@/components/ui/table";
 
-const TABS = ["สวัสดิการที่มีอยู่", "คำขอเบิก", "ประวัติรายการ", "นำเข้าประวัติ"];
+const TABS = ["สวัสดิการที่มีอยู่", "คำขอเบิก", "ประวัติการแก้ไข", "นำเข้าประวัติ"];
 const COLUMNS = ["รหัส", "ชื่อสวัสดิการ", "วงเงิน", "ประเภทงบ", "สถานะ"];
 const ROW_COUNT = 6;
 

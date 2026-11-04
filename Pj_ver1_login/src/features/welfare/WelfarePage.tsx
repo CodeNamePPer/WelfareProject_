@@ -15,7 +15,7 @@ export type TabId = 'catalog' | 'claims' | 'history' | 'import';
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'catalog', label: 'สวัสดิการที่มีอยู่' },
   { id: 'claims', label: 'คำขอเบิก' },
-  { id: 'history', label: 'ประวัติรายการ' },
+  { id: 'history', label: 'ประวัติการแก้ไข' },
   { id: 'import', label: 'นำเข้าประวัติ' },
 ];
 

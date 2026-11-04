@@ -11,7 +11,7 @@ import { SearchInput } from '../../components/ui/SearchInput';
 import { Select } from '../../components/ui/Select';
 import { downloadCsv } from '../../lib/csv';
 import type { AuditCategory, AuditEntry } from '../../types';
-import { LogTable, actionTag } from './LogTable';
+import { LogTable, actionTag, resultLabel } from './LogTable';
 
 type Filter = 'all' | AuditCategory;
 
@@ -23,7 +23,7 @@ const CATEGORY_LABELS: Record<AuditCategory, string> = {
   issue: 'แจ้งปัญหาเว็บไซต์',
 };
 
-const CSV_COLUMNS = ['วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'รายการ', 'รายละเอียด', 'ประเภท', 'ก่อน', 'หลัง', 'เหตุผล'];
+const CSV_COLUMNS = ['เลขอ้างอิง', 'วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'IP', 'ประเภท', 'ผลลัพธ์', 'เป้าหมาย', 'รายการ', 'รายละเอียด', 'ก่อน', 'หลัง', 'เหตุผล'];
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -46,7 +46,8 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
     return entries.filter((entry) => {
       if (entry.at.slice(0, 4) !== year) return false;
       if (month !== 'all' && Number(entry.at.slice(5, 7)) !== Number(month)) return false;
-      return !q || `${entry.actor} ${entry.actorRole} ${entry.title} ${entry.detail}`.toLowerCase().includes(q);
+      const target = entry.target ? `${entry.target.code} ${entry.target.name ?? ''}` : '';
+      return !q || `${entry.actor} ${entry.actorRole} ${target} ${entry.title} ${entry.detail} ${entry.ip ?? ''}`.toLowerCase().includes(q);
     });
   }, [entries, year, month, query]);
 
@@ -60,17 +61,25 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
     downloadCsv(
       `audit-log-${year}${month === 'all' ? '' : `-${month.padStart(2, '0')}`}.csv`,
       CSV_COLUMNS,
-      filtered.map((entry) => [
-        entry.at.replace('T', ' '),
-        entry.actor,
-        entry.actorRole,
-        entry.title,
-        entry.detail,
-        actionTag[entry.action].label,
-        entry.change?.before ?? '',
-        entry.change?.after ?? '',
-        entry.change?.reason ?? '',
-      ]),
+      filtered.map((entry) => {
+        const fields = entry.change?.fields ?? [];
+        const side = (pick: 'before' | 'after') => fields.map((f) => `${f.label}: ${f[pick]}`).join(' · ');
+        return [
+          entry.id,
+          entry.at.replace('T', ' '),
+          entry.actor,
+          entry.actorRole,
+          entry.ip ?? '',
+          actionTag[entry.action].label,
+          resultLabel[entry.result ?? 'success'],
+          entry.target ? [entry.target.code, entry.target.name].filter(Boolean).join(' ') : '',
+          entry.title,
+          entry.detail,
+          side('before'),
+          side('after'),
+          entry.change?.reason ?? '',
+        ];
+      }),
     );
 
   return (
@@ -83,7 +92,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
       <div className="flex flex-col gap-[10px] lg:flex-row">
         <SearchInput
           label="ค้นหา Log"
-          placeholder="ค้นหาชื่อผู้ใช้ / กิจกรรม / อีเมล IT"
+          placeholder="ค้นหาผู้ดำเนินการ / เป้าหมาย / กิจกรรม / IP"
           value={query}
           onChange={(value) => {
             setQuery(value);
@@ -132,7 +141,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
             rowCount={filtered.length}
             unit="บันทึก"
             columns={CSV_COLUMNS}
-            personalData="ชื่อผู้ดำเนินการ รวมถึงอีเมลและ IP address ในรายละเอียด"
+            personalData="ชื่อผู้ดำเนินการและผู้ถูกแก้ไข, IP address และอีเมลในค่าก่อน/หลัง"
             onCancel={() => setExporting(false)}
             onConfirm={() => {
               exportCsv();
