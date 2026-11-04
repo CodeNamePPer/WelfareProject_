@@ -4,16 +4,45 @@ export interface Employee {
   id: string;
   code: string;
   name: string;
+  department?: string;
+}
+
+/** submitted → hr-approved → finance-approved → paid; rejected can happen at the HR or finance step. */
+export type ClaimEventKind = 'submitted' | 'hr-approved' | 'finance-approved' | 'rejected' | 'paid';
+
+export interface ClaimEvent {
+  kind: ClaimEventKind;
+  /** ISO date, YYYY-MM-DD */
+  at: string;
+  /** ผู้ดำเนินการ เช่น "วิภา สุขสันต์ (HR)" – ว่างเมื่อเป็นการยื่นของพนักงานเอง */
+  by?: string;
+  /** เหตุผลปฏิเสธ / หมายเหตุการปรับยอด / รอบจ่าย */
+  note?: string;
 }
 
 export interface Claim {
   id: string;
+  /** เลขที่คำขอ เช่น CLM-2569-0012 */
+  code: string;
   employeeId: string;
   benefit: string;
+  /** ยอดขอเบิก */
   amount: number;
+  /** ยอดที่อนุมัติจริง – null เมื่อยังไม่อนุมัติหรือถูกปฏิเสธ */
+  approvedAmount: number | null;
   status: ClaimStatus;
-  /** ISO date, YYYY-MM-DD */
+  /** วันที่ยื่น – ISO date, YYYY-MM-DD */
   date: string;
+  /** วันที่เกิดค่าใช้จ่าย (ตามใบเสร็จ) – ISO date */
+  expenseDate: string;
+  /** วงเงินสิทธิ์ต่อปีของสวัสดิการนี้ – null = ไม่จำกัด */
+  annualLimit: number | null;
+  /** หมายเหตุจากผู้เบิก */
+  note?: string;
+  /** ชื่อไฟล์เอกสารแนบ */
+  attachments: string[];
+  /** เรียงจากเก่าไปใหม่ – รายการแรกคือการยื่นเสมอ */
+  timeline: ClaimEvent[];
 }
 
 export interface Period {

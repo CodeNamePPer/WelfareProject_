@@ -27,7 +27,8 @@ function summarize(list: Claim[]): Totals {
   for (const claim of list) {
     totals.all.amount += claim.amount;
     totals.all.count += 1;
-    totals[claim.status].amount += claim.amount;
+    // ยอด "อนุมัติ" ใช้ยอดที่อนุมัติจริง (อาจน้อยกว่ายอดขอ) – ยอดรวม/รอ/ปฏิเสธยังเป็นยอดขอเบิก
+    totals[claim.status].amount += claim.status === 'approved' ? (claim.approvedAmount ?? claim.amount) : claim.amount;
     totals[claim.status].count += 1;
   }
   return totals;
