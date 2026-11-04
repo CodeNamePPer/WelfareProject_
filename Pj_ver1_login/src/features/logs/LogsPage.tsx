@@ -85,7 +85,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
   return (
     <div className="flex flex-col gap-[20px]">
       <PageHeader
-        title="ประวัติการแก้ไข Log"
+        title="ประวัติของระบบ"
         description="บันทึกการเปลี่ยนแปลงระบบ · Admin จัดการระบบได้ แต่ไม่สามารถอนุมัติคำขอเบิก · ลบหรือแก้ไขไม่ได้"
       />
 

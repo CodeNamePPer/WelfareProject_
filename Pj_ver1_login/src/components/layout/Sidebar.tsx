@@ -56,7 +56,7 @@ export function Sidebar({
     { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount, href: '/admin/notifications' },
     { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
     { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
-    { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History, href: '/admin/logs' },
+    { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
     { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
   ];
 
