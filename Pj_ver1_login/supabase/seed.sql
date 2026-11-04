@@ -186,3 +186,52 @@ from (values
   ('security', 'เข้าสู่ระบบจากอุปกรณ์ใหม่',           'บัญชี E00009 · กรุงเทพฯ',                                            false, interval '12 days')
 ) as v(category, title, description, actionable, age)
 where not exists (select 1 from public.admin_notifications);
+
+
+-- -----------------------------------------------------------------------------
+-- สวัสดิการ (ตัวอย่าง ตรงกับ welfareItems ใน src/data/mock.ts) — รันซ้ำได้
+--   WEL-002 มีวงเงิน 2 ช่วง: ฿10,000 ใช้อยู่ และ ฿12,000 มีผล 1 ม.ค. 2570
+-- -----------------------------------------------------------------------------
+
+insert into public.welfare_benefit (code, name_th, budget_type, max_claims, max_claims_note, eligibility_note, approver_role_id, is_active)
+select v.code, v.name_th, v.budget_type::public.welfare_budget_type, v.max_claims, v.max_claims_note, 'พนักงานประจำ',
+       (select id from public.app_role where code = 'HR'), v.is_active
+from (values
+  ('WEL-001', 'ค่าเครื่องมือ AI สำหรับพนักงาน', 'yearly',    12,   null,                  true),
+  ('WEL-002', 'ค่าออกกำลังกาย / ฟิตเนส',        'yearly',    12,   null,                  true),
+  ('WEL-003', 'ค่าตัดแว่นสายตา',                'yearly',    1,    null,                  true),
+  ('WEL-004', 'วัคซีนไข้หวัดใหญ่',              'yearly',    1,    null,                  true),
+  ('WEL-005', 'ทุนอบรมหลักสูตรภายนอก',          'yearly',    2,    null,                  true),
+  ('WEL-006', 'ค่าเดินทางมาทำงาน',              'monthly',   null, null,                  true),
+  ('WEL-007', 'ค่าฝากครรภ์ / คลอดบุตร',         'per_claim', null, 'ต่อการคลอด 1 ครั้ง',  true),
+  ('WEL-008', 'ค่าอาหารกลางวัน',                'monthly',   null, null,                  false),
+  ('WEL-010', 'ค่าเดินทางไปอบรม',               'per_claim', null, null,                  true),
+  ('WEL-011', 'ค่าตรวจสุขภาพ',                  'yearly',    1,    null,                  true)
+) as v(code, name_th, budget_type, max_claims, max_claims_note, is_active)
+on conflict (code) do nothing;
+
+insert into public.welfare_benefit_limit (benefit_id, amount, effective_from, reason)
+select b.id, v.amount, v.effective_from::date, v.reason
+from (values
+  ('WEL-001', 6000,  '2026-11-01', null),
+  ('WEL-002', 10000, '2026-01-01', null),
+  ('WEL-002', 12000, '2027-01-01', 'ปรับตามอัตราตลาด'),
+  ('WEL-003', 3000,  '2026-01-01', null),
+  ('WEL-004', 1500,  '2026-01-01', null),
+  ('WEL-005', 20000, '2026-01-01', null),
+  ('WEL-006', 800,   '2026-01-01', null),
+  ('WEL-007', 25000, '2026-01-01', null),
+  ('WEL-008', 2500,  '2026-01-01', null),
+  ('WEL-010', 5000,  '2026-01-01', null),
+  ('WEL-011', 4000,  '2026-01-01', null)
+) as v(code, amount, effective_from, reason)
+join public.welfare_benefit b on b.code = v.code
+on conflict (benefit_id, effective_from) do nothing;
+
+-- WEL-001 ใช้เฉพาะฝ่ายไอที
+insert into public.welfare_benefit_department (benefit_id, department_id)
+select b.id, d.id
+from public.welfare_benefit b
+join public.department d on d.code = 'IT'
+where b.code = 'WEL-001'
+on conflict do nothing;
