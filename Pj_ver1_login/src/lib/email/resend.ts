@@ -8,12 +8,18 @@
  *                   ยังไม่มีโดเมน: ใช้ onboarding@resend.dev ได้ แต่ส่งถึงได้แค่อีเมลเจ้าของบัญชี Resend
  *   EMAIL_TEST_TO   (ช่วงทดสอบ) ส่งทุกฉบับไปที่อีเมลนี้แทนผู้รับจริง
  */
+import type { EmailDelivery } from "./address";
+
 export type SendResult = { ok: true; id: string; deliveredTo: string } | { ok: false; error: string };
 
 const DEFAULT_FROM = "ระบบพนักงานและสวัสดิการ <onboarding@resend.dev>";
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY);
+}
+
+export function getEmailDelivery(): EmailDelivery {
+  return { configured: isEmailConfigured(), testTo: process.env.EMAIL_TEST_TO?.trim() || null };
 }
 
 export async function sendEmail(message: { to: string; subject: string; html: string; text: string }): Promise<SendResult> {

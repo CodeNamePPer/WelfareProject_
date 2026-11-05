@@ -8,6 +8,7 @@ import { createAdminAlert } from "@/lib/admin/alerts";
 import { clearFailures } from "@/lib/auth/rate-limit";
 import { savePassword } from "@/lib/auth/credential";
 import { getUserWithProfileById } from "@/lib/auth/users";
+import { deliverableEmail, type ResetFallback } from "@/lib/email/address";
 import { escapeHtml, isEmailConfigured, sendEmail } from "@/lib/email/resend";
 
 export const runtime = "nodejs";
@@ -16,13 +17,6 @@ export const runtime = "nodejs";
 const LETTERS = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
 const DIGITS = "23456789";
 const TEMP_LENGTH = 12;
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-/** อีเมลติดต่อที่ส่งได้จริง (บัญชีที่ไม่มีอีเมลระบบตั้งเป็น ...@no-email.invalid) */
-function deliverableEmail(email: string | null): string | null {
-  const value = email?.trim() ?? "";
-  return EMAIL_RE.test(value) && !value.toLowerCase().endsWith(".invalid") ? value : null;
-}
 
 function resetEmail(name: string, loginName: string, tempPassword: string, loginUrl: string) {
   const subject = "รหัสผ่านชั่วคราวสำหรับเข้าสู่ระบบพนักงานและสวัสดิการ";
@@ -106,15 +100,21 @@ export async function POST(req: NextRequest) {
     const contactEmail = deliverableEmail(target.profile.contactEmail);
     let emailedTo: string | null = null;
     let emailError: string | null = null;
+    let fallback: ResetFallback | null = null;
     if (!contactEmail) {
       emailError = "พนักงานคนนี้ยังไม่มีอีเมลติดต่อ";
+      fallback = "no-email";
     } else if (!isEmailConfigured()) {
       emailError = "ระบบยังไม่ได้ตั้งค่าการส่งอีเมล";
+      fallback = "not-configured";
     } else {
       const mail = resetEmail(target.name, target.email, tempPassword, new URL("/login", req.url).toString());
       const sent = await sendEmail({ to: contactEmail, ...mail });
       if (sent.ok) emailedTo = sent.deliveredTo;
-      else emailError = "ส่งอีเมลไม่สำเร็จ";
+      else {
+        emailError = "ส่งอีเมลไม่สำเร็จ";
+        fallback = "send-failed";
+      }
     }
 
     await writeAudit({
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
 
     // ส่งอีเมลสำเร็จแล้วไม่ส่งรหัสกลับมาที่หน้าจอ admin ไม่จำเป็นต้องเห็นรหัสของคนอื่น
     return NextResponse.json(
-      emailedTo ? { ok: true, emailedTo } : { ok: true, tempPassword, emailError },
+      emailedTo ? { ok: true, emailedTo } : { ok: true, tempPassword, fallback },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {
