@@ -1,11 +1,14 @@
+import { redirect } from "next/navigation";
 import { WelfarePage, type TabId } from "@/features/welfare/WelfarePage";
-import { auditEntries, claims, employees, importPreview, welfareItems } from "@/data/mock";
+import { claims, employees, importPreview, welfareItems } from "@/data/mock";
 
-const TABS: TabId[] = ["catalog", "claims", "history", "import"];
+const TABS: TabId[] = ["catalog", "claims", "import"];
 
 // ?tab=import / ?tab=claims เปิดแท็บนั้นทันที (ใช้จากทางลัดหน้าแรก)
 export default async function AdminBenefitsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab } = await searchParams;
+  // ประวัติการแก้ไขสวัสดิการย้ายไปรวมที่หน้าประวัติของระบบแล้ว
+  if (tab === "history") redirect("/admin/logs?tab=welfare");
   const initialTab = TABS.find((id) => id === tab);
 
   return (
@@ -14,7 +17,6 @@ export default async function AdminBenefitsPage({ searchParams }: { searchParams
       importPreview={importPreview}
       claims={claims}
       employees={employees}
-      history={auditEntries.filter((entry) => entry.action === "welfare" || entry.category === "import")}
       initialTab={initialTab}
     />
   );
