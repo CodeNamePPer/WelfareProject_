@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/Button";
 import { checkNewPassword, PASSWORD_MAX, PASSWORD_RULES } from "@/lib/auth/password-policy";
 
 type Props = {
@@ -124,13 +125,9 @@ export function ChangePasswordForm({ employeeId, loginName, redirectTo, submitLa
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="inline-flex h-10 items-center justify-center rounded-lg bg-primary-600 px-4 text-sm font-medium text-white shadow-xs transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none"
-      >
+      <Button type="submit" variant="primary" loading={saving}>
         {saving ? "กำลังบันทึก…" : submitLabel}
-      </button>
+      </Button>
     </form>
   );
 }

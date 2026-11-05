@@ -463,7 +463,7 @@ function SectionForm({
         <Button onClick={onCancel} disabled={saving}>
           ยกเลิก
         </Button>
-        <Button type="submit" variant="primary" disabled={saving || !dirty} className="disabled:cursor-not-allowed disabled:opacity-50">
+        <Button type="submit" variant="primary" loading={saving} disabled={!dirty} className="disabled:cursor-not-allowed disabled:opacity-50">
           {saving ? "กำลังบันทึก…" : "บันทึก"}
         </Button>
       </div>
@@ -867,7 +867,7 @@ function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: bo
             <Button onClick={close} disabled={saving}>
               ยกเลิก
             </Button>
-            <Button type="submit" variant="danger" disabled={saving} className="disabled:cursor-not-allowed disabled:opacity-50">
+            <Button type="submit" variant="danger" loading={saving} className="disabled:cursor-not-allowed disabled:opacity-50">
               {saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
             </Button>
           </div>
