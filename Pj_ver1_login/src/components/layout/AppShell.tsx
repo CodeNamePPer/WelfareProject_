@@ -6,16 +6,19 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import type { SidebarUser } from './Sidebar';
+import { activeNavId, type NavSection } from './navigation';
 import { useToast } from '../ui/Toast';
 import { cx } from '../../lib/cx';
 
 interface AppShellProps {
+  /** Which menu the sidebar shows (see navigation.ts). */
+  section?: NavSection;
   notificationCount: number;
   user: SidebarUser;
   children: ReactNode;
 }
 
-export function AppShell({ notificationCount, user, children }: AppShellProps) {
+export function AppShell({ section = 'admin', notificationCount, user, children }: AppShellProps) {
   const pathname = usePathname();
   const { notifyPending } = useToast();
   // 768-1023px: collapsed by default (Style Guide). Below 768px the sidebar is a drawer.
@@ -29,7 +32,8 @@ export function AppShell({ notificationCount, user, children }: AppShellProps) {
   return (
     <div className="min-h-screen">
       <Sidebar
-        activeId={pathname === '/admin' ? 'home' : (pathname?.match(/^\/admin\/([^/]+)/)?.[1] ?? '')}
+        section={section}
+        activeId={activeNavId(section, pathname)}
         notificationCount={notificationCount}
         user={user}
         collapsed={collapsed}

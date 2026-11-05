@@ -1,30 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Bell,
-  ChevronRight,
-  FilePlus2,
-  Gift,
-  History,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  UserCog,
-  X,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { useState, type AnchorHTMLAttributes } from 'react';
+import { ChevronRight, LogOut, Menu, X } from 'lucide-react';
+import { useState, type AnchorHTMLAttributes, type ReactNode } from 'react';
 import { cx } from '../../lib/cx';
 import { Spinner } from '../ui/Spinner';
-
-interface NavItem {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  badge?: number;
-  href?: string;
-}
+import { NAV, type NavSection } from './navigation';
 
 export interface SidebarUser {
   name: string;
@@ -32,6 +13,7 @@ export interface SidebarUser {
 }
 
 interface SidebarProps {
+  section: NavSection;
   activeId: string;
   notificationCount: number;
   user: SidebarUser;
@@ -43,6 +25,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({
+  section,
   activeId,
   notificationCount,
   user,
@@ -52,14 +35,8 @@ export function Sidebar({
   onCloseMobile,
   onNavigate,
 }: SidebarProps) {
-  const items: NavItem[] = [
-    { id: 'home', label: 'หน้าแรก Home', icon: LayoutDashboard, href: '/admin' },
-    { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount, href: '/admin/notifications' },
-    { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
-    { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
-    { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
-    { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
-  ];
+  const config = NAV[section];
+  const items = config.items(notificationCount);
 
   const hideWhenCollapsed = collapsed ? 'md:hidden' : '';
   const profileActive = activeId === 'profile';
@@ -104,7 +81,7 @@ export function Sidebar({
           </button>
           <div className={cx('min-w-0 flex-1 leading-tight', hideWhenCollapsed)}>
             <p className="text-15 leading-snug font-semibold text-ink">ระบบพนักงานและสวัสดิการ</p>
-            <p className="text-11 text-muted">Admin</p>
+            <p className="text-11 text-muted">{config.subtitle}</p>
           </div>
           <button
             type="button"
@@ -117,7 +94,7 @@ export function Sidebar({
         </div>
 
         <p className={cx('px-3 pb-1.5 text-11 font-semibold text-muted', hideWhenCollapsed)}>
-          ADMIN
+          {config.sectionLabel}
         </p>
 
         <nav aria-label="เมนูหลัก" className="flex flex-col gap-1">
@@ -175,18 +152,18 @@ export function Sidebar({
 
         <div className="flex-1" />
 
-        {/* ผู้ที่เข้าระบบอยู่ – กดเพื่อดูโปรไฟล์ */}
+        {/* ผู้ที่เข้าระบบอยู่ – กดเพื่อดูโปรไฟล์ (ส่วนที่ยังไม่มีหน้าโปรไฟล์ แสดงเป็นข้อความเฉย ๆ) */}
         <div className="flex flex-col gap-1 border-t border-line pt-3">
-          <Link
-            href="/admin/profile"
+          <ProfileLink
+            href={config.profileHref}
             aria-current={profileActive ? 'page' : undefined}
-            aria-label={`โปรไฟล์ของฉัน: ${user.name}, ${user.roleLabel}`}
+            aria-label={config.profileHref ? `โปรไฟล์ของฉัน: ${user.name}, ${user.roleLabel}` : undefined}
             title={collapsed ? `${user.name} · ${user.roleLabel}` : undefined}
             onClick={onCloseMobile}
             className={cx(
               'group flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors motion-reduce:transition-none',
               collapsed && 'md:justify-center md:px-0',
-              profileActive ? 'bg-primary-100' : 'hover:bg-primary-50',
+              profileActive ? 'bg-primary-100' : config.profileHref && 'hover:bg-primary-50',
             )}
           >
             <span
@@ -204,8 +181,10 @@ export function Sidebar({
               </span>
               <span className="block truncate text-11 text-muted">{user.roleLabel}</span>
             </span>
-            <ChevronRight className={cx('size-4 shrink-0 text-muted', hideWhenCollapsed)} aria-hidden="true" />
-          </Link>
+            {config.profileHref ? (
+              <ChevronRight className={cx('size-4 shrink-0 text-muted', hideWhenCollapsed)} aria-hidden="true" />
+            ) : null}
+          </ProfileLink>
 
           <button
             type="button"
@@ -234,4 +213,20 @@ interface NavLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'hr
 /** Real route -> next/link (client-side navigation). No route yet -> inert anchor handled by onClick. */
 function NavLink({ href, ...rest }: NavLinkProps) {
   return href ? <Link href={href} {...rest} /> : <a href="#" {...rest} />;
+}
+
+/** Profile page exists -> link to it. Otherwise the same block as plain, non-interactive text. */
+function ProfileLink({ href, children, ...rest }: NavLinkProps & { children: ReactNode }) {
+  if (href) {
+    return (
+      <Link href={href} {...rest}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <div title={rest.title} className={rest.className}>
+      {children}
+    </div>
+  );
 }

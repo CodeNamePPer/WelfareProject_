@@ -1,0 +1,312 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+
+type RequestStatus = "รอตรวจสอบ" | "รอแก้ไข" | "อนุมัติแล้ว" | "ปฏิเสธแล้ว";
+
+type PersonRequest = {
+  requestNumber: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  personName: string;
+  relationship: string;
+  dateOfBirth: string;
+  phone: string;
+  submittedAt: string;
+  status: RequestStatus;
+  statusNote: string;
+  updatedAt: string;
+  documents: string[];
+};
+
+const requests: PersonRequest[] = [
+  {
+    requestNumber: "PER-2026-00128",
+    employeeId: "0124",
+    employeeName: "นายสมชาย ใจดี",
+    department: "IT",
+    position: "Developer",
+    personName: "นางสาวกมลวรรณ ใจดี",
+    relationship: "คู่สมรส",
+    dateOfBirth: "15 มี.ค. 2535",
+    phone: "08X-XXX-2145",
+    submittedAt: "04 พ.ย. 2569 09:14",
+    status: "รอแก้ไข",
+    statusNote: "กรุณาแนบสำเนาทะเบียนสมรสที่เห็นข้อมูลครบถ้วน",
+    updatedAt: "04 พ.ย. 2569 13:20",
+    documents: ["สำเนาบัตรประชาชน", "สำเนาทะเบียนสมรส (รอแก้ไข)"],
+  },
+  {
+    requestNumber: "PER-2026-00127",
+    employeeId: "0352",
+    employeeName: "น.ส.สมหญิง รักดี",
+    department: "Marketing",
+    position: "Marketing Officer",
+    personName: "เด็กชายณัฐวุฒิ รักดี",
+    relationship: "บุตร",
+    dateOfBirth: "22 ก.ค. 2562",
+    phone: "09X-XXX-8831",
+    submittedAt: "03 พ.ย. 2569 16:42",
+    status: "รอตรวจสอบ",
+    statusNote: "เอกสารครบถ้วน อยู่ระหว่างตรวจสอบข้อมูล",
+    updatedAt: "03 พ.ย. 2569 16:42",
+    documents: ["สูติบัตร", "สำเนาทะเบียนบ้าน"],
+  },
+  {
+    requestNumber: "PER-2026-00126",
+    employeeId: "0411",
+    employeeName: "นายมานะ มุ่งมั่น",
+    department: "Sales",
+    position: "Sales Executive",
+    personName: "นางอรทัย มุ่งมั่น",
+    relationship: "บิดา/มารดา",
+    dateOfBirth: "08 ธ.ค. 2503",
+    phone: "08X-XXX-6402",
+    submittedAt: "02 พ.ย. 2569 11:08",
+    status: "อนุมัติแล้ว",
+    statusNote: "ตรวจสอบเอกสารและอนุมัติเรียบร้อย",
+    updatedAt: "03 พ.ย. 2569 10:16",
+    documents: ["สำเนาบัตรประชาชน", "สำเนาทะเบียนบ้าน"],
+  },
+  {
+    requestNumber: "PER-2026-00125",
+    employeeId: "0278",
+    employeeName: "น.ส.ปวีณา ตั้งใจ",
+    department: "HR",
+    position: "HR Officer",
+    personName: "เด็กหญิงพิมพ์ชนก ตั้งใจ",
+    relationship: "บุตร",
+    dateOfBirth: "10 ม.ค. 2564",
+    phone: "09X-XXX-5107",
+    submittedAt: "01 พ.ย. 2569 14:36",
+    status: "ปฏิเสธแล้ว",
+    statusNote: "ข้อมูลชื่อในแบบคำขอไม่ตรงกับเอกสารสูติบัตร",
+    updatedAt: "02 พ.ย. 2569 09:25",
+    documents: ["สูติบัตร", "สำเนาทะเบียนบ้าน"],
+  },
+  {
+    requestNumber: "PER-2026-00124",
+    employeeId: "0506",
+    employeeName: "นายธนกร ก้าวหน้า",
+    department: "Finance",
+    position: "Accountant",
+    personName: "นางสาวธัญญารัตน์ ก้าวหน้า",
+    relationship: "คู่สมรส",
+    dateOfBirth: "19 ก.ย. 2534",
+    phone: "06X-XXX-7724",
+    submittedAt: "31 ต.ค. 2569 10:02",
+    status: "รอแก้ไข",
+    statusNote: "กรุณาแนบสำเนาบัตรประชาชนด้านหลังเพิ่มเติม",
+    updatedAt: "01 พ.ย. 2569 15:10",
+    documents: ["สำเนาบัตรประชาชน (ไม่ครบถ้วน)", "สำเนาทะเบียนสมรส"],
+  },
+];
+
+const departments = [...new Set(requests.map((request) => request.department))];
+const positions = [...new Set(requests.map((request) => request.position))];
+const statuses: RequestStatus[] = ["รอตรวจสอบ", "รอแก้ไข", "อนุมัติแล้ว", "ปฏิเสธแล้ว"];
+const pageSize = 5;
+
+function SearchIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
+}
+
+function DocumentIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h8" /></svg>;
+}
+
+export default function EmployeeRequestsPage() {
+  const [query, setQuery] = useState("");
+  const [department, setDepartment] = useState("ทั้งหมด");
+  const [position, setPosition] = useState("ทั้งหมด");
+  const [status, setStatus] = useState("ทั้งหมด");
+  const [page, setPage] = useState(1);
+  const [selectedRequest, setSelectedRequest] = useState<PersonRequest | null>(null);
+
+  const filteredRequests = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    return requests.filter((request) =>
+      (!normalizedQuery || [
+        request.requestNumber,
+        request.employeeId,
+        request.employeeName,
+        request.personName,
+        request.relationship,
+      ].some((value) => value.toLocaleLowerCase().includes(normalizedQuery))) &&
+      (department === "ทั้งหมด" || request.department === department) &&
+      (position === "ทั้งหมด" || request.position === position) &&
+      (status === "ทั้งหมด" || request.status === status),
+    );
+  }, [department, position, query, status]);
+
+  const pageCount = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageRequests = filteredRequests.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  function resetFilters() {
+    setQuery("");
+    setDepartment("ทั้งหมด");
+    setPosition("ทั้งหมด");
+    setStatus("ทั้งหมด");
+    setPage(1);
+  }
+
+  return (
+    <div className="app-shell">
+      <div className="app-main employee-management-main">
+        <div className="page-content person-requests-content">
+          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
+            <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
+            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
+            <span aria-current="page">ติดตามคำขอเพิ่มบุคคล</span>
+          </nav>
+          <div className="person-requests-heading">
+            <h1>ติดตามคำขอเพิ่มบุคคล</h1>
+            <span className="result-count">{filteredRequests.length} รายการ</span>
+            <Link href="/hr/employees" className="person-requests-back-button">
+              <span aria-hidden="true">←</span> ย้อนกลับ
+            </Link>
+          </div>
+
+          <section className="person-requests-panel" aria-label="รายการคำขอเพิ่มบุคคล">
+            <div className="person-request-filters">
+              <label className="person-request-search">
+                <span>ค้นหา</span>
+                <div className="person-request-search-input">
+                  <SearchIcon />
+                  <input
+                    value={query}
+                    onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+                    placeholder="เลขที่คำขอ / ชื่อพนักงาน / ชื่อบุคคล..."
+                    aria-label="ค้นหาคำขอเพิ่มบุคคล"
+                  />
+                </div>
+              </label>
+              <label>
+                <span>แผนก:</span>
+                <select value={department} onChange={(event) => { setDepartment(event.target.value); setPage(1); }} aria-label="กรองตามแผนก">
+                  <option>ทั้งหมด</option>
+                  {departments.map((item) => <option key={item}>{item}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>ตำแหน่ง:</span>
+                <select value={position} onChange={(event) => { setPosition(event.target.value); setPage(1); }} aria-label="กรองตามตำแหน่ง">
+                  <option>ทั้งหมด</option>
+                  {positions.map((item) => <option key={item}>{item}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>สถานะ:</span>
+                <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} aria-label="กรองตามสถานะ">
+                  <option>ทั้งหมด</option>
+                  {statuses.map((item) => <option key={item}>{item}</option>)}
+                </select>
+              </label>
+              <button type="button" className="person-request-reset" onClick={resetFilters}>ล้างตัวกรอง</button>
+            </div>
+
+            <div className="person-requests-table-wrap">
+              <table className="person-requests-table">
+                <thead>
+                  <tr>
+                    <th scope="col">เลขที่คำขอ</th>
+                    <th scope="col">รหัส / ชื่อพนักงาน</th>
+                    <th scope="col">แผนก / ตำแหน่ง</th>
+                    <th scope="col">บุคคลที่ขอเพิ่ม</th>
+                    <th scope="col">ความสัมพันธ์</th>
+                    <th scope="col">วันที่ยื่นคำขอ</th>
+                    <th scope="col">เอกสาร</th>
+                    <th scope="col">สถานะ</th>
+                    <th scope="col" aria-label="รายละเอียด" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageRequests.map((request) => (
+                    <tr key={request.requestNumber}>
+                      <td data-label="เลขที่คำขอ" className="person-request-number">{request.requestNumber}</td>
+                      <td data-label="รหัส / ชื่อพนักงาน">
+                        <div className="person-request-cell-value">
+                          <strong>{request.employeeId}</strong>
+                          <span className="person-request-secondary">{request.employeeName}</span>
+                        </div>
+                      </td>
+                      <td data-label="แผนก / ตำแหน่ง">
+                        <div className="person-request-cell-value">
+                          <strong>{request.department}</strong>
+                          <span className="person-request-secondary">{request.position}</span>
+                        </div>
+                      </td>
+                      <td data-label="บุคคลที่ขอเพิ่ม">{request.personName}</td>
+                      <td data-label="ความสัมพันธ์">{request.relationship}</td>
+                      <td data-label="วันที่ยื่นคำขอ"><time>{request.submittedAt}</time></td>
+                      <td data-label="เอกสาร">
+                        <button type="button" className="person-request-documents" onClick={() => setSelectedRequest(request)} aria-label={`ดูเอกสาร ${request.requestNumber}`}>
+                          <DocumentIcon /> {request.documents.length} รายการ
+                        </button>
+                      </td>
+                      <td data-label="สถานะ"><span className={`person-request-status ${request.status === "รอแก้ไข" ? "revision" : request.status === "อนุมัติแล้ว" ? "approved" : request.status === "ปฏิเสธแล้ว" ? "rejected" : "pending"}`}>{request.status}</span></td>
+                      <td data-label="รายละเอียด">
+                        <button type="button" className="person-request-details" onClick={() => setSelectedRequest(request)}>ดูรายละเอียด</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!pageRequests.length ? <tr><td className="person-request-empty" colSpan={9}>ไม่พบคำขอที่ตรงกับตัวกรอง</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+
+            <footer className="person-requests-footer">
+              <span>
+                {filteredRequests.length === 0
+                  ? "ไม่พบรายการ"
+                  : `แสดง ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, filteredRequests.length)} จาก ${filteredRequests.length} รายการ`}
+              </span>
+              <nav className="pagination" aria-label="เปลี่ยนหน้าคำขอ">
+                <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="หน้าก่อนหน้า">‹‹</button>
+                {Array.from({ length: pageCount }, (_, index) => index + 1).map((pageNumber) => (
+                  <button
+                    type="button"
+                    key={pageNumber}
+                    className={pageNumber === currentPage ? "current-page" : ""}
+                    aria-current={pageNumber === currentPage ? "page" : undefined}
+                    onClick={() => setPage(pageNumber)}
+                  >{pageNumber}</button>
+                ))}
+                <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)} aria-label="หน้าถัดไป">››</button>
+              </nav>
+            </footer>
+          </section>
+        </div>
+      </div>
+
+      {selectedRequest ? (
+        <div className="decision-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedRequest(null); }}>
+          <section className="person-request-dialog" role="dialog" aria-modal="true" aria-labelledby="person-request-dialog-title">
+            <button type="button" className="decision-close" onClick={() => setSelectedRequest(null)} aria-label="ปิดหน้าต่าง">×</button>
+            <span className={`person-request-status ${selectedRequest.status === "รอแก้ไข" ? "revision" : selectedRequest.status === "อนุมัติแล้ว" ? "approved" : selectedRequest.status === "ปฏิเสธแล้ว" ? "rejected" : "pending"}`}>{selectedRequest.status}</span>
+            <h2 id="person-request-dialog-title">รายละเอียดคำขอ {selectedRequest.requestNumber}</h2>
+            <dl className="person-request-detail-grid">
+              <div><dt>พนักงาน</dt><dd>{selectedRequest.employeeName} ({selectedRequest.employeeId})</dd></div>
+              <div><dt>แผนก / ตำแหน่ง</dt><dd>{selectedRequest.department} / {selectedRequest.position}</dd></div>
+              <div><dt>บุคคลที่ขอเพิ่ม</dt><dd>{selectedRequest.personName}</dd></div>
+              <div><dt>ความสัมพันธ์</dt><dd>{selectedRequest.relationship}</dd></div>
+              <div><dt>วันเกิด</dt><dd>{selectedRequest.dateOfBirth}</dd></div>
+              <div><dt>เบอร์ติดต่อ</dt><dd>{selectedRequest.phone}</dd></div>
+              <div><dt>วันที่ยื่นคำขอ</dt><dd>{selectedRequest.submittedAt}</dd></div>
+              <div><dt>อัปเดตล่าสุด</dt><dd>{selectedRequest.updatedAt}</dd></div>
+              <div className="person-request-detail-wide"><dt>เอกสารแนบ</dt><dd>{selectedRequest.documents.join(" · ")}</dd></div>
+              <div className="person-request-detail-wide"><dt>หมายเหตุสถานะ</dt><dd>{selectedRequest.statusNote}</dd></div>
+            </dl>
+            <div className="person-request-dialog-actions">
+              <button type="button" className="button button-secondary" onClick={() => setSelectedRequest(null)}>ปิด</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </div>
+  );
+}
