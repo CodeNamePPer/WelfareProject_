@@ -84,7 +84,7 @@ export function LoginForm({ next }: { next: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password, recaptchaToken: token }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as { error?: string; home?: string; mustChangePassword?: boolean };
 
       if (!res.ok) {
         setError(data.error ?? "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่");
@@ -94,8 +94,10 @@ export function LoginForm({ next }: { next: string }) {
         return;
       }
 
+      // ไม่ได้ระบุหน้าที่จะกลับไป (next = "/") หรือต้องตั้งรหัสผ่านใหม่ก่อน → ไปหน้าแรกของ role นั้นตรงๆ
+      const target = data.home && (next === "/" || data.mustChangePassword) ? data.home : next;
       startTransition(() => {
-        router.replace(next);
+        router.replace(target);
         router.refresh();
       });
     } catch {

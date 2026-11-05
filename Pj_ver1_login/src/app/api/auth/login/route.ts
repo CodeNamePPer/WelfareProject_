@@ -98,7 +98,11 @@ export async function POST(req: NextRequest) {
   await markLogin(user.employeeId);
   await writeAudit({ action: "LOGIN_SUCCESS", userId: user.employeeId, identifier, ip });
 
-  const res = NextResponse.json({ ok: true, mustChangePassword: mustChange });
+  // หน้าแรกของบัญชีนี้ ให้ฝั่ง client ไปถึงตรงๆ ไม่ต้องผ่าน "/" แล้วถูก redirect ซ้ำ
+  // (ไม่งั้นจะเห็นโครงหน้าของ "/" ซึ่งเป็นหน้าพนักงาน แวบก่อนเข้า /admin)
+  const home = mustChange ? "/change-password" : user.role === "SUPER_ADMIN" ? "/admin" : "/";
+
+  const res = NextResponse.json({ ok: true, mustChangePassword: mustChange, home });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return res;
 }
