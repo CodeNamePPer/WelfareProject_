@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
-import { Size } from "react-aria-components";
 
 const plex = IBM_Plex_Sans_Thai({
   subsets: ["thai", "latin"],
@@ -11,8 +10,10 @@ const plex = IBM_Plex_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบสวัสดิการพนักงาน",
+  title: { default: "ระบบสวัสดิการพนักงาน", template: "%s · ระบบสวัสดิการพนักงาน" },
   description: "เข้าสู่ระบบเพื่อเบิกและติดตามสวัสดิการของคุณ",
+  // ระบบภายใน: ห้าม index ทุกหน้า (ซ้ำกับ X-Robots-Tag ใน next.config เผื่อ header ถูกตัดโดย proxy)
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

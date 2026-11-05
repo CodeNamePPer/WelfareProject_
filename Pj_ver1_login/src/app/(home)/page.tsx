@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import LogoutButton from "@/components/LogoutButton";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "หน้าหลัก" };
 
 export default async function Home() {
   const session = await getSession();

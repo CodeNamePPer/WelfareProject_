@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'ไม่พบหน้าที่ต้องการ' };
 
 // 404 สำหรับ URL นอก /admin – "/" จะส่งต่อไปหน้าที่เหมาะกับสิทธิ์ของผู้ใช้เอง
 export default function NotFound() {
