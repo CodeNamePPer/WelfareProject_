@@ -1,5 +1,6 @@
 import { getAllUsersWithProfile, getOrgOptions } from "@/lib/auth/users";
 import { getSession } from "@/lib/auth/get-session";
+import { getEmailDelivery } from "@/lib/email/resend";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AdminUsersClient from "./AdminUsersClient";
@@ -21,7 +22,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   return (
     <div className="flex flex-col gap-[24px]">
       <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
-      <AdminUsersClient initialUsers={users} orgOptions={orgOptions} initialSelectedId={initialSelectedId} currentUserId={session.sub} />
+      <AdminUsersClient
+        initialUsers={users}
+        orgOptions={orgOptions}
+        initialSelectedId={initialSelectedId}
+        currentUserId={session.sub}
+        emailDelivery={getEmailDelivery()}
+      />
     </div>
   );
 }

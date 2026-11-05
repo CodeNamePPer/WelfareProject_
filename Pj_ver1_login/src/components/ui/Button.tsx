@@ -1,11 +1,12 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { cx } from '../../lib/cx';
 import { Spinner } from './Spinner';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'danger' | 'danger-outline';
 type Size = 'sm' | 'md';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+// ComponentProps (ไม่ใช่ ButtonHTMLAttributes) เพื่อให้ส่ง ref ได้ตาม React 19 เช่น ย้ายโฟกัสไปที่ปุ่ม
+interface ButtonProps extends ComponentProps<'button'> {
   variant?: Variant;
   size?: Size;
   /** แสดงวงหมุนและปิดปุ่มไว้ระหว่างรอผลจากเซิร์ฟเวอร์ */
@@ -18,6 +19,8 @@ const variants: Record<Variant, string> = {
   ghost: 'text-muted hover:text-ink hover:bg-surface transition-colors',
   tonal: 'bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors',
   danger: 'bg-danger text-white hover:bg-danger/90 active:bg-danger/90 shadow-xs',
+  // ปุ่มเปิดการกระทำที่ย้อนไม่ได้ (เช่น รีเซ็ตรหัสผ่าน): แยกจากปุ่มแก้ไขทั่วไป แต่ไม่ดังเท่าปุ่มยืนยันสีทึบ
+  'danger-outline': 'border border-danger/40 bg-white text-danger hover:border-danger hover:bg-danger/5 transition-colors',
 };
 
 const sizes: Record<Size, string> = {

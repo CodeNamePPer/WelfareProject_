@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { Copy, FileDown, KeyRound, Pencil } from "lucide-react";
+import { CircleCheck, Copy, FileDown, KeyRound, Pencil, TriangleAlert } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/Button";
 import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
@@ -16,6 +16,7 @@ import { downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
 import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
+import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 
 type User = {
   employeeId: string; // Primary Key
@@ -64,12 +65,15 @@ export default function AdminUsersClient({
   orgOptions,
   initialSelectedId,
   currentUserId,
+  emailDelivery,
 }: {
   initialUsers: User[];
   orgOptions: OrgOptions;
   initialSelectedId?: string;
   /** ผู้ที่ล็อกอินอยู่ (รีเซ็ตรหัสของตัวเองจากหน้านี้ไม่ได้) */
   currentUserId: string;
+  /** ระบบส่งอีเมลได้หรือไม่ ใช้บอกล่วงหน้าว่ารหัสชั่วคราวจะไปทางอีเมลหรือแสดงบนจอ */
+  emailDelivery: EmailDelivery;
 }) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -301,6 +305,7 @@ export default function AdminUsersClient({
           key={selected.employeeId}
           user={selected}
           isSelf={selected.employeeId === currentUserId}
+          emailDelivery={emailDelivery}
           orgOptions={orgOptions}
           managerChoices={users
             .filter((u) => u.status === "ACTIVE" && u.employeeId !== selected.employeeId)
@@ -486,12 +491,14 @@ function toChoices(options: OrgOption[], currentId: string | null, currentName: 
 function UserPanel({
   user,
   isSelf,
+  emailDelivery,
   orgOptions,
   managerChoices,
   onSaved,
 }: {
   user: User;
   isSelf: boolean;
+  emailDelivery: EmailDelivery;
   orgOptions: OrgOptions;
   managerChoices: Choice[];
   onSaved: (user: User) => void;
@@ -647,10 +654,11 @@ function UserPanel({
   ];
 
   return (
+    // xl: panel ติดขอบบน ความสูงสูงสุดเว้นล่าง 104px (ปุ่มทางลัด 56px + ขอบ 24px + ช่องว่าง 24px) ไม่ให้ FAB ทับปุ่มท้าย panel
     <aside
       id="user-panel"
       aria-labelledby="user-panel-title"
-      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-48px)] xl:self-start xl:overflow-y-auto"
+      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-128px)] xl:self-start xl:overflow-y-auto"
     >
       <header className="flex items-start gap-[12px]">
         <div
@@ -734,24 +742,30 @@ function UserPanel({
         );
       })}
 
-      <ResetPasswordSection user={user} isSelf={isSelf} dimmed={editing !== null} />
+      <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} />
     </aside>
   );
 }
 
 /**
  * รีเซ็ตรหัสผ่าน (พนักงานลืมรหัส → HR/IT ยืนยันตัวตนแล้ว → Admin ออกรหัสชั่วคราว)
- * รหัสชั่วคราวแสดงครั้งเดียว ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
+ * ทำใน dialog แบบ modal: ระหว่างเปิดอยู่เลือกพนักงานคนอื่นหรือเปิดฟอร์มอื่นไม่ได้
+ * รหัสชั่วคราวจึงไม่หายเพราะเผลอคลิกแถวอื่น ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
  */
-function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: boolean; dimmed: boolean }) {
-  const [step, setStep] = useState<"idle" | "confirm" | "done">("idle");
-  const [reason, setReason] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [tempPassword, setTempPassword] = useState<string | null>(null);
-  const [emailedTo, setEmailedTo] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+function ResetPasswordSection({
+  user,
+  isSelf,
+  emailDelivery,
+  dimmed,
+}: {
+  user: User;
+  isSelf: boolean;
+  emailDelivery: EmailDelivery;
+  dimmed: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const hintId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const blocked = isSelf
     ? "รหัสผ่านของตัวเองให้เปลี่ยนที่หน้าโปรไฟล์"
@@ -759,20 +773,105 @@ function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: bo
       ? "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่"
       : null;
 
-  const close = () => {
-    setStep("idle");
-    setReason("");
-    setError(null);
-    setTempPassword(null);
-    setEmailedTo(null);
-    setEmailError(null);
-    setCopied(false);
+  return (
+    <section
+      aria-label="รหัสผ่าน"
+      className={cx("flex flex-col gap-[10px] border-t border-line pt-[14px]", dimmed && "opacity-60")}
+    >
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <h3 className="text-13 font-semibold text-ink">รหัสผ่าน</h3>
+        <Button
+          size="sm"
+          ref={triggerRef}
+          variant="danger-outline"
+          onClick={() => setOpen(true)}
+          disabled={dimmed || blocked !== null}
+          aria-describedby={hintId}
+          className="disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <KeyRound className="size-3.5" aria-hidden="true" />
+          รีเซ็ตรหัสผ่าน
+        </Button>
+      </div>
+      <p id={hintId} className="text-12 text-muted">
+        {blocked ?? "ใช้เมื่อพนักงานลืมรหัสผ่าน ยืนยันตัวตนกับพนักงานก่อนรีเซ็ตทุกครั้ง"}
+      </p>
+
+      {open ? (
+        <ResetPasswordDialog
+          user={user}
+          emailDelivery={emailDelivery}
+          onClose={() => {
+            setOpen(false);
+            // Safari ไม่โฟกัสปุ่มตอนคลิก dialog จึงคืนโฟกัสเองไม่ได้ ส่งโฟกัสกลับปุ่มรีเซ็ตเสมอ
+            triggerRef.current?.focus();
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function ResetPasswordDialog({
+  user,
+  emailDelivery,
+  onClose,
+}: {
+  user: User;
+  emailDelivery: EmailDelivery;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const resultRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const ackId = useId();
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [emailedTo, setEmailedTo] = useState<string | null>(null);
+  const [fallback, setFallback] = useState<ResetFallback | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+
+  const done = tempPassword !== null || emailedTo !== null;
+  // รหัสบนจอแสดงครั้งเดียว: ปิดได้เมื่อคัดลอกแล้วหรือยืนยันว่าแจ้งพนักงานแล้วเท่านั้น
+  const mustAcknowledge = tempPassword !== null && !copied && !acknowledged;
+  const canDismiss = !saving && !mustAcknowledge;
+
+  // เปิดเป็น modal ตอน mount: โฟกัสอยู่ใน dialog, พื้นหลังกดไม่ได้, ปิดแล้วโฟกัสกลับไปที่ปุ่มที่เปิด
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    reasonRef.current?.focus();
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, []);
+
+  // ผลลัพธ์มาแทนฟอร์ม: ย้ายโฟกัสไปที่ปุ่มหลักของผลลัพธ์ ไม่ให้หลุดไปที่ <body>
+  useEffect(() => {
+    if (done) resultRef.current?.focus();
+  }, [done]);
+
+  // ปิดด้วย close() ก่อน unmount: เบราว์เซอร์คืนโฟกัสให้ปุ่มที่เปิด dialog ได้ (ถ้าถอด node ทิ้งเลย โฟกัสจะหลุดไป <body>)
+  const dismiss = () => {
+    ref.current?.close();
+    onClose();
+  };
+
+  const requestClose = () => {
+    if (canDismiss) dismiss();
   };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (saving) return;
     if (!reason.trim()) {
       setError("กรุณาระบุเหตุผลการรีเซ็ตรหัสผ่าน");
+      reasonRef.current?.focus();
       return;
     }
     setSaving(true);
@@ -789,11 +888,10 @@ function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: bo
       } else {
         setTempPassword(result.tempPassword ?? null);
         setEmailedTo(result.emailedTo ?? null);
-        setEmailError(result.emailError ?? null);
-        setStep("done");
+        setFallback(result.fallback ?? null);
       }
     } catch {
-      setError("เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน");
+      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ รหัสผ่านยังไม่ถูกรีเซ็ต ลองอีกครั้ง");
     }
     setSaving(false);
   };
@@ -808,106 +906,174 @@ function ResetPasswordSection({ user, isSelf, dimmed }: { user: User; isSelf: bo
     }
   };
 
+  // บอกล่วงหน้าตามที่ server จะทำจริง (กติกาเดียวกับ API) ไม่สัญญาว่าจะส่งอีเมลเมื่อระบบส่งไม่ได้
+  const contactEmail = deliverableEmail(user.profile.contactEmail);
+  const deliveryPlan = !contactEmail
+    ? "พนักงานไม่มีอีเมลติดต่อ ระบบจะแสดงรหัสชั่วคราวบนจอครั้งเดียว ให้คุณแจ้งพนักงานเอง"
+    : !emailDelivery.configured
+      ? "ระบบยังไม่ได้ตั้งค่าการส่งอีเมล จึงจะแสดงรหัสชั่วคราวบนจอครั้งเดียว ให้คุณแจ้งพนักงานเอง"
+      : emailDelivery.testTo
+        ? `โหมดทดสอบ: ระบบจะส่งรหัสชั่วคราวไปที่ ${emailDelivery.testTo} แทน ${contactEmail} ถ้าส่งไม่สำเร็จจะแสดงรหัสบนจอแทน`
+        : `ระบบจะส่งรหัสชั่วคราวไปที่ ${contactEmail} ถ้าส่งไม่สำเร็จจะแสดงรหัสบนจอแทน`;
+
+  const title = tempPassword
+    ? `รหัสผ่านชั่วคราวของ ${user.name}`
+    : emailedTo
+      ? "ส่งรหัสผ่านชั่วคราวแล้ว"
+      : `รีเซ็ตรหัสผ่านของ ${user.name}?`;
+
   return (
-    <section
-      aria-label="รหัสผ่าน"
-      className={cx("flex flex-col gap-[10px] border-t border-line pt-[14px]", dimmed && step === "idle" && "opacity-60")}
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onKeyDown={(event) => {
+        // จัดการ Esc เอง: Chrome ปิด dialog ได้ถ้ากด Esc ซ้ำติดกัน แม้ onCancel จะสั่ง preventDefault
+        if (event.key === "Escape") {
+          event.preventDefault();
+          requestClose();
+        }
+      }}
+      onCancel={(event) => {
+        event.preventDefault();
+        requestClose();
+      }}
+      onClose={() => {
+        // ถ้าเบราว์เซอร์ปิด dialog เองทั้งที่ยังปิดไม่ได้ ให้เปิดกลับ ไม่ทิ้งรหัสที่ดูซ้ำไม่ได้
+        if (!canDismiss && ref.current && !ref.current.open) ref.current.showModal();
+      }}
+      className="m-auto max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[440px] overflow-y-auto rounded-[10px] border border-line bg-white p-0 text-ink shadow-lg backdrop:bg-ink/40"
     >
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <h3 className="text-13 font-semibold text-ink">รหัสผ่าน</h3>
-        {step === "idle" ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setStep("confirm")}
-            disabled={dimmed || blocked !== null}
-            className="disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <KeyRound className="size-3.5" aria-hidden="true" />
-            รีเซ็ตรหัสผ่าน
-          </Button>
-        ) : null}
-      </div>
-
-      {step === "idle" ? (
-        <p className="text-12 text-muted">{blocked ?? "ใช้เมื่อพนักงานลืมรหัสผ่าน ยืนยันตัวตนกับพนักงานก่อนรีเซ็ตทุกครั้ง"}</p>
-      ) : null}
-
-      {step === "confirm" ? (
-        <form onSubmit={submit} className="flex flex-col gap-[12px]">
-          <ul className="list-disc space-y-[2px] pl-[18px] text-12 text-muted">
-            <li>
-              {user.profile.contactEmail && !user.profile.contactEmail.endsWith(".invalid")
-                ? `ระบบจะส่งรหัสชั่วคราวไปที่ ${user.profile.contactEmail}`
-                : "พนักงานไม่มีอีเมลติดต่อ ระบบจะแสดงรหัสชั่วคราวบนจอครั้งเดียว"}
-            </li>
-            <li>{user.name} ต้องตั้งรหัสใหม่ตอนล็อกอินครั้งถัดไป</li>
-            <li>ทุกเครื่องที่ล็อกอินค้างไว้จะถูกออกจากระบบ</li>
-          </ul>
-          <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
-            <span>
-              เหตุผลการรีเซ็ต <span className="text-danger">*</span>
-            </span>
-            <textarea
-              rows={2}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              maxLength={500}
-              autoFocus
-              placeholder="เช่น พนักงานลืมรหัสผ่าน ยืนยันตัวตนด้วยบัตรพนักงานแล้ว"
-              className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-13 font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-            />
-          </label>
-          {error ? (
-            <p role="alert" className="text-12 text-danger">
-              {error}
+      <div className="flex flex-col gap-[16px] p-[20px]">
+        <div className="flex flex-col gap-[4px]">
+          <h2 id={titleId} className="flex items-start gap-[8px] break-words text-17 font-semibold">
+            {emailedTo && !tempPassword ? (
+              <CircleCheck className="mt-[3px] size-[18px] shrink-0 text-status-approved-ink" aria-hidden="true" />
+            ) : null}
+            <span className="min-w-0">{title}</span>
+          </h2>
+          {!done ? (
+            <p className="break-words text-13 text-muted">
+              {user.employeeId} · {user.email}
             </p>
           ) : null}
-          <div className="grid grid-cols-2 gap-[8px]">
-            <Button onClick={close} disabled={saving}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" variant="danger" loading={saving} className="disabled:cursor-not-allowed disabled:opacity-50">
-              {saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
-            </Button>
-          </div>
-        </form>
-      ) : null}
-
-      {step === "done" && emailedTo ? (
-        <div role="status" className="flex flex-col gap-[10px] rounded-lg border border-line bg-surface p-[12px]">
-          <p className="text-13 font-medium text-ink">ส่งรหัสผ่านชั่วคราวแล้ว</p>
-          <p className="break-words text-12 text-muted">
-            ส่งไปที่ <span className="font-medium text-ink">{emailedTo}</span> ให้ {user.name} เช็กอีเมล (รวมถึงโฟลเดอร์สแปม)
-            แล้วล็อกอินเพื่อตั้งรหัสใหม่ ถ้าไม่ได้รับอีเมล ให้รีเซ็ตอีกครั้ง
-          </p>
-          <Button variant="primary" onClick={close}>
-            เสร็จสิ้น
-          </Button>
         </div>
-      ) : null}
 
-      {step === "done" && tempPassword ? (
-        <div role="status" className="flex flex-col gap-[10px] rounded-lg border border-line bg-surface p-[12px]">
-          <p className="text-13 font-medium text-ink">รหัสผ่านชั่วคราวของ {user.name}</p>
-          {emailError ? <p className="text-12 text-danger">{emailError} จึงแสดงรหัสบนจอแทน</p> : null}
-          <div className="flex items-center gap-[8px]">
-            <code className="min-w-0 flex-1 select-all break-all rounded-md border border-line bg-white px-3 py-2 font-mono text-14 tracking-wider text-ink">
-              {tempPassword}
-            </code>
-            <Button size="sm" onClick={copy} aria-label="คัดลอกรหัสผ่านชั่วคราว">
-              <Copy className="size-3.5" aria-hidden="true" />
-              {copied ? "คัดลอกแล้ว" : "คัดลอก"}
-            </Button>
+        {!done ? (
+          <form onSubmit={submit} noValidate className="flex flex-col gap-[16px]">
+            <ul className="list-disc space-y-[2px] pl-[18px] text-13 text-muted">
+              <li className="break-words">{deliveryPlan}</li>
+              <li>{user.name} ต้องตั้งรหัสใหม่ตอนล็อกอินครั้งถัดไป</li>
+              <li>ทุกเครื่องที่ล็อกอินค้างไว้จะถูกออกจากระบบ</li>
+            </ul>
+            <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
+              <span>
+                เหตุผลการรีเซ็ต <span className="text-danger">*</span>
+              </span>
+              <textarea
+                ref={reasonRef}
+                rows={3}
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (error) setError(null);
+                }}
+                maxLength={500}
+                aria-required="true"
+                aria-invalid={error ? true : undefined}
+                placeholder="เช่น พนักงานลืมรหัสผ่าน ยืนยันตัวตนด้วยบัตรพนักงานแล้ว"
+                className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-13 font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 aria-[invalid=true]:border-danger"
+              />
+            </label>
+            {error ? (
+              <p role="alert" className="text-12 text-danger">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-col-reverse gap-[8px] sm:flex-row sm:justify-end">
+              <Button onClick={requestClose} disabled={saving}>
+                ยกเลิก
+              </Button>
+              <Button type="submit" variant="danger" loading={saving}>
+                {saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        {emailedTo && !tempPassword ? (
+          <div role="status" className="flex flex-col gap-[16px]">
+            <p className="break-words text-13 text-muted">
+              {emailDelivery.testTo ? (
+                <>
+                  โหมดทดสอบ: ส่งไปที่ <span className="font-medium text-ink">{emailedTo}</span> แทนอีเมลของ {user.name}{" "}
+                  พนักงานจะไม่ได้รับอีเมลนี้ ให้แจ้งรหัสจากกล่องจดหมายทดสอบเอง
+                </>
+              ) : (
+                <>
+                  ส่งไปที่ <span className="font-medium text-ink">{emailedTo}</span> ให้ {user.name} เช็กอีเมล (รวมถึงโฟลเดอร์สแปม)
+                  แล้วล็อกอินเพื่อตั้งรหัสใหม่ ถ้าไม่ได้รับอีเมล ให้รีเซ็ตอีกครั้ง
+                </>
+              )}
+            </p>
+            <div className="flex flex-col sm:flex-row sm:justify-end">
+              <Button ref={resultRef} variant="primary" onClick={dismiss}>
+                เสร็จสิ้น
+              </Button>
+            </div>
           </div>
-          <p className="text-12 text-muted">
-            แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตใหม่
-          </p>
-          <Button variant="primary" onClick={close}>
-            เสร็จสิ้น
-          </Button>
-        </div>
-      ) : null}
-    </section>
+        ) : null}
+
+        {tempPassword ? (
+          <div role="status" className="flex flex-col gap-[12px]">
+            {fallback === "send-failed" ? (
+              <div className="flex gap-[8px] rounded-[8px] bg-status-pending-soft px-[10px] py-[8px] text-13 text-status-pending-ink">
+                <TriangleAlert className="mt-[2px] size-[14px] shrink-0" aria-hidden="true" />
+                <p className="break-words">
+                  ส่งอีเมลไปที่ {emailDelivery.testTo ?? contactEmail} ไม่สำเร็จ รหัสผ่านถูกรีเซ็ตแล้ว ให้แจ้งรหัสด้านล่างกับพนักงานเอง
+                </p>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-[8px]">
+              <code className="min-w-0 flex-1 select-all break-all rounded-md border border-line bg-surface px-3 py-2 font-mono text-14 tracking-wider text-ink">
+                {tempPassword}
+              </code>
+              <Button ref={resultRef} size="sm" onClick={copy} aria-label="คัดลอกรหัสผ่านชั่วคราว">
+                <Copy className="size-3.5" aria-hidden="true" />
+                {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+              </Button>
+            </div>
+            <p className="text-12 text-muted">
+              แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตใหม่
+            </p>
+            <label className="flex items-start gap-[8px] text-13 text-ink">
+              <input
+                type="checkbox"
+                checked={acknowledged || copied}
+                disabled={copied}
+                onChange={(e) => setAcknowledged(e.target.checked)}
+                className="mt-[3px] size-4 shrink-0 accent-primary-600"
+              />
+              <span>แจ้งหรือจดรหัสนี้ให้พนักงานแล้ว</span>
+            </label>
+            <div className="flex flex-col gap-[6px] sm:items-end">
+              <Button
+                variant="primary"
+                onClick={dismiss}
+                disabled={mustAcknowledge}
+                aria-describedby={mustAcknowledge ? ackId : undefined}
+                className="disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                เสร็จสิ้น
+              </Button>
+              {mustAcknowledge ? (
+                <p id={ackId} className="text-12 text-muted">
+                  คัดลอกรหัส หรือติ๊กยืนยันก่อนปิด
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </dialog>
   );
 }
