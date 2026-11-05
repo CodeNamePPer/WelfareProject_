@@ -90,11 +90,12 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
       </div>
 
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="flex flex-col gap-[20px]">
-        {tab === 'catalog' || tab === 'import' ? (
-          <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} />
-        ) : null}
+        {/* แท็บนำเข้า: การ์ดนำเข้าอยู่บนสุด รายการสวัสดิการตามมาด้านล่าง */}
         {tab === 'import' ? (
           <ImportPanel preview={importPreview} onImported={(count) => setImportedCount((total) => total + count)} />
+        ) : null}
+        {tab === 'catalog' || tab === 'import' ? (
+          <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} />
         ) : null}
         {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} /> : null}
       </div>
