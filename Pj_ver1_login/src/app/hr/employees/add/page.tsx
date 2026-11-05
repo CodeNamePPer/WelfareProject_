@@ -1,0 +1,255 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+
+type MaritalStatus = "โสด" | "สมรส" | "หย่าร้าง / หม้าย";
+
+type EmployeeForm = {
+  department: string;
+  startDate: string;
+  position: string;
+  prefix: string;
+  maritalStatus: MaritalStatus;
+  firstName: string;
+  lastName: string;
+  childrenCount: string;
+  gender: string;
+  nationality: string;
+  currentAddress: string;
+  citizenId: string;
+  birthDate: string;
+  religion: string;
+  fatherFirstName: string;
+  fatherLastName: string;
+  motherFirstName: string;
+  motherLastName: string;
+  email: string;
+  phone: string;
+};
+
+const departments = ["IT", "Marketing", "Sales", "HR", "Finance"];
+const positions = ["Developer", "ผู้จัดการ", "พนักงาน", "HR Officer", "Accountant"];
+const prefixes = ["นาย", "นาง", "นางสาว", "อื่น ๆ"];
+const maritalStatuses: MaritalStatus[] = ["โสด", "สมรส", "หย่าร้าง / หม้าย"];
+
+const initialForm: EmployeeForm = {
+  department: "IT",
+  startDate: "",
+  position: "พนักงาน",
+  prefix: "นาย",
+  maritalStatus: "โสด",
+  firstName: "",
+  lastName: "",
+  childrenCount: "0",
+  gender: "ชาย",
+  nationality: "ไทย",
+  currentAddress: "",
+  citizenId: "",
+  birthDate: "",
+  religion: "",
+  fatherFirstName: "",
+  fatherLastName: "",
+  motherFirstName: "",
+  motherLastName: "",
+  email: "",
+  phone: "",
+};
+
+export default function AddEmployeePage() {
+  const router = useRouter();
+  const [form, setForm] = useState(initialForm);
+
+  function updateField<Key extends keyof EmployeeForm>(key: Key, value: EmployeeForm[Key]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function saveEmployee(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextId = Number(sessionStorage.getItem("employee-next-id") ?? "274");
+    const id = String(nextId).padStart(4, "0");
+    const employee = {
+      id,
+      name: `${form.prefix}${form.firstName.trim()} ${form.lastName.trim()}`,
+      email: form.email.trim(),
+      department: form.department,
+      position: form.position,
+      tier: "พนักงาน",
+      used: 0,
+      limit: 15000,
+      profile: Object.fromEntries(Object.entries(form).map(([key, value]) => [key, String(value)])),
+    };
+
+    sessionStorage.setItem("employee-next-id", String(nextId + 1));
+    sessionStorage.setItem("new-employee", JSON.stringify(employee));
+    router.push("/hr/employees");
+  }
+
+  return (
+    <div className="app-shell">
+      <div className="app-main employee-add-main">
+        <div className="page-content employee-add-content">
+          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
+            <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
+            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
+            <span aria-current="page">เพิ่มพนักงานรายบุคคล</span>
+          </nav>
+          <div className="employee-add-heading">
+            <h1>เพิ่มพนักงานรายบุคคล</h1>
+            <p>กรอกข้อมูลพนักงานเพื่อกำหนดสิทธิ์และคำนวณสวัสดิการ</p>
+          </div>
+
+          <form className="employee-profile-form" onSubmit={saveEmployee}>
+            <section className="employee-profile-card" aria-labelledby="employee-profile-title">
+              <h2 id="employee-profile-title">1. แก้ไขข้อมูลส่วนตัวและข้อมูลการทำงาน</h2>
+              <div className="employee-profile-grid">
+                <section className="employee-profile-identity" aria-labelledby="employee-identity-title">
+                  <h3 id="employee-identity-title">ข้อมูลระบุตัวตน</h3>
+                  <div className="employee-identity-fields">
+                    <label className="profile-field">
+                      <span>รหัสพนักงาน</span>
+                      <input value="กำหนดอัตโนมัติ" readOnly aria-describedby="employee-code-hint" />
+                      <small id="employee-code-hint">ระบบจะสร้างรหัสเมื่อบันทึก</small>
+                    </label>
+                    <label className="profile-field">
+                      <span>แผนก</span>
+                      <select required value={form.department} onChange={(event) => updateField("department", event.target.value)}>
+                        {departments.map((item) => <option key={item}>{item}</option>)}
+                      </select>
+                    </label>
+                    <label className="profile-field">
+                      <span>ตำแหน่ง</span>
+                      <select required value={form.position} onChange={(event) => updateField("position", event.target.value)}>
+                        {positions.map((item) => <option key={item}>{item}</option>)}
+                      </select>
+                    </label>
+                    <label className="profile-field">
+                      <span>คำนำหน้า</span>
+                      <select required value={form.prefix} onChange={(event) => updateField("prefix", event.target.value)}>
+                        {prefixes.map((item) => <option key={item}>{item}</option>)}
+                      </select>
+                    </label>
+                    <label className="profile-field">
+                      <span>ชื่อ</span>
+                      <input required value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>นามสกุล</span>
+                      <input required value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>เพศ</span>
+                      <select required value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
+                        <option>ชาย</option>
+                        <option>หญิง</option>
+                        <option>ไม่ระบุ</option>
+                      </select>
+                    </label>
+                    <label className="profile-field">
+                      <span>สัญชาติ</span>
+                      <input required value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>เลขบัตรประชาชน</span>
+                      <input
+                        required
+                        inputMode="numeric"
+                        pattern="[0-9]{13}"
+                        maxLength={13}
+                        value={form.citizenId}
+                        onChange={(event) => updateField("citizenId", event.target.value.replace(/\D/g, ""))}
+                        title="กรอกเลขบัตรประชาชน 13 หลัก"
+                      />
+                    </label>
+                    <label className="profile-field">
+                      <span>วัน/เดือน/ปี เกิด</span>
+                      <input required type="date" value={form.birthDate} onChange={(event) => updateField("birthDate", event.target.value)} />
+                    </label>
+                    <label className="profile-field employee-profile-wide">
+                      <span>ศาสนา</span>
+                      <input required value={form.religion} onChange={(event) => updateField("religion", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>ชื่อ-บิดา</span>
+                      <input required value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>นามสกุล-บิดา</span>
+                      <input required value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>ชื่อ-มารดา</span>
+                      <input required value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
+                    </label>
+                    <label className="profile-field">
+                      <span>นามสกุล-มารดา</span>
+                      <input required value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
+                    </label>
+                  </div>
+                </section>
+
+                <section className="employee-profile-benefits" aria-labelledby="employee-benefits-title">
+                  <h3 id="employee-benefits-title">เงื่อนไขการคำนวณสิทธิสวัสดิการ</h3>
+                  <label className="profile-field">
+                    <span>วันเริ่มงาน</span>
+                    <input required type="date" value={form.startDate} onChange={(event) => updateField("startDate", event.target.value)} />
+                  </label>
+                  <fieldset className="profile-field profile-marital">
+                    <legend>สถานะสมรส</legend>
+                    <div className="marital-options">
+                      {maritalStatuses.map((status) => (
+                        <label className="marital-option" key={status}>
+                          <input
+                            type="radio"
+                            name="maritalStatus"
+                            value={status}
+                            checked={form.maritalStatus === status}
+                            onChange={() => updateField("maritalStatus", status)}
+                          />
+                          <span>{status}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <label className="profile-field">
+                    <span>จำนวนบุตร (ที่เข้าเงื่อนไขเบิกสิทธิ์)</span>
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.childrenCount}
+                      onChange={(event) => updateField("childrenCount", event.target.value)}
+                    />
+                  </label>
+                  <label className="profile-field">
+                    <span>ที่อยู่ปัจจุบัน</span>
+                    <textarea required rows={3} value={form.currentAddress} onChange={(event) => updateField("currentAddress", event.target.value)} />
+                  </label>
+                  <h3 className="employee-contact-title">ข้อมูลติดต่อ</h3>
+                  <label className="profile-field">
+                    <span>อีเมล</span>
+                    <input required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>เบอร์โทรศัพท์</span>
+                    <input type="tel" autoComplete="tel" value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
+                  </label>
+                </section>
+              </div>
+
+              <footer className="employee-profile-footer">
+                <p><span aria-hidden="true">*</span> ข้อมูลที่จำเป็นต้องกรอก</p>
+                <div className="form-actions">
+                  <Link href="/hr/employees" className="button button-secondary">ยกเลิก</Link>
+                  <button type="submit" className="button button-primary">บันทึกพนักงาน</button>
+                </div>
+              </footer>
+            </section>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}

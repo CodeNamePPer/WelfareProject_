@@ -15,6 +15,11 @@ export default async function Home() {
     redirect("/admin");
   }
 
+  // ฝ่ายบุคคล ส่งต่อไปยังหน้าของ HR
+  if (session.role === "HR") {
+    redirect("/hr");
+  }
+
   const roleLabel = ROLE_LABELS[session.role as Role] || session.role;
 
   
