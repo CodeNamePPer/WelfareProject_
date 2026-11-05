@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/PageHeader';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'ไม่พบหน้าที่ต้องการ' };
 
 // แสดงเมื่อเปิด URL ใต้ /admin ที่ไม่มีอยู่ – sidebar มาจาก admin/layout จึงยังเลือกเมนูอื่นได้ทันที
 export default function AdminNotFound() {

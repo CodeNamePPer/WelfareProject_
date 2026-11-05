@@ -3,6 +3,9 @@ import { LOG_SECTIONS } from "@/features/logs/sections";
 import { toLogEntries } from "@/features/logs/fromAuditLog";
 import { listAudit } from "@/lib/auth/audit";
 import { getAllUsers } from "@/lib/auth/users";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "ประวัติของระบบ" };
 
 // อ่าน log ล่าสุดทุกครั้งที่เปิดหน้า
 export const dynamic = "force-dynamic";

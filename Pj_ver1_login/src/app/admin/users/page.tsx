@@ -4,6 +4,9 @@ import { getEmailDelivery } from "@/lib/email/resend";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import AdminUsersClient from "./AdminUsersClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "ตั้งค่าผู้ใช้งานระบบ" };
 
 // ?user=<รหัสพนักงาน> เปิดหน้าโดยเลือกผู้ใช้คนนั้นไว้ (เช่น ปุ่มแก้ไขจากหน้าโปรไฟล์)
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<{ user?: string }> }) {
