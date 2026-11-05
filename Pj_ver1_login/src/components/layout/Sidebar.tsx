@@ -14,8 +14,9 @@ import {
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { AnchorHTMLAttributes } from 'react';
+import { useState, type AnchorHTMLAttributes } from 'react';
 import { cx } from '../../lib/cx';
+import { Spinner } from '../ui/Spinner';
 
 interface NavItem {
   id: string;
@@ -56,7 +57,7 @@ export function Sidebar({
     { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount, href: '/admin/notifications' },
     { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
     { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
-    { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History, href: '/admin/logs' },
+    { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
     { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
   ];
 
@@ -64,7 +65,10 @@ export function Sidebar({
   const profileActive = activeId === 'profile';
   const userInitial = Array.from(user.name.trim())[0] ?? '?';
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } finally {
@@ -206,14 +210,16 @@ export function Sidebar({
           <button
             type="button"
             onClick={handleLogout}
+            disabled={loggingOut}
+            aria-busy={loggingOut || undefined}
             title={collapsed ? 'ออกจากระบบ' : undefined}
             className={cx(
-              'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 text-muted hover:bg-danger/10 hover:text-danger cursor-pointer',
+              'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-13 text-muted hover:bg-danger/10 hover:text-danger cursor-pointer disabled:cursor-wait disabled:opacity-80',
               collapsed && 'md:justify-center',
             )}
           >
-            <LogOut className="size-4 shrink-0" aria-hidden="true" />
-            <span className={hideWhenCollapsed}>ออกจากระบบ</span>
+            {loggingOut ? <Spinner /> : <LogOut className="size-4 shrink-0" aria-hidden="true" />}
+            <span className={hideWhenCollapsed}>{loggingOut ? 'กำลังออกจากระบบ…' : 'ออกจากระบบ'}</span>
           </button>
         </div>
       </aside>

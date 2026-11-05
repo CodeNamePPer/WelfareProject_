@@ -44,7 +44,7 @@ interface LogTableProps {
   emptyText?: string;
 }
 
-// Log table from Figma "Admin / Log" (node 163:896), shared by the Log page, the dashboard and the welfare history tab.
+// Log table from Figma "Admin / Log" (node 163:896), shared by the Log page and the dashboard.
 // ประเภทอยู่ถัดจากเวลา ให้สแกนหาแท็กได้ทางซ้าย ส่วนปุ่มดูรายละเอียดอยู่คอลัมน์ขวาสุด ตำแหน่งเดียวกับปุ่มคำสั่งของแถวในตารางอื่น
 export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไม่พบ Log ที่ตรงกับเงื่อนไข' }: LogTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(defaultExpandedId);
@@ -60,7 +60,7 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
             <th scope="col" className={cx(table.th, 'w-[90px]')}>เวลา</th>
             <th scope="col" className={cx(table.th, 'w-[150px]')}>ประเภท</th>
             <th scope="col" className={cx(table.th, 'w-[190px]')}>ผู้ดำเนินการ</th>
-            <th scope="col" className={cx(table.th, 'min-w-[190px]')}>เป้าหมาย</th>
+            <th scope="col" className={cx(table.th, 'min-w-[190px]')}>ผู้ถูกดำเนินการ</th>
             <th scope="col" className={cx(table.th, 'w-full')}>รายละเอียด</th>
             <th scope="col" className={table.th}>
               <span className="sr-only">การเปลี่ยนแปลง</span>

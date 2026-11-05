@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { cx } from '../../lib/cx';
+import { Spinner } from './Spinner';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'tonal' | 'danger';
 type Size = 'sm' | 'md';
@@ -7,6 +8,8 @@ type Size = 'sm' | 'md';
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
+  /** แสดงวงหมุนและปิดปุ่มไว้ระหว่างรอผลจากเซิร์ฟเวอร์ */
+  loading?: boolean;
 }
 
 const variants: Record<Variant, string> = {
@@ -25,20 +28,30 @@ const sizes: Record<Size, string> = {
 export function Button({
   variant = 'secondary',
   size = 'md',
+  loading = false,
   className,
   type = 'button',
+  disabled,
+  children,
   ...rest
 }: ButtonProps) {
   return (
     <button
       type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cx(
         'inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-colors motion-reduce:transition-none',
         variants[variant],
         sizes[size],
         className,
+        // ระหว่างโหลด: เคอร์เซอร์รอ และไม่จางมากจนมองวงหมุนไม่ออก (ทับ disabled:* ของผู้เรียก)
+        '[&[aria-busy=true]]:cursor-wait [&[aria-busy=true]]:opacity-80',
       )}
       {...rest}
-    />
+    >
+      {loading ? <Spinner /> : null}
+      {children}
+    </button>
   );
 }

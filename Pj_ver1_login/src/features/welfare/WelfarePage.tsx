@@ -1,21 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole } from '../../lib/format';
-import type { AuditEntry, Claim, Employee, ImportRecord, WelfareItem } from '../../types';
+import type { Claim, Employee, ImportRecord, WelfareItem } from '../../types';
 import { ClaimsTab } from './ClaimsTab';
-import { HistoryTab } from './HistoryTab';
 import { ImportPanel } from './ImportPanel';
 import { WelfareCatalog } from './WelfareCatalog';
 
-export type TabId = 'catalog' | 'claims' | 'history' | 'import';
+export type TabId = 'catalog' | 'claims' | 'import';
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'catalog', label: 'สวัสดิการที่มีอยู่' },
   { id: 'claims', label: 'คำขอเบิก' },
-  { id: 'history', label: 'ประวัติการแก้ไข' },
   { id: 'import', label: 'นำเข้าประวัติ' },
 ];
 
@@ -24,13 +24,12 @@ interface WelfarePageProps {
   importPreview: ImportRecord[];
   claims: Claim[];
   employees: Employee[];
-  history: AuditEntry[];
   /** Tab to open first, e.g. from a dashboard shortcut (?tab=import). */
   initialTab?: TabId;
 }
 
 // Layout follows Figma "Admin / จัดการสวัสดิการและนำเข้าประวัติ" (node 163:180).
-export function WelfarePage({ initialItems, importPreview, claims, employees, history, initialTab = 'catalog' }: WelfarePageProps) {
+export function WelfarePage({ initialItems, importPreview, claims, employees, initialTab = 'catalog' }: WelfarePageProps) {
   const [tab, setTab] = useState<TabId>(initialTab);
   const [items, setItems] = useState(initialItems);
   const [selectedCode, setSelectedCode] = useState(initialItems[0]?.code ?? '');
@@ -42,7 +41,8 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
     <div className="flex flex-col gap-[20px]">
       <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขได้โดยตรง · ไม่อนุมัติคำขอเบิก · ข้อมูลตัวอย่าง" />
 
-      <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="scrollbar-none -mx-4 flex gap-[4px] overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+      <div className="-mx-4 flex items-center gap-[12px] border-b border-line px-4 sm:mx-0 sm:px-0">
+      <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="scrollbar-none flex min-w-0 flex-1 gap-[4px] overflow-x-auto">
         {tabs.map(({ id, label }) => {
           const active = id === tab;
           return (
@@ -64,6 +64,15 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
             </button>
           );
         })}
+      </div>
+        {/* ประวัติการแก้ไขสวัสดิการรวมอยู่ที่หน้าประวัติของระบบ */}
+        <Link
+          href="/admin/logs?tab=welfare"
+          className="inline-flex shrink-0 items-center gap-[4px] rounded-[4px] text-13 font-medium text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+        >
+          ประวัติการแก้ไข
+          <ArrowUpRight className="size-4" aria-hidden="true" />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
@@ -88,7 +97,6 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, hi
           <ImportPanel preview={importPreview} onImported={(count) => setImportedCount((total) => total + count)} />
         ) : null}
         {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} /> : null}
-        {tab === 'history' ? <HistoryTab entries={history} /> : null}
       </div>
     </div>
   );

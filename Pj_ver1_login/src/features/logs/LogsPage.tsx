@@ -9,30 +9,27 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Pagination, paginate } from '../../components/ui/Pagination';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Select } from '../../components/ui/Select';
+import { cx } from '../../lib/cx';
 import { downloadCsv } from '../../lib/csv';
-import type { AuditCategory, AuditEntry } from '../../types';
+import type { AuditAction, AuditEntry } from '../../types';
 import { LogTable, actionTag, resultLabel } from './LogTable';
+import { LOG_SECTIONS, SECTIONS, SECTION_OF, type LogSection } from './sections';
 
-type Filter = 'all' | AuditCategory;
+type Filter = 'all' | AuditAction;
 
 const PAGE_SIZE = 20;
 
-const CATEGORY_LABELS: Record<AuditCategory, string> = {
-  settings: 'การตั้งค่าระบบ',
-  import: 'การนำเข้าข้อมูล',
-  issue: 'แจ้งปัญหาเว็บไซต์',
-};
-
-const CSV_COLUMNS = ['เลขอ้างอิง', 'วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'IP', 'ประเภท', 'ผลลัพธ์', 'เป้าหมาย', 'รายการ', 'รายละเอียด', 'ก่อน', 'หลัง', 'เหตุผล'];
+const CSV_COLUMNS = ['เลขอ้างอิง', 'วันเวลา', 'ผู้ดำเนินการ', 'บทบาท', 'IP', 'ประเภท', 'ผลลัพธ์', 'ผู้ถูกดำเนินการ', 'รายการ', 'รายละเอียด', 'ก่อน', 'หลัง', 'เหตุผล'];
 
 const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 // Layout follows Figma "Admin / Log" (node 163:896). The log is append-only: no edit or delete.
-export function LogsPage({ entries }: { entries: AuditEntry[] }) {
+export function LogsPage({ entries, initialSection = 'people' }: { entries: AuditEntry[]; initialSection?: LogSection }) {
   const years = useMemo(
     () => Array.from(new Set(entries.map((entry) => Number(entry.at.slice(0, 4))))).sort((a, b) => b - a),
     [entries],
   );
+  const [section, setSection] = useState<LogSection>(initialSection);
   const [year, setYear] = useState(String(years[0] ?? new Date().getFullYear()));
   const [month, setMonth] = useState('all');
   const [query, setQuery] = useState('');
@@ -40,26 +37,37 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
-  // Year, month and search narrow the set; the chips then split it by category (counts follow the narrowed set).
+  // Year, month and search narrow the set; tabs and chips then split it (counts follow the narrowed set).
   const scoped = useMemo(() => {
     const q = query.trim().toLowerCase();
     return entries.filter((entry) => {
       if (entry.at.slice(0, 4) !== year) return false;
       if (month !== 'all' && Number(entry.at.slice(5, 7)) !== Number(month)) return false;
       const target = entry.target ? `${entry.target.code} ${entry.target.name ?? ''}` : '';
-      return !q || `${entry.actor} ${entry.actorRole} ${target} ${entry.title} ${entry.detail} ${entry.ip ?? ''}`.toLowerCase().includes(q);
+      const haystack = `${entry.actor} ${entry.actorRole} ${target} ${entry.importSummary?.file ?? ''} ${entry.title} ${entry.detail} ${entry.ip ?? ''}`;
+      return !q || haystack.toLowerCase().includes(q);
     });
   }, [entries, year, month, query]);
 
-  const filtered = filter === 'all' ? scoped : scoped.filter((entry) => entry.category === filter);
+  const inSection = (target: LogSection) => scoped.filter((entry) => SECTION_OF[entry.action] === target);
+  const sectionEntries = inSection(section);
+  const filtered = filter === 'all' ? sectionEntries : sectionEntries.filter((entry) => entry.action === filter);
   const rows = paginate(filtered, page, PAGE_SIZE);
-  const count = (category: AuditCategory) => scoped.filter((entry) => entry.category === category).length;
+  const hasAnyInSection = entries.some((entry) => SECTION_OF[entry.action] === section);
 
   const resetPage = () => setPage(1);
 
+  const selectSection = (next: LogSection) => {
+    setSection(next);
+    setFilter('all');
+    resetPage();
+    // เก็บแท็บไว้ใน URL ให้ลิงก์/รีเฟรชกลับมาที่แท็บเดิม
+    window.history.replaceState(null, '', `?tab=${next}`);
+  };
+
   const exportCsv = () =>
     downloadCsv(
-      `audit-log-${year}${month === 'all' ? '' : `-${month.padStart(2, '0')}`}.csv`,
+      `audit-log-${section}-${year}${month === 'all' ? '' : `-${month.padStart(2, '0')}`}.csv`,
       CSV_COLUMNS,
       filtered.map((entry) => {
         const fields = entry.change?.fields ?? [];
@@ -72,7 +80,7 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
           entry.ip ?? '',
           actionTag[entry.action].label,
           resultLabel[entry.result ?? 'success'],
-          entry.target ? [entry.target.code, entry.target.name].filter(Boolean).join(' ') : '',
+          entry.target ? [entry.target.code, entry.target.name].filter(Boolean).join(' ') : entry.importSummary?.file ?? '',
           entry.title,
           entry.detail,
           side('before'),
@@ -85,14 +93,39 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
   return (
     <div className="flex flex-col gap-[20px]">
       <PageHeader
-        title="ประวัติการแก้ไข Log"
+        title="ประวัติของระบบ"
         description="บันทึกการเปลี่ยนแปลงระบบ · Admin จัดการระบบได้ แต่ไม่สามารถอนุมัติคำขอเบิก · ลบหรือแก้ไขไม่ได้"
       />
+
+      <div role="tablist" aria-label="หมวดประวัติ" className="scrollbar-none -mx-4 flex gap-[4px] overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+        {LOG_SECTIONS.map((id) => {
+          const active = id === section;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`tab-${id}`}
+              aria-selected={active}
+              aria-controls="panel-logs"
+              onClick={() => selectSection(id)}
+              className={cx(
+                '-mb-px inline-flex shrink-0 items-center gap-[6px] border-b-2 px-[12px] py-[12px] text-14 sm:px-[18px] whitespace-nowrap transition-colors motion-reduce:transition-none',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+                active ? 'border-primary-600 font-semibold text-primary-700' : 'border-transparent text-muted hover:text-ink',
+              )}
+            >
+              {SECTIONS[id].label}
+              <span className="text-12 font-normal tabular-nums text-muted">{inSection(id).length.toLocaleString('th-TH')}</span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex flex-col gap-[10px] lg:flex-row">
         <SearchInput
           label="ค้นหา Log"
-          placeholder="ค้นหาผู้ดำเนินการ / เป้าหมาย / กิจกรรม / IP"
+          placeholder="ค้นหาผู้ดำเนินการ / ผู้ถูกดำเนินการ / กิจกรรม / IP"
           value={query}
           onChange={(value) => {
             setQuery(value);
@@ -151,7 +184,12 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
         </div>
       </div>
 
-      <section aria-label="รายการ Log" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
+      <section
+        id="panel-logs"
+        role="tabpanel"
+        aria-labelledby={`tab-${section}`}
+        className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]"
+      >
         <FilterChips
           label="กรองตามประเภท"
           value={filter}
@@ -160,14 +198,21 @@ export function LogsPage({ entries }: { entries: AuditEntry[] }) {
             resetPage();
           }}
           options={[
-            { id: 'all', label: 'ทั้งหมด', count: scoped.length },
-            { id: 'settings', label: CATEGORY_LABELS.settings, count: count('settings') },
-            { id: 'import', label: CATEGORY_LABELS.import, count: count('import') },
-            { id: 'issue', label: CATEGORY_LABELS.issue, count: count('issue') },
+            { id: 'all', label: 'ทั้งหมด', count: sectionEntries.length },
+            ...SECTIONS[section].filters.map(({ id, label }) => ({
+              id,
+              label,
+              count: sectionEntries.filter((entry) => entry.action === id).length,
+            })),
           ]}
         />
 
-        <LogTable entries={rows} defaultExpandedId={entries[0]?.id ?? null} />
+        <LogTable
+          key={section}
+          entries={rows}
+          defaultExpandedId={sectionEntries[0]?.id ?? null}
+          emptyText={hasAnyInSection ? 'ไม่พบประวัติที่ตรงกับเงื่อนไข' : 'ยังไม่มีประวัติในหมวดนี้'}
+        />
 
         <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} unit="บันทึก" onChange={setPage} />
       </section>
