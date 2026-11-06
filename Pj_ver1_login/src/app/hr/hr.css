@@ -2569,28 +2569,25 @@
   font-weight: 600;
 }
 
-.hr-app .employee-management-table th:nth-child(2) {
-  width: 17%;
+.hr-app .employee-management-table th:nth-child(1) {
+  width: 24%;
 }
 
+.hr-app .employee-management-table th:nth-child(2),
 .hr-app .employee-management-table th:nth-child(3) {
   width: 10%;
 }
 
 .hr-app .employee-management-table th:nth-child(4) {
-  width: 10%;
-}
-
-.hr-app .employee-management-table th:nth-child(5) {
   width: 12%;
 }
 
-.hr-app .employee-management-table th:nth-child(6) {
+.hr-app .employee-management-table th:nth-child(5) {
   width: 20%;
 }
 
-.hr-app .employee-management-table th:nth-child(7) {
-  width: 23%;
+.hr-app .employee-management-table th:nth-child(6) {
+  width: 24%;
   text-align: center;
 }
 
@@ -2605,14 +2602,6 @@
 
 .hr-app .employee-management-table tbody tr:hover {
   background: var(--primary-50);
-}
-
-.hr-app .employee-management-id {
-  font-variant-numeric: tabular-nums;
-}
-
-.hr-app .employee-management-name {
-  font-weight: 600;
 }
 
 .hr-app .employee-management-actions {
@@ -3293,36 +3282,31 @@
     width: 100%;
   }
 
+  .hr-app .employee-management-table th:nth-child(2),
+  .hr-app .employee-management-table td:nth-child(2),
   .hr-app .employee-management-table th:nth-child(3),
-  .hr-app .employee-management-table td:nth-child(3),
-  .hr-app .employee-management-table th:nth-child(4),
-  .hr-app .employee-management-table td:nth-child(4) {
+  .hr-app .employee-management-table td:nth-child(3) {
     display: none;
   }
 
   .hr-app .employee-management-table th:nth-child(1),
   .hr-app .employee-management-table td:nth-child(1) {
-    width: 14%;
+    width: 34%;
   }
 
-  .hr-app .employee-management-table th:nth-child(2),
-  .hr-app .employee-management-table td:nth-child(2) {
-    width: 24%;
+  .hr-app .employee-management-table th:nth-child(4),
+  .hr-app .employee-management-table td:nth-child(4) {
+    width: 12%;
   }
 
   .hr-app .employee-management-table th:nth-child(5),
   .hr-app .employee-management-table td:nth-child(5) {
-    width: 12%;
+    width: 24%;
   }
 
   .hr-app .employee-management-table th:nth-child(6),
   .hr-app .employee-management-table td:nth-child(6) {
-    width: 22%;
-  }
-
-  .hr-app .employee-management-table th:nth-child(7),
-  .hr-app .employee-management-table td:nth-child(7) {
-    width: 28%;
+    width: 30%;
   }
 
   .hr-app .employee-management-table th,
@@ -3538,31 +3522,25 @@
 }
 
 @media (max-width: 420px) {
-  .hr-app .employee-management-table th:nth-child(5),
-  .hr-app .employee-management-table td:nth-child(5) {
+  .hr-app .employee-management-table th:nth-child(4),
+  .hr-app .employee-management-table td:nth-child(4) {
     display: none;
   }
 
   .hr-app .employee-management-table th:nth-child(1),
   .hr-app .employee-management-table td:nth-child(1) {
-    width: 16%;
+    width: 40%;
   }
 
-  .hr-app .employee-management-table th:nth-child(2),
-  .hr-app .employee-management-table td:nth-child(2) {
-    width: 29%;
+  .hr-app .employee-management-table th:nth-child(5),
+  .hr-app .employee-management-table td:nth-child(5) {
+    width: 27%;
   }
 
   .hr-app .employee-management-table th:nth-child(6),
   .hr-app .employee-management-table td:nth-child(6) {
-    width: 25%;
+    width: 33%;
   }
-
-  .hr-app .employee-management-table th:nth-child(7),
-  .hr-app .employee-management-table td:nth-child(7) {
-    width: 30%;
-  }
-
 }
 
 .hr-app .employee-history-content {
