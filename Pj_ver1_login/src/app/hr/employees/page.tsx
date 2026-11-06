@@ -307,8 +307,7 @@ export default function EmployeesPage() {
               <table className="employee-management-table">
                 <thead>
                   <tr>
-                    <th scope="col">รหัส</th>
-                    <th scope="col">ชื่อ-นามสกุล</th>
+                    <th scope="col">รหัส / ชื่อ-นามสกุล</th>
                     <th scope="col">แผนก</th>
                     <th scope="col">ตำแหน่ง</th>
                     <th scope="col">กลุ่มสิทธิ์ (Tier)</th>
@@ -321,8 +320,10 @@ export default function EmployeesPage() {
                     const usedPercent = Math.min((employee.used / employee.limit) * 100, 100);
                     return (
                       <tr key={employee.id}>
-                        <td className="employee-management-id">{employee.id}</td>
-                        <td className="employee-management-name">{employee.name}</td>
+                        <td className="home-employee-identity">
+                          <strong>{employee.id}</strong>
+                          <span>{employee.name}</span>
+                        </td>
                         <td>{employee.department}</td>
                         <td>{employee.position}</td>
                         <td><span className={`tier-badge ${employee.tier === "Admin" ? "admin" : employee.tier === "ผู้จัดการ" ? "manager" : "staff"}`}>{employee.tier}</span></td>
@@ -368,7 +369,7 @@ export default function EmployeesPage() {
                     );
                   })}
                   {pageEmployees.length === 0 ? (
-                    <tr><td className="employee-management-empty" colSpan={7}>ไม่พบข้อมูลพนักงานที่ตรงกับตัวกรอง</td></tr>
+                    <tr><td className="employee-management-empty" colSpan={6}>ไม่พบข้อมูลพนักงานที่ตรงกับตัวกรอง</td></tr>
                   ) : null}
                 </tbody>
               </table>
