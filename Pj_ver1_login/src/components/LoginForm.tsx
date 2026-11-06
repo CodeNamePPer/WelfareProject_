@@ -184,7 +184,7 @@ export function LoginForm({ next }: { next: string }) {
         className="flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-2.5 font-medium text-white transition hover:bg-ink-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
       >
         {busy && (
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg className="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle
               cx="12"
               cy="12"
