@@ -7,7 +7,6 @@ import type {
   WelfareItem,
   Employee,
   NotificationItem,
-  Period,
   RoleCount,
   SystemUser,
 } from '../types';
@@ -54,13 +53,6 @@ export const employees: Employee[] = [
   { id: 'E00014', code: 'E00014', name: 'อนุชา ประเสริฐศรี', department: 'ฝ่ายไอที' },
   { id: 'E00015', code: 'E00015', name: 'ภูมิพัฒน์ จันทร์เพ็ญ', department: 'ฝ่ายไอที · พัฒนาระบบ' },
   { id: 'E00016', code: 'E00016', name: 'ศิริพร มีสุข', department: 'ฝ่ายไอที · พัฒนาระบบ' },
-];
-
-export const periods: Period[] = [
-  { id: '2026-11', label: '1 พ.ย. – 30 พ.ย. 2569', from: '2026-11-01', to: '2026-11-30' },
-  { id: '2026-10', label: '1 ต.ค. – 31 ต.ค. 2569', from: '2026-10-01', to: '2026-10-31' },
-  { id: '2026-09', label: '1 ก.ย. – 30 ก.ย. 2569', from: '2026-09-01', to: '2026-09-30' },
-  { id: '2026', label: 'ทั้งปี 2569', from: '2026-01-01', to: '2026-12-31' },
 ];
 
 // TODO: แทนด้วยตารางคำขอเบิกจริง – ข้อมูลจำลอง 5 คน ช่วง ก.ย.–พ.ย. 2569 ครบทุกสถานะและทุกขั้นตอน

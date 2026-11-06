@@ -137,17 +137,23 @@ function hrQueueStats(): SummaryStats["hrQueue"] {
 
 function fetchEmployees(): Promise<Employee[] | null> {
   return safe("employees", async () => {
-    const { data, error } = await supabaseAdmin
-      .from("employee")
-      .select("employee_code, first_name_th, last_name_th")
-      .eq("employment_status", "active")
-      .is("deleted_at", null)
-      .order("employee_code", { ascending: true });
+    const [{ data, error }, departments] = await Promise.all([
+      supabaseAdmin
+        .from("employee")
+        .select("employee_code, first_name_th, last_name_th, department_id")
+        .eq("employment_status", "active")
+        .is("deleted_at", null)
+        .order("employee_code", { ascending: true }),
+      // ชื่อแผนกใช้ค้นหาในตัวเลือกพนักงาน – โหลดไม่ได้ก็ยังค้นด้วยชื่อ/รหัสได้
+      supabaseAdmin.from("department").select("id, name_th"),
+    ]);
     if (error) throw error;
+    const departmentName = new Map((departments.data ?? []).map((d) => [d.id as string, d.name_th as string]));
     return data.map((row) => {
       const last = row.last_name_th?.trim();
       const name = [row.first_name_th?.trim(), last && last !== "-" ? last : null].filter(Boolean).join(" ");
-      return { id: row.employee_code, code: row.employee_code, name };
+      const department = row.department_id ? departmentName.get(row.department_id) : undefined;
+      return { id: row.employee_code, code: row.employee_code, name, department };
     });
   });
 }

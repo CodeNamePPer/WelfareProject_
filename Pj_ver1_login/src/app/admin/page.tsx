@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
-// TODO: claims/periods รอตารางคำขอเบิกสวัสดิการ (ตอนนี้เป็นข้อมูลจำลองที่ผูกกับรหัสพนักงานจริงจาก seed)
-import { claims, periods } from "@/data/mock";
+// TODO: claims รอตารางคำขอเบิกสวัสดิการ (ตอนนี้เป็นข้อมูลจำลองที่ผูกกับรหัสพนักงานจริงจาก seed)
+import { claims } from "@/data/mock";
+import { buildPeriods } from "@/lib/periods";
 import { getAdminAlerts } from "@/lib/admin/alerts";
 import { getSession } from "@/lib/auth/get-session";
 import { getAdminDashboard } from "@/lib/admin/dashboard";
@@ -26,7 +27,7 @@ export default async function AdminHomePage() {
       roleCounts={roleCounts}
       logEntries={logEntries}
       employees={employees}
-      periods={periods}
+      periods={buildPeriods()}
       claims={claims}
     />
   );
