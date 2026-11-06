@@ -63,7 +63,16 @@ export function AppShell({ section = 'admin', notificationCount, user, children 
           <span className="text-15 font-semibold">ระบบพนักงานและสวัสดิการ</span>
         </header>
 
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+        {/* Collapsing the sidebar frees 188px (260 → 72); widen the cap by the same amount so the
+            content takes that space instead of leaving wider empty gutters on both sides. */}
+        <main
+          className={cx(
+            'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
+            collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );
