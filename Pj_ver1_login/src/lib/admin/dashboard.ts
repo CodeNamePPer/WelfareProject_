@@ -120,11 +120,15 @@ function fetchLoginActivity(): Promise<Pick<SummaryStats, "logins" | "loginError
 
 /** คิวคำขอเบิกของ HR – ตอนนี้คำนวณจาก mock claims */
 function hrQueueStats(): SummaryStats["hrQueue"] {
-  const pending = claims.filter((c) => c.status === "pending");
+  // คำขอ pending ที่ HR อนุมัติแล้วกำลังรอการเงิน ไม่ใช่คิวของ HR
+  const atHr = (c: (typeof claims)[number]) => !c.timeline.some((e) => e.kind === "hr-approved");
+  const allPending = claims.filter((c) => c.status === "pending");
+  const pending = allPending.filter(atHr);
   const today = new Date(`${bangkokDate()}T00:00:00Z`).getTime();
   const ages = pending.map((c) => Math.round((today - new Date(`${c.date}T00:00:00Z`).getTime()) / DAY_MS));
   return {
     pending: pending.length,
+    atFinance: allPending.length - pending.length,
     approved: claims.filter((c) => c.status === "approved").length,
     rejected: claims.filter((c) => c.status === "rejected").length,
     oldestPendingDays: ages.length ? Math.max(...ages) : null,
@@ -133,17 +137,23 @@ function hrQueueStats(): SummaryStats["hrQueue"] {
 
 function fetchEmployees(): Promise<Employee[] | null> {
   return safe("employees", async () => {
-    const { data, error } = await supabaseAdmin
-      .from("employee")
-      .select("employee_code, first_name_th, last_name_th")
-      .eq("employment_status", "active")
-      .is("deleted_at", null)
-      .order("employee_code", { ascending: true });
+    const [{ data, error }, departments] = await Promise.all([
+      supabaseAdmin
+        .from("employee")
+        .select("employee_code, first_name_th, last_name_th, department_id")
+        .eq("employment_status", "active")
+        .is("deleted_at", null)
+        .order("employee_code", { ascending: true }),
+      // ชื่อแผนกใช้ค้นหาในตัวเลือกพนักงาน – โหลดไม่ได้ก็ยังค้นด้วยชื่อ/รหัสได้
+      supabaseAdmin.from("department").select("id, name_th"),
+    ]);
     if (error) throw error;
+    const departmentName = new Map((departments.data ?? []).map((d) => [d.id as string, d.name_th as string]));
     return data.map((row) => {
       const last = row.last_name_th?.trim();
       const name = [row.first_name_th?.trim(), last && last !== "-" ? last : null].filter(Boolean).join(" ");
-      return { id: row.employee_code, code: row.employee_code, name };
+      const department = row.department_id ? departmentName.get(row.department_id) : undefined;
+      return { id: row.employee_code, code: row.employee_code, name, department };
     });
   });
 }
@@ -179,6 +189,8 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
         ? {
             active: activeUsers.length,
             inactive: users.length - activeUsers.length,
+            resigned: users.filter((u) => u.status === "RESIGNED").length,
+            deceased: users.filter((u) => u.status === "DECEASED").length,
             newThisMonth: hiredThisMonth ? users.filter((u) => hiredThisMonth.has(u.employeeId)).length : null,
           }
         : null,

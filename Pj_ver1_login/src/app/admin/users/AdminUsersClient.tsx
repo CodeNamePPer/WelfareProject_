@@ -17,6 +17,7 @@ import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
 import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
+import { employmentStatusLabel } from "@/lib/employmentStatus";
 
 type User = {
   employeeId: string; // Primary Key
@@ -33,7 +34,6 @@ type Filter = "all" | "ACTIVE" | "RESIGNED";
 
 const PAGE_SIZE = 20;
 
-const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
 
 const CSV_COLUMNS = [
   "รหัสพนักงาน",
@@ -53,7 +53,7 @@ const CSV_COLUMNS = [
 ];
 
 const roleLabel = (role: string) => ROLE_LABELS[role as Role] ?? role;
-const statusLabel = (status: string) => STATUS_LABELS[status] ?? status;
+const statusLabel = employmentStatusLabel;
 
 const joinParts = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ") || null;
 const addressLabel = (p: EmployeeProfile) =>
@@ -84,10 +84,13 @@ export default function AdminUsersClient({
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
 
+  const listedUsers = useMemo(() => users.filter((u) => u.status !== "DECEASED"), [users]);
+
   // กรองตามสถานะ + รหัสพนักงาน ชื่อ ชื่อเล่น อีเมล แผนก หรือตำแหน่ง
   const filteredUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return users.filter((u) => {
+    // บัญชีพนักงานที่เสียชีวิตไม่แสดงในรายชื่อและไม่นับในยอด
+    return listedUsers.filter((u) => {
       if (filter !== "all" && u.status !== filter) return false;
       if (!query) return true;
       const p = u.profile;
@@ -95,7 +98,7 @@ export default function AdminUsersClient({
         v?.toLowerCase().includes(query),
       );
     });
-  }, [users, filter, searchQuery]);
+  }, [listedUsers, filter, searchQuery]);
 
   const rows = paginate(filteredUsers, page, PAGE_SIZE);
   const selected = users.find((u) => u.employeeId === selectedId);
@@ -132,8 +135,9 @@ export default function AdminUsersClient({
     );
 
   return (
-    <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
+    // แผ่นเดียว: รายชื่อ | รายละเอียด คั่นด้วยเส้นตั้งเส้นเดียว (ไม่ใช่การ์ดสองใบ) – ไม่ใส่ overflow-hidden เพราะจะทำให้ panel ขวาเลิก sticky
+    <div className="grid grid-cols-1 rounded-[10px] border border-line bg-white xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
           <h2 id="user-list-title" className="text-17 font-semibold text-ink">
             รายชื่อผู้ใช้งานระบบ
@@ -175,9 +179,12 @@ export default function AdminUsersClient({
             setPage(1);
           }}
           options={[
-            { id: "all", label: "ทั้งหมด", count: users.length },
-            { id: "ACTIVE", label: "ใช้งานอยู่", count: users.filter((u) => u.status === "ACTIVE").length },
-            { id: "RESIGNED", label: "ลาออก", count: users.filter((u) => u.status === "RESIGNED").length },
+            { id: "all", label: "ทั้งหมด", count: listedUsers.length },
+            ...(["ACTIVE", "RESIGNED"] as const).map((status) => ({
+              id: status,
+              label: statusLabel(status),
+              count: users.filter((u) => u.status === status).length,
+            })),
           ]}
         />
 
@@ -233,7 +240,7 @@ export default function AdminUsersClient({
                       </td>
                       <td className={cx(table.td, "break-all text-muted")}>{u.email}</td>
                       <td className={table.td}>
-                        <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"} className="rounded-full">
+                        <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"}>
                           {roleLabel(u.role)}
                         </Tag>
                       </td>
@@ -273,15 +280,15 @@ export default function AdminUsersClient({
                         </span>
                         <span className="block text-12 text-muted">
                           {u.employeeId}
-                          {u.profile.departmentName ? ` · ${u.profile.departmentName}` : ""}
-                          {u.profile.positionName ? ` · ${u.profile.positionName}` : ""}
+                          {u.profile.departmentName ? `, ${u.profile.departmentName}` : ""}
+                          {u.profile.positionName ? `, ${u.profile.positionName}` : ""}
                         </span>
                       </span>
                       <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
                     </span>
                     <span className="mt-[6px] block break-all text-12 text-muted">{u.email}</span>
                     <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-                      <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"} className="rounded-full">
+                      <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"}>
                         {roleLabel(u.role)}
                       </Tag>
                       <span className="ml-auto text-11 text-muted tabular-nums">
@@ -313,7 +320,7 @@ export default function AdminUsersClient({
           onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.employeeId === updated.employeeId ? updated : u)))}
         />
       ) : (
-        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-14 text-muted xl:self-start">
+        <p className="p-[20px] text-14 text-muted xl:self-start">
           เลือกผู้ใช้จากตารางเพื่อดูและแก้ไขข้อมูล
         </p>
       )}
@@ -526,9 +533,9 @@ function UserPanel({
 
   const p = user.profile;
   const initial = Array.from((p.firstNameTh ?? user.name).trim())[0] ?? "?";
-  const workLine = [p.positionName, p.departmentName].filter(Boolean).join(" · ");
+  const workLine = [p.positionName, p.departmentName].filter(Boolean).join(", ");
   const managerLabel = p.managerName ? `${p.managerName}${p.managerCode ? ` (${p.managerCode})` : ""}` : null;
-  const emergencyLabel = joinParts(p.emergencyContactName, p.emergencyContactPhone && `· ${p.emergencyContactPhone}`);
+  const emergencyLabel = joinParts(p.emergencyContactName, p.emergencyContactPhone && `(${p.emergencyContactPhone})`);
   const endDate = user.status === "DECEASED" ? p.deceasedDate : p.resignedDate;
 
   const statusChoices: Choice[] = [
@@ -549,7 +556,7 @@ function UserPanel({
         ["ชื่อล็อกอิน", <span key="email" className="break-all">{user.email}</span>],
         [
           "บทบาท",
-          <Tag key="role" tone={user.role === "SUPER_ADMIN" ? "info" : "outline"} className="rounded-full">
+          <Tag key="role" tone={user.role === "SUPER_ADMIN" ? "info" : "outline"}>
             {roleLabel(user.role)}
           </Tag>,
         ],
@@ -658,7 +665,7 @@ function UserPanel({
     <aside
       id="user-panel"
       aria-labelledby="user-panel-title"
-      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-128px)] xl:self-start xl:overflow-y-auto"
+      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-128px)] xl:self-start xl:overflow-y-auto"
     >
       <header className="flex items-start gap-[12px]">
         <div
@@ -678,7 +685,7 @@ function UserPanel({
           </div>
           <p className="mt-[2px] text-12 text-muted tabular-nums">
             {user.employeeId}
-            {p.nickname ? ` · ${p.nickname}` : ""}
+            {p.nickname ? ` (${p.nickname})` : ""}
           </p>
           {workLine ? <p className="text-12 text-muted">{workLine}</p> : null}
         </div>
@@ -953,7 +960,7 @@ function ResetPasswordDialog({
           </h2>
           {!done ? (
             <p className="break-words text-13 text-muted">
-              {user.employeeId} · {user.email}
+              {user.employeeId}, {user.email}
             </p>
           ) : null}
         </div>

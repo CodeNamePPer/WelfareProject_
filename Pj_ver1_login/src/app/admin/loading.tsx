@@ -1,30 +1,25 @@
 import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { table } from "@/components/ui/table";
-import { Panel } from "@/features/dashboard/ui";
+import { Region } from "@/features/dashboard/ui";
 
 const SUMMARY_CARDS = 4;
 const NOTIFICATION_ROWS = 3;
 const ROLE_ROWS = 4;
 const LOG_ROWS = 5;
-const LOG_COLUMNS = ["วันเวลา", "ผู้ดำเนินการ", "รายการ", "ประเภท"];
 
-// โครงหน้าภาพรวมระบบ (/admin) ระหว่างรอข้อมูล — วางตาม bento grid เดียวกับ DashboardPage
+// โครงหน้าภาพรวมระบบ (/admin) ระหว่างรอข้อมูล วางเป็นแผ่นเดียวแบบเดียวกับ DashboardPage
 export default function AdminDashboardLoading() {
   return (
     <SkeletonScreen className="flex flex-col gap-[24px]">
-      <PageHeader title="ภาพรวมระบบ" description="Admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก" />
+      <PageHeader title="ภาพรวมระบบ" description="ดูแลระบบและติดตามคิว HR ส่วนการอนุมัติคำขอเบิกเป็นงานของ HR" />
 
-      <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-6">
-        {/* การ์ดสรุป 2×2 */}
-        <div className="min-w-0 xl:col-span-3">
-          <div className="grid h-full grid-cols-1 gap-[16px] sm:grid-cols-2 xl:gap-[24px]">
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[10px] border border-line bg-line xl:grid-cols-6">
+        {/* ตัวเลขสรุป 2×2 */}
+        <div className="min-w-0 bg-white xl:col-span-3">
+          <div className="grid h-full grid-cols-1 gap-px bg-line sm:grid-cols-2">
             {Array.from({ length: SUMMARY_CARDS }).map((_, i) => (
-              <div key={i} className="flex min-h-[132px] flex-col gap-[12px] rounded-[6px] border border-line bg-white p-[16px]">
-                <div className="flex items-center gap-[10px]">
-                  <Skeleton className="size-[28px] shrink-0 rounded-[6px]" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
+              <div key={i} className="flex min-h-[132px] flex-col gap-[12px] bg-white p-[16px] sm:p-[20px]">
+                <Skeleton className="h-3 w-24" />
                 <div className="flex flex-1 flex-col justify-end gap-[8px]">
                   <Skeleton className="h-6 w-20" />
                   <Skeleton className="h-[6px] w-full rounded-[3px]" />
@@ -36,13 +31,13 @@ export default function AdminDashboardLoading() {
         </div>
 
         {/* Notification */}
-        <Panel className="xl:col-span-3">
+        <Region className="xl:col-span-3">
           <div className="flex items-start justify-between gap-[14px]">
             <div className="flex min-w-0 flex-col gap-[6px]">
               <Skeleton className="h-5 w-28" />
               <Skeleton className="h-3 w-40" />
             </div>
-            <Skeleton className="h-[30px] w-[96px] rounded-[6px]" />
+            <Skeleton className="h-3 w-14" />
           </div>
           <div className="flex flex-col divide-y divide-line">
             {Array.from({ length: NOTIFICATION_ROWS }).map((_, i) => (
@@ -56,16 +51,16 @@ export default function AdminDashboardLoading() {
               </div>
             ))}
           </div>
-        </Panel>
+        </Region>
 
         {/* Users ในระบบ */}
-        <Panel className="xl:col-span-2">
+        <Region className="xl:col-span-2">
           <div className="flex items-start justify-between gap-[14px]">
             <div className="flex min-w-0 flex-col gap-[6px]">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-3 w-24" />
             </div>
-            <Skeleton className="h-[30px] w-[96px] rounded-[6px]" />
+            <Skeleton className="h-3 w-14" />
           </div>
           <div className="flex flex-col gap-[14px]">
             <Skeleton className="h-[12px] w-full rounded-[6px]" />
@@ -80,45 +75,33 @@ export default function AdminDashboardLoading() {
               ))}
             </div>
           </div>
-        </Panel>
+        </Region>
 
         {/* ประวัติการแก้ไข */}
-        <Panel className="xl:col-span-4">
+        <Region className="xl:col-span-4">
           <div className="flex items-start justify-between gap-[14px]">
             <div className="flex flex-col gap-[6px]">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-3 w-28" />
             </div>
-            <Skeleton className="h-[30px] w-[96px] rounded-[6px]" />
+            <Skeleton className="h-3 w-14" />
           </div>
-          <div className={table.wrapper}>
-            <table className={table.table}>
-              <thead>
-                <tr>
-                  {LOG_COLUMNS.map((col) => (
-                    <th key={col} scope="col" className={table.th}>
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {Array.from({ length: LOG_ROWS }).map((_, i) => (
-                  <tr key={i}>
-                    <td className={table.td}><Skeleton className="h-4 w-24" /></td>
-                    <td className={table.td}><Skeleton className="h-4 w-28" /></td>
-                    <td className={table.td}><Skeleton className="h-4 w-44" /></td>
-                    <td className={table.td}><Skeleton className="h-6 w-20 rounded-full" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* บรรทัดเดียวต่อรายการ แบบเดียวกับ ActivityLogPanel */}
+          <div className="flex flex-col divide-y divide-line border-y border-line">
+            {Array.from({ length: LOG_ROWS }).map((_, i) => (
+              <div key={i} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-x-[12px] py-[12px] sm:grid-cols-[6.5rem_7rem_minmax(0,1fr)_auto]">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="hidden h-5 w-20 sm:block" />
+                <Skeleton className="h-4 w-full max-w-[280px]" />
+                <Skeleton className="hidden h-3 w-24 sm:block" />
+              </div>
+            ))}
           </div>
-        </Panel>
+        </Region>
 
         {/* สถิติการขอเบิกรายบุคคล */}
-        <div className="min-w-0 xl:col-span-6">
-          <Panel>
+        <div className="min-w-0 bg-white xl:col-span-6">
+          <Region>
             <div className="flex flex-col gap-[12px] lg:flex-row lg:items-start lg:justify-between">
               <div className="flex flex-col gap-[6px]">
                 <Skeleton className="h-5 w-48" />
@@ -130,9 +113,9 @@ export default function AdminDashboardLoading() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-[12px] sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-px border-y border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-[8px] rounded-[8px] border border-line bg-white p-[16px]">
+                <div key={i} className="flex flex-col gap-[8px] bg-white py-[14px] sm:px-[16px] sm:first:pl-0">
                   <Skeleton className="h-3 w-24" />
                   <Skeleton className="h-6 w-28" />
                   <Skeleton className="h-3 w-32" />
@@ -140,8 +123,8 @@ export default function AdminDashboardLoading() {
               ))}
             </div>
 
-            <div className="grid items-start gap-[12px] lg:grid-cols-2">
-              <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
+            <div className="grid items-start gap-[20px] lg:grid-cols-2 lg:gap-0">
+              <div className="flex flex-col gap-[10px] lg:pr-[24px]">
                 <Skeleton className="h-4 w-20" />
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex justify-between gap-3">
@@ -150,7 +133,7 @@ export default function AdminDashboardLoading() {
                   </div>
                 ))}
               </div>
-              <div className="flex flex-col gap-[10px] rounded-[8px] border border-line bg-white p-[16px]">
+              <div className="flex flex-col gap-[10px] lg:border-l lg:border-line lg:pl-[24px]">
                 <Skeleton className="h-4 w-32" />
                 {Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex items-center justify-between gap-[12px]">
@@ -166,7 +149,7 @@ export default function AdminDashboardLoading() {
                 ))}
               </div>
             </div>
-          </Panel>
+          </Region>
         </div>
       </div>
     </SkeletonScreen>

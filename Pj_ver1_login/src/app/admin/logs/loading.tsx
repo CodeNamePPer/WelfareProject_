@@ -11,9 +11,16 @@ export default function AdminLogsLoading() {
     <SkeletonScreen className="flex flex-col gap-[20px]">
       <PageHeader
         title="ประวัติของระบบ"
-        description="บันทึกการเปลี่ยนแปลงระบบ · Admin จัดการระบบได้ แต่ไม่สามารถอนุมัติคำขอเบิก · ลบหรือแก้ไขไม่ได้"
+        description="บันทึกการเปลี่ยนแปลงทั้งหมดในระบบ ลบหรือแก้ไขย้อนหลังไม่ได้"
       />
 
+      <div className="rounded-[10px] border border-line bg-white">
+      <div className="flex gap-[16px] border-b border-line px-[20px] py-[14px]">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <div className="flex flex-col gap-[16px] p-[16px] sm:p-[20px]">
       <div className="flex flex-col gap-[10px] lg:flex-row">
         <Skeleton className="h-10 w-full flex-1 rounded-lg" />
         <div className="grid grid-cols-2 gap-[10px] sm:flex">
@@ -23,7 +30,7 @@ export default function AdminLogsLoading() {
         </div>
       </div>
 
-      <section className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <section className="flex flex-col gap-[16px]">
         <div className="flex gap-[8px] overflow-x-auto">
           <Skeleton className="h-8 w-24 shrink-0 rounded-full" />
           <Skeleton className="h-8 w-32 shrink-0 rounded-full" />
@@ -66,6 +73,8 @@ export default function AdminLogsLoading() {
           <Skeleton className="h-8 w-40 rounded-lg" />
         </div>
       </section>
+      </div>
+      </div>
     </SkeletonScreen>
   );
 }

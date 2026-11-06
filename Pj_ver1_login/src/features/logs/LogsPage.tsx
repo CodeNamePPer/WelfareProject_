@@ -94,10 +94,12 @@ export function LogsPage({ entries, initialSection = 'people' }: { entries: Audi
     <div className="flex flex-col gap-[20px]">
       <PageHeader
         title="ประวัติของระบบ"
-        description="บันทึกการเปลี่ยนแปลงระบบ · Admin จัดการระบบได้ แต่ไม่สามารถอนุมัติคำขอเบิก · ลบหรือแก้ไขไม่ได้"
+        description="บันทึกการเปลี่ยนแปลงทั้งหมดในระบบ ลบหรือแก้ไขย้อนหลังไม่ได้"
       />
 
-      <div role="tablist" aria-label="หมวดประวัติ" className="scrollbar-none -mx-4 flex gap-[4px] overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+      {/* แผ่นเดียว: แถบหมวด, ตัวกรอง, ตาราง อยู่ในกรอบเดียวกัน ไม่แยกเป็นการ์ด */}
+      <div className="rounded-[10px] border border-line bg-white">
+      <div role="tablist" aria-label="หมวดประวัติ" className="scrollbar-none flex gap-[4px] overflow-x-auto border-b border-line px-[8px] sm:px-[12px]">
         {LOG_SECTIONS.map((id) => {
           const active = id === section;
           return (
@@ -122,6 +124,7 @@ export function LogsPage({ entries, initialSection = 'people' }: { entries: Audi
         })}
       </div>
 
+      <div className="flex flex-col gap-[16px] p-[16px] sm:p-[20px]">
       <div className="flex flex-col gap-[10px] lg:flex-row">
         <SearchInput
           label="ค้นหา Log"
@@ -188,7 +191,7 @@ export function LogsPage({ entries, initialSection = 'people' }: { entries: Audi
         id="panel-logs"
         role="tabpanel"
         aria-labelledby={`tab-${section}`}
-        className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]"
+        className="flex flex-col gap-[16px]"
       >
         <FilterChips
           label="กรองตามประเภท"
@@ -216,6 +219,8 @@ export function LogsPage({ entries, initialSection = 'people' }: { entries: Audi
 
         <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} unit="บันทึก" onChange={setPage} />
       </section>
+      </div>
+      </div>
     </div>
   );
 }

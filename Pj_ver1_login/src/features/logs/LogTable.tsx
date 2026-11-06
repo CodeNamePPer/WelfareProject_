@@ -14,7 +14,7 @@ export const actionTag: Record<AuditAction, { label: string; tone: TagTone }> = 
   'role-change': { label: 'เปลี่ยนบทบาท', tone: 'outline' },
   welfare: { label: 'สวัสดิการ', tone: 'info' },
   'user-update': { label: 'แก้ไขผู้ใช้', tone: 'outline' },
-  security: { label: 'ความปลอดภัย', tone: 'danger' },
+  security: { label: 'ความปลอดภัย', tone: 'outline' },
   system: { label: 'ระบบ', tone: 'warning' },
   import: { label: 'นำเข้าข้อมูล', tone: 'success' },
 };
@@ -160,7 +160,7 @@ export function LogTable({ entries, defaultExpandedId = null, emptyText = 'ไ�
               ) : null}
               {entry.detail ? <p className="break-words text-12 text-muted">{entry.detail}</p> : null}
               <p className="mt-[6px] truncate text-12 text-muted">
-                <span className="font-semibold text-ink">{entry.actor}</span> · {entry.actorRole}
+                <span className="font-semibold text-ink">{entry.actor}</span> ({entry.actorRole})
               </p>
               {hasDetail(entry) ? (
                 <>
@@ -202,7 +202,7 @@ function TargetCell({ target, inline }: { target?: AuditTarget; inline?: boolean
     return (
       <p className="break-words">
         {code}
-        {target.name ? <span className="text-muted"> · {target.name}</span> : null}
+        {target.name ? <span className="text-muted"> {target.name}</span> : null}
       </p>
     );
   }
@@ -276,7 +276,7 @@ function EntryDetail({ entry }: { entry: AuditEntry }) {
 
       <p className="text-11 text-muted tabular-nums">
         เลขอ้างอิง #{entry.id}
-        {entry.ip ? ` · IP ${entry.ip}` : null}
+        {entry.ip ? `, IP ${entry.ip}` : null}
       </p>
     </div>
   );

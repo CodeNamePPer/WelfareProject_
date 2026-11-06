@@ -1,53 +1,25 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ChevronRight, ClipboardList, LogIn, ShieldAlert, UsersRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import type { SummaryStats } from '../../types';
 import { cx } from '../../lib/cx';
-import { NumberTicker } from '../../components/ui/NumberTicker';
+import { EMPLOYMENT_STATUS_LABELS } from '../../lib/employmentStatus';
 
-// Figma 163:1146 – four summary cards (radius 6, padding 16), laid out 2×2 as the left tile of the bento grid.
-// Each card: icon + label, a headline number with a small visual beside or under it, and one line of context.
-// Each card links to the page that holds its details.
+// Figma 163:1146 – ตัวเลขสรุป 4 ช่อง วาง 2×2 ทางซ้ายของแผ่นภาพรวม
+// แต่ละช่องเป็นส่วนของแผ่นเดียวกัน (เส้นแบ่งร่วม ไม่มีกรอบ/ไอคอนของตัวเอง): ชื่อ, ตัวเลข, ภาพเล็กของข้อมูล, บรรทัดบริบท
+// กดทั้งช่องเพื่อไปหน้าที่มีรายละเอียด
 
 type Tone = 'primary' | 'danger';
 
-const iconTone: Record<Tone, string> = {
-  primary: 'bg-primary-50 text-primary-600',
-  danger: 'bg-status-rejected-soft text-danger',
-};
-
-function SummaryCard({
-  label,
-  href,
-  icon: Icon,
-  tone = 'primary',
-  highlight,
-  children,
-}: {
-  label: string;
-  href: string;
-  icon: LucideIcon;
-  tone?: Tone;
-  highlight?: boolean;
-  children: ReactNode;
-}) {
+function SummaryCard({ label, href, children }: { label: string; href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
       className={cx(
-        'group flex min-h-[132px] flex-col gap-[12px] rounded-[6px] border bg-white p-[16px] transition-colors',
-        'hover:border-primary-500 hover:bg-primary-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none',
-        highlight ? 'border-primary-100' : 'border-line',
+        'flex min-h-[132px] flex-col gap-[12px] bg-white p-[16px] transition-colors sm:p-[20px]',
+        'hover:bg-surface focus-visible:relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 motion-reduce:transition-none',
       )}
     >
-      <span className="flex items-center gap-[10px]">
-        <span className={cx('flex size-[28px] shrink-0 items-center justify-center rounded-[6px]', iconTone[tone])}>
-          <Icon className="size-[16px]" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-13 font-medium text-ink-soft">{label}</span>
-        <ChevronRight className="size-[16px] shrink-0 text-muted group-hover:text-primary-600" aria-hidden="true" />
-      </span>
+      <span className="text-13 font-medium text-ink-soft">{label}</span>
       <span className="flex flex-1 flex-col justify-end gap-[8px]">{children}</span>
     </Link>
   );
@@ -64,7 +36,7 @@ function Headline({ value, unit, className }: { value: number | null; unit: stri
   }
   return (
     <span className="flex items-baseline gap-[6px]">
-      <NumberTicker value={value} className={cx('text-24 font-semibold leading-none text-ink', className)} />
+      <span className={cx('text-24 font-semibold leading-none text-ink tabular-nums', className)}>{value.toLocaleString('th-TH')}</span>
       <span className="text-13 text-muted">{unit}</span>
     </span>
   );
@@ -74,13 +46,12 @@ function LoadFailed() {
   return <span className="text-12 text-danger">โหลดข้อมูลไม่สำเร็จ</span>;
 }
 
-/** One muted line of context; children are joined with a middle dot. */
+/** บรรทัดบริบทสีจาง – แต่ละส่วนเว้นระยะกัน ไม่คั่นด้วยจุดกลาง */
 function MetaLine({ parts }: { parts: ReactNode[] }) {
   return (
-    <span className="flex flex-wrap items-center gap-x-[6px] text-12 text-muted tabular-nums">
+    <span className="flex flex-wrap items-center gap-x-[12px] text-12 text-muted tabular-nums">
       {parts.map((part, i) => (
         <span key={i} className="flex items-center gap-[6px]">
-          {i > 0 ? <span aria-hidden="true">·</span> : null}
           {part}
         </span>
       ))}
@@ -88,14 +59,15 @@ function MetaLine({ parts }: { parts: ReactNode[] }) {
   );
 }
 
-function Pill({ children, tone = 'primary' }: { children: ReactNode; tone?: 'primary' | 'pending' | 'neutral' }) {
+/** ข้อความกำกับข้างตัวเลข – ตัวหนังสือเฉยๆ ไม่ใช่ป้ายแคปซูล */
+function Note({ children, tone = 'muted' }: { children: ReactNode; tone?: 'muted' | 'primary' | 'pending' }) {
   return (
     <span
       className={cx(
-        'inline-flex shrink-0 items-center rounded-full px-[8px] py-[2px] text-11 font-medium tabular-nums',
-        tone === 'pending' && 'bg-status-pending-soft text-status-pending-ink',
-        tone === 'primary' && 'bg-primary-50 text-primary-700',
-        tone === 'neutral' && 'bg-paper text-muted',
+        'shrink-0 text-12 font-medium tabular-nums',
+        tone === 'muted' && 'text-muted',
+        tone === 'primary' && 'text-primary-700',
+        tone === 'pending' && 'text-status-pending-ink',
       )}
     >
       {children}
@@ -164,12 +136,13 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
   const errorTotal = loginErrors ? loginErrors.failed + loginErrors.blocked : null;
 
   return (
-    <div className="grid h-full grid-cols-1 gap-[16px] sm:grid-cols-2 xl:gap-[24px]">
-      <SummaryCard label="ผู้ใช้ทั้งหมด" href="/admin/users" icon={UsersRound}>
+    <div className="grid h-full grid-cols-1 gap-px bg-line sm:grid-cols-2">
+      <SummaryCard label="ผู้ใช้ทั้งหมด" href="/admin/users">
         <span className="flex items-center justify-between gap-[8px]">
-          <Headline value={users?.active ?? null} unit="คน" />
+          {/* ทำงานอยู่ + ลาออก (ไม่นับผู้เสียชีวิต) ให้ตรงกับ "ทั้งหมด" บนหน้าผู้ใช้ */}
+          <Headline value={users ? users.active + users.resigned : null} unit="คน" />
           {users && users.newThisMonth !== null ? (
-            <Pill tone={users.newThisMonth > 0 ? 'primary' : 'neutral'}>+{users.newThisMonth} เดือนนี้</Pill>
+            <Note tone={users.newThisMonth > 0 ? 'primary' : 'muted'}>ใหม่เดือนนี้ {users.newThisMonth}</Note>
           ) : null}
         </span>
         {users === null ? (
@@ -177,28 +150,23 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         ) : (
           <>
             <SegmentBar
-              label={`ใช้งาน ${users.active} คน พ้นสภาพ ${users.inactive} คน`}
+              label={`${EMPLOYMENT_STATUS_LABELS.ACTIVE} ${users.active} คน ${EMPLOYMENT_STATUS_LABELS.RESIGNED} ${users.resigned} คน`}
               segments={[
                 { value: users.active, className: 'bg-primary-500' },
-                { value: users.inactive, className: 'bg-ink-mute/40' },
+                { value: users.resigned, className: 'bg-ink-mute/40' },
               ]}
             />
             <MetaLine
               parts={[
-                <LegendDot key="a" className="bg-primary-500" text={`ใช้งาน ${users.active.toLocaleString('th-TH')}`} />,
-                <LegendDot key="i" className="bg-ink-mute/40" text={`พ้นสภาพ ${users.inactive.toLocaleString('th-TH')}`} />,
+                <LegendDot key="a" className="bg-primary-500" text={`${EMPLOYMENT_STATUS_LABELS.ACTIVE} ${users.active.toLocaleString('th-TH')}`} />,
+                <LegendDot key="r" className="bg-ink-mute/40" text={`${EMPLOYMENT_STATUS_LABELS.RESIGNED} ${users.resigned.toLocaleString('th-TH')}`} />,
               ]}
             />
           </>
         )}
       </SummaryCard>
 
-      <SummaryCard
-        label="คำขอรอ HR ตรวจ"
-        href="/admin/benefits?tab=claims"
-        icon={ClipboardList}
-        highlight={(hrQueue?.pending ?? 0) > 0}
-      >
+      <SummaryCard label="คำขอรอ HR ตรวจ" href="/admin/benefits?tab=claims">
         <span className="flex items-center justify-between gap-[8px]">
           <Headline
             value={hrQueue?.pending ?? null}
@@ -206,9 +174,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
             className={(hrQueue?.pending ?? 0) > 0 ? 'text-primary-700' : undefined}
           />
           {hrQueue?.oldestPendingDays != null ? (
-            <Pill tone={hrQueue.oldestPendingDays > 7 ? 'pending' : 'primary'}>
-              เก่าสุด {hrQueue.oldestPendingDays} วัน
-            </Pill>
+            <Note tone={hrQueue.oldestPendingDays > 7 ? 'pending' : 'muted'}>ค้างนานสุด {hrQueue.oldestPendingDays} วัน</Note>
           ) : null}
         </span>
         {hrQueue === null ? (
@@ -216,16 +182,20 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         ) : (
           <>
             <SegmentBar
-              label={`รอตรวจ ${hrQueue.pending} อนุมัติ ${hrQueue.approved} ไม่อนุมัติ ${hrQueue.rejected}`}
+              label={`รอ HR ${hrQueue.pending} รอการเงิน ${hrQueue.atFinance} อนุมัติ ${hrQueue.approved} ไม่อนุมัติ ${hrQueue.rejected}`}
               segments={[
                 { value: hrQueue.pending, className: 'bg-status-pending' },
+                { value: hrQueue.atFinance, className: 'bg-status-pending/40' },
                 { value: hrQueue.approved, className: 'bg-status-approved' },
                 { value: hrQueue.rejected, className: 'bg-status-rejected' },
               ]}
             />
             <MetaLine
               parts={[
-                <LegendDot key="p" className="bg-status-pending" text={`รอ ${hrQueue.pending}`} />,
+                <LegendDot key="p" className="bg-status-pending" text={`รอ HR ${hrQueue.pending}`} />,
+                ...(hrQueue.atFinance > 0
+                  ? [<LegendDot key="f" className="bg-status-pending/40" text={`รอการเงิน ${hrQueue.atFinance}`} />]
+                  : []),
                 <LegendDot key="a" className="bg-status-approved" text={`อนุมัติ ${hrQueue.approved}`} />,
                 <LegendDot key="r" className="bg-status-rejected" text={`ไม่อนุมัติ ${hrQueue.rejected}`} />,
               ]}
@@ -234,7 +204,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         )}
       </SummaryCard>
 
-      <SummaryCard label="เข้าใช้งานวันนี้" href="/admin/logs" icon={LogIn}>
+      <SummaryCard label="เข้าใช้งานวันนี้" href="/admin/logs">
         <span className="flex items-end justify-between gap-[8px]">
           <Headline value={logins?.today ?? null} unit="คน" />
           {logins ? (
@@ -246,14 +216,13 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         ) : (
           <MetaLine
             parts={[
-              `เฉลี่ย ${(sum(logins.daily) / logins.daily.length).toLocaleString('th-TH', { maximumFractionDigits: 1 })} คน/วัน`,
-              '7 วันล่าสุด',
+              `เฉลี่ย 7 วันล่าสุด ${(sum(logins.daily) / logins.daily.length).toLocaleString('th-TH', { maximumFractionDigits: 1 })} คน/วัน`,
             ]}
           />
         )}
       </SummaryCard>
 
-      <SummaryCard label="ล็อกอินผิดพลาด" href="/admin/logs" icon={ShieldAlert} tone={(errorTotal ?? 0) > 0 ? 'danger' : 'primary'}>
+      <SummaryCard label="ล็อกอินผิดพลาด" href="/admin/logs">
         <span className="flex items-end justify-between gap-[8px]">
           <Headline value={errorTotal} unit="ครั้ง" className={(errorTotal ?? 0) > 0 ? 'text-danger' : undefined} />
           {loginErrors ? (
@@ -267,7 +236,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         {loginErrors === null ? (
           <LoadFailed />
         ) : errorTotal === 0 ? (
-          <MetaLine parts={['ไม่พบใน 7 วัน', 'ระบบปกติ']} />
+          <MetaLine parts={['ไม่พบใน 7 วันล่าสุด']} />
         ) : (
           <span className="flex flex-col gap-[2px]">
             <MetaLine parts={[`รหัสผิด ${loginErrors.failed}`, `ถูกบล็อก ${loginErrors.blocked}`]} />

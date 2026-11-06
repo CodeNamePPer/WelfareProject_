@@ -18,8 +18,9 @@ export default function AdminNotificationsLoading() {
         }
       />
 
+      <div className="flex flex-col overflow-hidden rounded-[10px] border border-line bg-white">
       {/* สรุปตัวเลข 3 ช่อง */}
-      <div className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[10px] border border-line bg-white">
+      <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex flex-col items-start gap-[6px] px-[12px] py-[12px] sm:px-[18px] sm:py-[14px]">
             <Skeleton className="h-6 w-8" />
@@ -29,7 +30,7 @@ export default function AdminNotificationsLoading() {
       </div>
 
       {/* ตัวกรอง + ค้นหา */}
-      <div className="flex flex-col gap-[12px]">
+      <div className="flex flex-col gap-[12px] border-b border-line p-[16px]">
         <div className="flex gap-[8px] overflow-x-auto">
           <Skeleton className="h-8 w-24 shrink-0 rounded-full" />
           <Skeleton className="h-8 w-28 shrink-0 rounded-full" />
@@ -44,7 +45,7 @@ export default function AdminNotificationsLoading() {
       </div>
 
       {/* ต้องดำเนินการ */}
-      <section className="overflow-hidden rounded-[10px] border border-primary-100 bg-white shadow-card">
+      <section className="border-b border-line">
         <header className="flex items-center gap-[8px] border-b border-primary-100 bg-primary-50 px-[16px] py-[10px]">
           <h2 className="text-14 font-semibold text-primary-700">ต้องดำเนินการ</h2>
           <Skeleton className="h-5 w-6 rounded-full" />
@@ -64,7 +65,7 @@ export default function AdminNotificationsLoading() {
       </section>
 
       {/* รายการแจ้งเตือนทั้งหมด */}
-      <section className="overflow-hidden rounded-[10px] border border-line bg-white">
+      <section>
         <div className="border-b border-line bg-surface px-[16px] py-[8px]">
           <Skeleton className="h-3 w-16" />
         </div>
@@ -83,6 +84,7 @@ export default function AdminNotificationsLoading() {
           ))}
         </div>
       </section>
+      </div>
     </SkeletonScreen>
   );
 }

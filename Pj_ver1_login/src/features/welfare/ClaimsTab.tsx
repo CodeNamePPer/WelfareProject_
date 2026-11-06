@@ -47,7 +47,7 @@ const has = (claim: Claim, kind: ClaimEventKind) => claim.timeline.some((event) 
 function stageOf(claim: Claim): string {
   if (claim.status === 'rejected') return has(claim, 'hr-approved') ? 'ไม่ผ่านขั้นการเงิน' : 'ไม่ผ่านขั้น HR';
   if (claim.status === 'pending') return has(claim, 'hr-approved') ? 'รอการเงินอนุมัติ' : 'รอ HR ตรวจสอบ';
-  return has(claim, 'paid') ? 'จ่ายเงินแล้ว' : 'อนุมัติแล้ว · รอจ่ายเงิน';
+  return has(claim, 'paid') ? 'จ่ายเงินแล้ว' : 'อนุมัติแล้ว รอจ่ายเงิน';
 }
 
 /** ขั้นถัดไปที่ยังไม่เกิด – null เมื่อคำขอจบแล้ว */
@@ -112,14 +112,14 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
     );
 
   return (
-    <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section aria-labelledby="claims-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <section aria-labelledby="claims-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
         <header className="flex flex-col gap-[12px] sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 id="claims-title" className="text-17 font-semibold text-ink">
               คำขอเบิกล่าสุด
             </h2>
-            <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว · การอนุมัติทำโดย HR และฝ่ายการเงิน</p>
+            <p className="mt-[4px] text-12 text-muted">ดูได้อย่างเดียว HR และฝ่ายการเงินเป็นผู้อนุมัติ</p>
           </div>
           <Button onClick={() => setExporting(true)} disabled={visible.length === 0} className="sm:w-[180px] disabled:opacity-50">
             <FileDown className="size-4" aria-hidden="true" />
@@ -152,7 +152,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           ]}
         />
         {visible.length === 0 ? (
-          <p className="rounded-[8px] border border-dashed border-line px-[16px] py-[24px] text-center text-13 text-muted">
+          <p className="border-t border-line py-[24px] text-13 text-muted">
             ไม่มีคำขอเบิกในสถานะนี้
           </p>
         ) : (
@@ -200,7 +200,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
                           {nameOf(claim.employeeId)}
                           <span className="block text-12 text-muted">
                             {claim.employeeId}
-                            {department ? ` · ${department}` : ''}
+                            {department ? `, ${department}` : ''}
                           </span>
                         </td>
                         <td className={table.td}>{claim.benefit}</td>
@@ -243,7 +243,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
                         <span className="min-w-0">
                           <span className="block font-semibold">{claim.benefit}</span>
                           <span className="block text-12 text-muted">
-                            {nameOf(claim.employeeId)} · {claim.code}
+                            {nameOf(claim.employeeId)}, {claim.code}
                           </span>
                         </span>
                         <StatusBadge status={claim.status} />
@@ -286,7 +286,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
       ) : (
         <p
           id={DETAIL_ID}
-          className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-14 text-muted xl:self-start"
+          className="p-[20px] text-14 text-muted xl:self-start"
         >
           เลือกคำขอจากตารางเพื่อดูรายละเอียดและประวัติการอนุมัติ
         </p>
@@ -365,7 +365,7 @@ function ClaimPanel({
     <aside
       id={DETAIL_ID}
       aria-labelledby="claim-detail-title"
-      className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] xl:self-start"
+      className="flex flex-col gap-[16px] p-[16px] sm:p-[20px] xl:self-start"
     >
       <header className="flex flex-col gap-[8px]">
         <div className="flex items-start justify-between gap-[8px]">
@@ -381,7 +381,7 @@ function ClaimPanel({
           {employeeName}
           <span className="block text-12 text-muted">
             {claim.employeeId}
-            {department ? ` · ${department}` : ''}
+            {department ? `, ${department}` : ''}
           </span>
         </p>
       </header>
@@ -466,7 +466,7 @@ function ClaimPanel({
                 tone={event.kind === 'rejected' ? 'danger' : 'done'}
                 connector={!isLast}
                 title={EVENT_LABEL[event.kind]}
-                meta={`${event.by ?? employeeName} · ${formatShortThaiDate(event.at)}`}
+                meta={`${event.by ?? employeeName}, ${formatShortThaiDate(event.at)}`}
                 note={event.note}
               />
             );
