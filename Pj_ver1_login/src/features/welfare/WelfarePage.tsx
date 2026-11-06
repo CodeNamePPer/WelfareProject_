@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole } from '../../lib/format';
@@ -47,9 +46,12 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
 
   return (
     <div className="flex flex-col gap-[20px]">
-      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขได้โดยตรง · ไม่อนุมัติคำขอเบิก · ข้อมูลตัวอย่าง" />
+      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตอนนี้ยังใช้ข้อมูลตัวอย่าง" />
 
-      <div className="-mx-4 flex items-center gap-[12px] border-b border-line px-4 sm:mx-0 sm:px-0">
+      {/* แผ่นเดียว: แถบหมวด, ตัวเลขสรุป, เนื้อหาแต่ละหมวด คั่นด้วยเส้น ไม่แยกเป็นการ์ด
+          ไม่ใส่ overflow-hidden เพราะ panel รายละเอียดด้านขวาต้อง sticky ได้ */}
+      <div className="rounded-[10px] border border-line bg-white">
+      <div className="flex items-center gap-[12px] border-b border-line pl-[8px] pr-[16px] sm:pl-[12px] sm:pr-[20px]">
       <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="scrollbar-none flex min-w-0 flex-1 gap-[4px] overflow-x-auto">
         {tabs.map(({ id, label }) => {
           const active = id === tab;
@@ -79,26 +81,25 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
           className="inline-flex shrink-0 items-center gap-[4px] rounded-[4px] text-13 font-medium text-primary-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >
           ประวัติการแก้ไข
-          <ArrowUpRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
+      <div className="grid grid-cols-1 divide-y divide-line border-b border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <StatCard label="สวัสดิการที่มีอยู่" value={String(items.length)} note="รายการ" />
         <StatCard
           label="วงเงินสวัสดิการที่เลือก"
           value={selected ? formatBahtWhole(selected.amount) : '—'}
-          note={selected ? `ต่อคน / ${selected.budgetType === 'รายปี' ? 'ปี' : selected.budgetType} · ${selected.name}` : 'ยังไม่ได้เลือกสวัสดิการ'}
+          note={selected ? `ต่อคนต่อ${selected.budgetType === 'รายปี' ? 'ปี' : selected.budgetType}, ${selected.name}` : 'ยังไม่ได้เลือกสวัสดิการ'}
         />
         <StatCard
           label="เบิกย้อนหลังที่นำเข้า"
           value={String(importedCount)}
-          note={importedCount === 0 ? 'รายการ · ยังไม่มีการนำเข้า' : 'รายการ'}
+          note={importedCount === 0 ? 'ยังไม่มีการนำเข้า' : 'รายการ'}
         />
       </div>
 
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="flex flex-col gap-[20px]">
-        {/* แท็บนำเข้า: การ์ดนำเข้าอยู่บนสุด รายการสวัสดิการตามมาด้านล่าง */}
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="flex flex-col">
+        {/* แท็บนำเข้า: ส่วนนำเข้าอยู่บนสุด รายการสวัสดิการตามมาด้านล่าง */}
         {tab === 'import' ? (
           <ImportPanel preview={importPreview} onImported={(count) => setImportedCount((total) => total + count)} />
         ) : null}
@@ -107,13 +108,14 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
         ) : null}
         {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} /> : null}
       </div>
+      </div>
     </div>
   );
 }
 
 function StatCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="flex flex-col gap-[6px] rounded-[6px] border border-line bg-white p-[16px] sm:min-h-[118px]">
+    <div className="flex min-w-0 flex-col gap-[6px] p-[16px] sm:p-[20px]">
       <p className="text-12 text-muted">{label}</p>
       <p className="text-24 font-semibold text-ink tabular-nums">{value}</p>
       <p className="truncate text-11 text-muted">{note}</p>

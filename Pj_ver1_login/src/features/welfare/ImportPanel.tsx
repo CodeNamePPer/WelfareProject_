@@ -68,7 +68,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
   const tag = phaseTag[phase];
 
   return (
-    <section aria-labelledby="import-title" className="flex flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
+    <section aria-labelledby="import-title" className="flex flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px]">
       <header className="flex items-start justify-between gap-3">
         <div>
           <h2 id="import-title" className="text-17 font-semibold text-ink">
@@ -125,7 +125,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
       </div>
 
       {phase === 'idle' ? (
-        <p className="rounded-[8px] border border-dashed border-line px-[16px] py-[32px] text-center text-13 text-muted">
+        <p className="text-13 text-muted">
           เลือกไฟล์เพื่อดูตัวอย่างข้อมูลก่อนนำเข้า
         </p>
       ) : (
@@ -166,7 +166,7 @@ export function ImportPanel({ preview, onImported }: ImportPanelProps) {
                   <div className="min-w-0">
                     <p className="font-semibold">{record.benefit}</p>
                     <p className="text-12 text-muted">
-                      {record.id} · {record.claimant}
+                      {record.id}, {record.claimant}
                     </p>
                   </div>
                   <Tag tone={statusTag[record.status].tone}>{statusTag[record.status].label}</Tag>

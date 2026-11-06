@@ -75,13 +75,18 @@ export interface RoleCount {
 export interface SummaryStats {
   users: {
     active: number;
-    /** ลาออก/เสียชีวิต */
+    /** ลาออก + เสียชีวิต */
     inactive: number;
+    resigned: number;
+    deceased: number;
     /** null = โหลดวันเริ่มงานไม่สำเร็จ */
     newThisMonth: number | null;
   } | null;
   hrQueue: {
+    /** คำขอที่ยังอยู่ขั้น HR ตรวจ (ยังไม่มี hr-approved) */
     pending: number;
+    /** HR อนุมัติแล้ว รอการเงิน – ไม่นับเป็นงานของ HR */
+    atFinance: number;
     approved: number;
     rejected: number;
     /** อายุคำขอที่รอนานที่สุด (วัน) – null เมื่อไม่มีคำขอรอ */

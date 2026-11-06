@@ -120,11 +120,15 @@ function fetchLoginActivity(): Promise<Pick<SummaryStats, "logins" | "loginError
 
 /** คิวคำขอเบิกของ HR – ตอนนี้คำนวณจาก mock claims */
 function hrQueueStats(): SummaryStats["hrQueue"] {
-  const pending = claims.filter((c) => c.status === "pending");
+  // คำขอ pending ที่ HR อนุมัติแล้วกำลังรอการเงิน ไม่ใช่คิวของ HR
+  const atHr = (c: (typeof claims)[number]) => !c.timeline.some((e) => e.kind === "hr-approved");
+  const allPending = claims.filter((c) => c.status === "pending");
+  const pending = allPending.filter(atHr);
   const today = new Date(`${bangkokDate()}T00:00:00Z`).getTime();
   const ages = pending.map((c) => Math.round((today - new Date(`${c.date}T00:00:00Z`).getTime()) / DAY_MS));
   return {
     pending: pending.length,
+    atFinance: allPending.length - pending.length,
     approved: claims.filter((c) => c.status === "approved").length,
     rejected: claims.filter((c) => c.status === "rejected").length,
     oldestPendingDays: ages.length ? Math.max(...ages) : null,
@@ -179,6 +183,8 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
         ? {
             active: activeUsers.length,
             inactive: users.length - activeUsers.length,
+            resigned: users.filter((u) => u.status === "RESIGNED").length,
+            deceased: users.filter((u) => u.status === "DECEASED").length,
             newThisMonth: hiredThisMonth ? users.filter((u) => hiredThisMonth.has(u.employeeId)).length : null,
           }
         : null,

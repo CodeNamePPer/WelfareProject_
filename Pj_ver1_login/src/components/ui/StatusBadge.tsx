@@ -24,7 +24,7 @@ export function StatusBadge({ status }: { status: ClaimStatus }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
+        'inline-flex items-center gap-[6px] rounded-[4px] px-[8px] py-[2px] text-11 font-medium',
         badge,
       )}
     >

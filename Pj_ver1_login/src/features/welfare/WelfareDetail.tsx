@@ -60,7 +60,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
       id="welfare-detail"
       onSubmit={submit}
       aria-labelledby="welfare-detail-title"
-      className="flex scroll-mt-[72px] flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:self-start"
+      className="flex scroll-mt-[72px] flex-col gap-[16px] p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:self-start"
     >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -68,15 +68,14 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
             รายละเอียดสวัสดิการ
           </h2>
           <p className="mt-[4px] text-12 text-muted">
-            {item.code} · แก้ไขล่าสุด {formatShortThaiDate(item.updatedAt)}
+            {item.code}, แก้ไขล่าสุด {formatShortThaiDate(item.updatedAt)}
           </p>
           <p className="text-12 text-muted">ผู้ดูแล: {item.owner}</p>
         </div>
         <Tag tone={item.status === 'active' ? 'success' : 'neutral'}>{item.status === 'active' ? 'ใช้งาน' : 'หยุดใช้'}</Tag>
       </header>
 
-      <div className="flex flex-col gap-[8px] rounded-[8px] bg-surface p-[12px]">
-        <p className="text-11 text-muted">สวัสดิการที่เลือก</p>
+      <div className="flex flex-col gap-[8px] border-t border-line pt-[14px]">
         {editing ? (
           <Field label="ชื่อสวัสดิการ">
             <input className={inputClass} value={form.name} onChange={(event) => set('name', event.target.value)} autoFocus />
@@ -104,9 +103,9 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
         {item.documents.length === 0 ? (
           <p className="text-12 text-muted">ยังไม่มีเอกสารแนบ</p>
         ) : (
-          <ul className="flex flex-col gap-[8px]">
+          <ul className="flex flex-col divide-y divide-line border-y border-line">
             {item.documents.map((doc) => (
-              <li key={doc} className="flex items-center gap-[8px] rounded-[6px] border border-line px-[10px] py-[6px] text-12 text-ink">
+              <li key={doc} className="flex items-center gap-[8px] py-[8px] text-12 text-ink">
                 <FileText className="size-4 shrink-0 text-muted" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{doc}</span>
                 <button type="button" onClick={() => notifyPending(`ดูไฟล์ ${doc}`)} className="shrink-0 text-primary-700 hover:underline">
@@ -140,7 +139,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
                   {done ? <Check className="size-[10px]" strokeWidth={3} aria-hidden="true" /> : null}
                 </span>
                 <span className={cx('text-12', current || done ? 'font-medium text-ink' : 'text-muted')}>{step.label}</span>
-                <span className="text-10 text-muted">{step.by}</span>
+                <span className="text-11 text-muted">{step.by}</span>
               </li>
             );
           })}

@@ -1,4 +1,4 @@
-import { OutlineButton, Panel, PanelError, PanelTitle } from './ui';
+import { PanelError, Region, RegionHeader } from './ui';
 import { cx } from '../../lib/cx';
 import type { RoleCount } from '../../types';
 
@@ -14,28 +14,26 @@ interface UsersByRolePanelProps {
 // สีอ่อนสุดมีเส้นขอบบางเพื่อไม่ให้กลืนกับพื้นขาว
 const ROLE_SWATCHES = ['bg-ink', 'bg-primary-700', 'bg-primary-500', 'bg-primary-100 ring-1 ring-inset ring-primary-500/40'];
 
-// Figma 163:1197 – "Users ในระบบ" panel: แถบสัดส่วนเส้นเดียว + รายการบทบาทแบบ legend
+// Figma 163:1197 – ส่วน "ผู้ใช้ในระบบ": แถบสัดส่วนเส้นเดียว + รายการบทบาทแบบ legend
 export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: UsersByRolePanelProps) {
   const total = roles?.reduce((sum, role) => sum + role.count, 0) ?? null;
   const share = (count: number) => (!total ? 0 : (count / total) * 100);
   const swatch = (index: number) => ROLE_SWATCHES[index % ROLE_SWATCHES.length];
 
   return (
-    <Panel className={className} aria-labelledby="users-title">
-      {/* หัวข้อ + จำนวนรวมเป็นบรรทัดรอง แบบเดียวกับ ActivityLogPanel – ไม่ชนปุ่มเมื่อจอแคบ */}
-      <div className="flex items-start justify-between gap-[14px]">
-        <div className="flex min-w-0 flex-col gap-[4px]">
-          <PanelTitle id="users-title">Users ในระบบ</PanelTitle>
-          <p className="text-13 text-muted tabular-nums">{total === null ? 'รวม — คน' : `รวม ${total.toLocaleString('th-TH')} คน`}</p>
-        </div>
-        <OutlineButton onClick={onViewAll}>ดูทั้งหมด</OutlineButton>
-      </div>
+    <Region className={className} aria-labelledby="users-title">
+      <RegionHeader
+        title="ผู้ใช้ในระบบ"
+        titleId="users-title"
+        sub={total === null ? 'ทำงานอยู่ — คน' : `ทำงานอยู่ ${total.toLocaleString('th-TH')} คน`}
+        onViewAll={onViewAll}
+      />
 
       {roles === null ? (
         <PanelError onRetry={onRetry} />
       ) : (
-        // flex-1 ทั้งสายลงถึง li: เมื่อแผงถูกยืดให้สูงเท่าตาราง Log ข้างๆ แถวบทบาทจะกระจายเต็มแผงแทนการเหลือที่ว่างด้านล่าง
-        <div className="flex flex-1 flex-col gap-[14px]">
+        // แถวบทบาทสูงตามเนื้อหา ถ้าตารางประวัติข้างๆ สูงกว่า ที่ว่างด้านล่างเป็นพื้นแผ่นเดียวกัน ไม่ต้องยืดแถว
+        <div className="flex flex-col gap-[14px]">
           {/* ตัวเลขจริงอยู่ในรายการด้านล่าง แถบนี้จึงเป็นภาพสรุปสำหรับผู้ใช้ screen reader แบบข้อความเดียว */}
           <div
             role="img"
@@ -49,9 +47,9 @@ export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: Users
             )}
           </div>
 
-          <ul className="flex flex-1 flex-col divide-y divide-line">
+          <ul className="flex flex-col divide-y divide-line">
             {roles.map((role, index) => (
-              <li key={role.id} className="flex flex-1 items-center gap-[10px] py-[12px] first:pt-[4px] last:pb-0">
+              <li key={role.id} className="flex items-center gap-[10px] py-[12px] first:pt-[4px] last:pb-0">
                 <span aria-hidden="true" className={cx('size-[10px] shrink-0 rounded-full', swatch(index))} />
                 <span className="min-w-0 flex-1 truncate text-14 text-ink" title={role.role}>
                   {role.role}
@@ -65,6 +63,6 @@ export function UsersByRolePanel({ className, roles, onViewAll, onRetry }: Users
           </ul>
         </div>
       )}
-    </Panel>
+    </Region>
   );
 }

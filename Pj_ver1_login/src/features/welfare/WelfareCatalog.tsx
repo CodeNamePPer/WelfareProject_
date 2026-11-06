@@ -138,8 +138,8 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
   }, [startCreating]);
 
   return (
-    <div className="grid grid-cols-1 gap-[20px] xl:grid-cols-[minmax(0,1fr)_350px]">
-      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_350px]">
+      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
         <div className="flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
           <h2 id="welfare-list-title" className="text-17 font-semibold text-ink">
             รายการสวัสดิการที่มีอยู่
@@ -258,7 +258,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
                 <li
                   key={item.code}
                   className={cx(
-                    'flex items-start gap-[4px] rounded-[8px] border border-line text-13 text-ink',
+                    'flex items-start gap-[4px] border-b border-line text-13 text-ink',
                     table.cardButton,
                     isSelected ? table.cardSelected : table.cardHover,
                   )}
@@ -267,11 +267,11 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
                     type="button"
                     onClick={() => pick(item.code)}
                     aria-pressed={isSelected}
-                    className="min-w-0 flex-1 rounded-[8px] p-[12px] pr-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                    className="min-w-0 flex-1 rounded-[4px] px-[4px] py-[12px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   >
                     <span className="block font-semibold">{item.name}</span>
                     <span className="block text-12 text-muted">
-                      {item.code} · {item.owner}
+                      {item.code}, {item.owner}
                     </span>
                     <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
                       <span className="font-semibold tabular-nums">{formatBahtWhole(item.amount)}</span>
@@ -316,7 +316,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
           }}
         />
       ) : (
-        <p className="rounded-[10px] border border-dashed border-line bg-white p-[20px] text-center text-14 text-muted">
+        <p className="p-[20px] text-14 text-muted">
           เลือกสวัสดิการจากตารางเพื่อดูรายละเอียด
         </p>
       )}

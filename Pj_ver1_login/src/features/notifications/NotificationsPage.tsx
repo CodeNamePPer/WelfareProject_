@@ -134,14 +134,16 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
         }
       />
 
+      {/* แผ่นเดียว: สรุปตัวเลข, ตัวกรอง, งานที่ต้องทำ, รายการทั้งหมด คั่นด้วยเส้น ไม่แยกเป็นการ์ด */}
+      <div className="flex flex-col overflow-hidden rounded-[10px] border border-line bg-white">
       {/* สรุปตัวเลข – กดเพื่อกรองรายการ */}
-      <div className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[10px] border border-line bg-white">
+      <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
         <SummaryStat label="ต้องดำเนินการ" value={count('actionable')} active={filter === 'actionable'} onClick={() => changeFilter(filter === 'actionable' ? 'all' : 'actionable')} />
         <SummaryStat label="สิทธิ์ใกล้หมดอายุ" value={count('expiring')} tone="warning" active={filter === 'expiring'} onClick={() => changeFilter(filter === 'expiring' ? 'all' : 'expiring')} />
-        <SummaryStat label="เหตุการณ์ความปลอดภัย" value={count('security')} tone="danger" active={filter === 'security'} onClick={() => changeFilter(filter === 'security' ? 'all' : 'security')} />
+        <SummaryStat label="เหตุการณ์ความปลอดภัย" value={count('security')} tone={alerts.some((a) => a.category === 'security' && a.actionable) ? 'danger' : undefined} active={filter === 'security'} onClick={() => changeFilter(filter === 'security' ? 'all' : 'security')} />
       </div>
 
-      <div className="flex flex-col gap-[12px]">
+      <div className="flex flex-col gap-[12px] border-b border-line p-[16px]">
         <FilterChips
           label="กรองการแจ้งเตือน"
           value={filter}
@@ -184,11 +186,11 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
 
       {/* แจ้งผู้ใช้โปรแกรมอ่านหน้าจอเมื่อผลลัพธ์เปลี่ยน */}
       <p className="sr-only" role="status" aria-live="polite">
-        {`แสดง ${filtered.length} รายการ · ต้องดำเนินการ ${actionItems.length} · ยังไม่อ่าน ${unreadCount}`}
+        {`แสดง ${filtered.length} รายการ, ต้องดำเนินการ ${actionItems.length}, ยังไม่อ่าน ${unreadCount}`}
       </p>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-[8px] rounded-[10px] border border-dashed border-line bg-white px-[16px] py-[48px] text-center">
+        <div className="flex flex-col items-center gap-[8px] px-[16px] py-[48px] text-center">
           <BellOff className="size-[28px] text-muted" strokeWidth={1.5} aria-hidden="true" />
           <p className="text-14 font-medium text-ink">ไม่พบการแจ้งเตือนที่ตรงกับเงื่อนไข</p>
           <p className="text-13 text-muted">ลองเปลี่ยนตัวกรอง ช่วงวันที่ หรือคำค้นหา</p>
@@ -196,7 +198,7 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
       ) : null}
 
       {actionItems.length > 0 ? (
-        <section aria-labelledby="action-title" className="overflow-hidden rounded-[10px] border border-primary-100 bg-white shadow-card">
+        <section aria-labelledby="action-title" className="border-b border-line last:border-b-0">
           <header className="flex items-center gap-[8px] border-b border-primary-100 bg-primary-50 px-[16px] py-[10px]">
             <h2 id="action-title" className="text-14 font-semibold text-primary-700">
               ต้องดำเนินการ
@@ -214,14 +216,14 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
           </ul>
         </section>
       ) : filter !== 'actionable' && filtered.length > 0 ? (
-        <p className="flex items-center gap-[8px] rounded-[10px] border border-line bg-white px-[16px] py-[12px] text-13 text-muted">
+        <p className="flex items-center gap-[8px] border-b border-line px-[16px] py-[12px] text-13 text-muted last:border-b-0">
           <Check className="size-[16px] text-ok" aria-hidden="true" />
           ไม่มีงานค้างที่ต้องดำเนินการ
         </p>
       ) : null}
 
       {groups.length > 0 ? (
-        <section aria-label="การแจ้งเตือนทั้งหมด" className="overflow-hidden rounded-[10px] border border-line bg-white">
+        <section aria-label="การแจ้งเตือนทั้งหมด">
           {groups.map((group) => (
             <div key={group.label} role="group" aria-label={group.label}>
               <h2 className="border-b border-line bg-surface px-[16px] py-[8px] text-12 font-medium text-muted">{group.label}</h2>
@@ -241,11 +243,12 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
         <button
           type="button"
           onClick={() => setVisibleCount((n) => n + PAGE_STEP)}
-          className="self-center rounded-[6px] px-[12px] py-[8px] text-13 font-medium text-muted transition-colors hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 motion-reduce:transition-none"
+          className="w-full border-t border-line px-[12px] py-[12px] text-13 font-medium text-muted transition-colors hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 motion-reduce:transition-none"
         >
           โหลดเพิ่มเติม ({feed.length - visibleCount} รายการ)
         </button>
       ) : null}
+      </div>
     </div>
   );
 }
@@ -253,7 +256,7 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
 function ActionRow({ alert, onReview }: { alert: AdminAlert; onReview: (alert: AdminAlert) => void }) {
   return (
     <article className="flex flex-wrap items-center gap-x-[14px] gap-y-[10px] px-[16px] py-[14px] sm:flex-nowrap">
-      <CategoryIcon category={alert.category} />
+      <CategoryIcon alert={alert} />
       {/* บนมือถือให้ข้อความกินเต็มแถว แล้วปุ่มตกลงไปบรรทัดใหม่ */}
       <div className="flex min-w-[calc(100%-54px)] flex-1 flex-col gap-[2px] sm:min-w-0">
         <h3 className="text-15 font-semibold text-ink">
@@ -261,13 +264,13 @@ function ActionRow({ alert, onReview }: { alert: AdminAlert; onReview: (alert: A
           {alert.title}
         </h3>
         <p className="text-13 text-muted">
-          {alert.description} · <time className="tabular-nums">{alert.time}</time>
+          {alert.description} <time className="ml-[6px] whitespace-nowrap text-ink-mute tabular-nums">{alert.time}</time>
         </p>
       </div>
       <button
         type="button"
         onClick={() => onReview(alert)}
-        className={cx('ml-[54px] sm:ml-0', reviewButtonClass(alert.category))}
+        className={cx('ml-[54px] sm:ml-0', reviewButtonClass(alert))}
       >
         ตรวจสอบ
         <span className="sr-only"> {alert.title}</span>
@@ -282,13 +285,13 @@ function FeedRow({ alert, onToggleRead }: { alert: AdminAlert; onToggleRead: (al
       <span className="flex w-[8px] shrink-0 justify-center" aria-hidden="true">
         <span className={cx('size-[8px] rounded-full', alert.unread ? 'bg-primary-600' : 'bg-transparent')} />
       </span>
-      <CategoryIcon category={alert.category} size="sm" />
+      <CategoryIcon alert={alert} size="sm" />
       <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
         <h3 className={cx('text-14', alert.unread ? 'font-semibold text-ink' : 'font-medium text-ink-soft')}>
           {alert.unread ? <span className="sr-only">ยังไม่อ่าน: </span> : null}
           {alert.title}
         </h3>
-        <p className={cx('text-13', toneOf(alert.category) === 'warning' ? 'text-status-pending-ink' : 'text-muted')}>
+        <p className={cx('text-13', toneOf(alert) === 'warning' ? 'text-status-pending-ink' : 'text-muted')}>
           {alert.description}
         </p>
       </div>

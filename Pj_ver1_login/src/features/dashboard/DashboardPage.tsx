@@ -56,13 +56,13 @@ export function DashboardPage({
     <div className="flex flex-col gap-[24px]">
       <header className="flex flex-col gap-[4px]">
         <h1 className="text-22 font-semibold text-ink">ภาพรวมระบบ</h1>
-        <p className="text-13 text-muted">Admin · จัดการระบบได้ แต่ไม่อนุมัติคำขอเบิก</p>
+        <p className="text-13 text-muted">ดูแลระบบและติดตามคิว HR ส่วนการอนุมัติคำขอเบิกเป็นงานของ HR</p>
       </header>
 
-      {/* Bento grid on 6 columns: stat cards (2×2) | notifications, then a narrow users tile | wide log table,
-          then the full-width stats table. Tiles in the same row stretch to equal height. */}
-      <div className="grid grid-cols-1 gap-[24px] xl:grid-cols-6">
-        <div className="min-w-0 xl:col-span-3">
+      {/* ตำแหน่งตาม Figma (6 คอลัมน์): สรุป 2×2 | แจ้งเตือน, ผู้ใช้ | ประวัติ, แล้วสถิติรายบุคคลเต็มแถว
+          แต่วาดเป็นแผ่นเดียว: ขอบนอกเส้นเดียว ส่วนต่างๆ ใช้เส้นแบ่งร่วมกัน (gap-px บนพื้นสีเส้น) ไม่ใช่การ์ดแยกใบ */}
+      <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[10px] border border-line bg-line xl:grid-cols-6">
+        <div className="min-w-0 bg-white xl:col-span-3">
           <SummaryCards stats={stats} />
         </div>
         <NotificationPanel
@@ -78,7 +78,7 @@ export function DashboardPage({
           onRetry={() => router.refresh()}
         />
         <ActivityLogPanel className="xl:col-span-4" entries={logEntries} onViewAll={go('/admin/logs')} />
-        <div className="min-w-0 xl:col-span-6">
+        <div className="min-w-0 bg-white xl:col-span-6">
           <EmployeeClaimStats employees={employees} periods={periods} claims={claims} />
         </div>
       </div>

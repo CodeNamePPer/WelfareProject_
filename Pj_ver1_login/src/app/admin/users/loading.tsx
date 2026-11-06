@@ -11,8 +11,8 @@ export default function AdminUsersLoading() {
     <SkeletonScreen className="flex flex-col gap-[24px]">
       <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
 
-      <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <div className="grid grid-cols-1 rounded-[10px] border border-line bg-white xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[20px] xl:border-b-0 xl:border-r">
           <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-17 font-semibold text-ink">รายชื่อผู้ใช้งานระบบ</h2>
             <Skeleton className="h-10 w-full rounded-lg sm:w-[200px]" />
@@ -58,7 +58,7 @@ export default function AdminUsersLoading() {
           </div>
         </section>
 
-        <div className="flex flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[20px] xl:self-start">
+        <div className="flex flex-col gap-[14px] p-[20px] xl:self-start">
           <div className="flex items-start gap-[12px]">
             <Skeleton className="size-12 shrink-0 rounded-full" />
             <div className="flex flex-1 flex-col gap-[6px]">

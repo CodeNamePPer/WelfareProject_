@@ -7,8 +7,9 @@ import { Tag } from "@/components/ui/Tag";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import type { EmployeeProfile, UserWithProfile } from "@/lib/auth/users";
 import { formatThaiDate } from "@/lib/format";
+import { EMPLOYMENT_STATUS_LABELS } from "@/lib/employmentStatus";
 
-const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
+const STATUS_LABELS = EMPLOYMENT_STATUS_LABELS;
 
 type InfoRow = [label: string, value: ReactNode];
 
@@ -55,7 +56,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
 
   const p = user.profile;
   const initial = Array.from((p.firstNameTh ?? user.name).trim())[0] ?? "?";
-  const workLine = [p.positionName, p.departmentName].filter(Boolean).join(" · ");
+  const workLine = [p.positionName, p.departmentName].filter(Boolean).join(", ");
   const tenure = p.hireDate && user.status === "ACTIVE" ? tenureLabel(p.hireDate) : null;
   const endDate = user.status === "DECEASED" ? p.deceasedDate : p.resignedDate;
 
@@ -75,7 +76,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
       rows: [
         ["อีเมลติดต่อ", p.contactEmail],
         ["เบอร์โทร", p.phone],
-        ["ผู้ติดต่อฉุกเฉิน", joinParts(p.emergencyContactName, p.emergencyContactPhone && `· ${p.emergencyContactPhone}`)],
+        ["ผู้ติดต่อฉุกเฉิน", joinParts(p.emergencyContactName, p.emergencyContactPhone && `(${p.emergencyContactPhone})`)],
         ["ที่อยู่", addressLabel(p)],
       ],
     },
@@ -93,7 +94,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
           p.hireDate ? (
             <>
               {formatThaiDate(p.hireDate)}
-              {tenure ? <span className="font-normal text-muted"> · อายุงาน {tenure}</span> : null}
+              {tenure ? <span className="font-normal text-muted"> (อายุงาน {tenure})</span> : null}
             </>
           ) : null,
         ],
@@ -148,8 +149,8 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
             </div>
             <p className="text-13 text-muted">
               <span className="tabular-nums">{user.employeeId}</span>
-              {p.nickname ? ` · ${p.nickname}` : ""}
-              {workLine ? ` · ${workLine}` : ""}
+              {p.nickname ? ` (${p.nickname})` : ""}
+              {workLine ? `, ${workLine}` : ""}
             </p>
           </div>
         </header>
@@ -165,9 +166,9 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
             </section>
           ))}
         </div>
-      </article>
 
-      <section aria-labelledby="profile-password" className="rounded-[10px] border border-line bg-white p-[20px]">
+        {/* รหัสผ่านอยู่ในแผ่นเดียวกับโปรไฟล์ คั่นด้วยเส้น ไม่แยกเป็นกล่องใหม่ */}
+        <section aria-labelledby="profile-password" className="border-t border-line p-[20px]">
         <div className="flex flex-col gap-[16px] lg:flex-row lg:gap-[40px]">
           <div className="flex flex-col gap-[6px] lg:w-[280px] lg:shrink-0">
             <h3 id="profile-password" className="text-14 font-semibold text-ink">
@@ -181,7 +182,8 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
             <ChangePasswordForm employeeId={user.employeeId} loginName={user.email} />
           </div>
         </div>
-      </section>
+        </section>
+      </article>
     </div>
   );
 }

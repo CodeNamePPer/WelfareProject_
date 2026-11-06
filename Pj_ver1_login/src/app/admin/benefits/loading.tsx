@@ -10,10 +10,11 @@ const ROW_COUNT = 6;
 export default function AdminBenefitsLoading() {
   return (
     <SkeletonScreen className="flex flex-col gap-[20px]">
-      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขได้โดยตรง · ไม่อนุมัติคำขอเบิก · ข้อมูลตัวอย่าง" />
+      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตอนนี้ยังใช้ข้อมูลตัวอย่าง" />
 
       {/* แถบแท็บ: ใช้ข้อความจริงแต่ยังกดไม่ได้ เพื่อให้ความสูงตรงกับหน้าจริง */}
-      <div aria-hidden="true" className="flex gap-[4px] overflow-x-auto border-b border-line">
+      <div className="rounded-[10px] border border-line bg-white">
+      <div aria-hidden="true" className="flex gap-[4px] overflow-x-auto border-b border-line px-[8px] sm:px-[12px]">
         {TABS.map((label, i) => (
           <span
             key={label}
@@ -28,9 +29,9 @@ export default function AdminBenefitsLoading() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-[16px] sm:grid-cols-3">
+      <div className="grid grid-cols-1 divide-y divide-line border-b border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex min-h-[118px] flex-col gap-[6px] rounded-[6px] border border-line bg-white p-[16px]">
+          <div key={i} className="flex flex-col gap-[6px] p-[16px] sm:p-[20px]">
             <Skeleton className="h-3 w-28" />
             <Skeleton className="mt-[4px] h-6 w-24" />
             <Skeleton className="h-3 w-40" />
@@ -38,8 +39,8 @@ export default function AdminBenefitsLoading() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[20px]">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_350px]">
+        <section className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[20px] xl:border-b-0 xl:border-r">
           <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-10 w-full rounded-lg sm:w-[180px]" />
@@ -73,7 +74,7 @@ export default function AdminBenefitsLoading() {
         </section>
 
         {/* รายละเอียดสวัสดิการที่เลือก */}
-        <div className="flex flex-col gap-[14px] rounded-[10px] border border-line bg-white p-[20px] xl:self-start">
+        <div className="flex flex-col gap-[14px] p-[20px] xl:self-start">
           <div className="flex items-start justify-between gap-[12px]">
             <div className="flex flex-col gap-[6px]">
               <Skeleton className="h-5 w-44" />
@@ -93,6 +94,7 @@ export default function AdminBenefitsLoading() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </SkeletonScreen>
   );
