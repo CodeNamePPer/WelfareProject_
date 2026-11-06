@@ -78,12 +78,15 @@ export function LoginForm({ next }: { next: string }) {
     }
 
     setLoading(true);
+    // แยกสาเหตุ: fetch ล้ม = ติดต่อเซิร์ฟเวอร์ไม่ได้เลย / อ่าน JSON ไม่ได้ = เซิร์ฟเวอร์ตอบมาแต่ผิดพลาด (เน็ตปกติ)
+    let reachedServer = false;
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier, password, recaptchaToken: token }),
       });
+      reachedServer = true;
       const data = (await res.json()) as { error?: string; home?: string; mustChangePassword?: boolean };
 
       if (!res.ok) {
@@ -101,7 +104,11 @@ export function LoginForm({ next }: { next: string }) {
         router.refresh();
       });
     } catch {
-      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบว่าคุณต่ออินเทอร์เน็ตของบริษัทอยู่");
+      setError(
+        reachedServer
+          ? "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง หากยังไม่ได้ให้ติดต่อผู้ดูแลระบบ"
+          : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบว่าคุณต่ออินเทอร์เน็ตของบริษัทอยู่",
+      );
       resetCaptcha();
       setLoading(false);
     }
