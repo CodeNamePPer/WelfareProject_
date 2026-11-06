@@ -50,6 +50,8 @@ export interface Period {
   label: string;
   from: string;
   to: string;
+  /** ใช้แบ่งกลุ่มในตัวเลือก "รายเดือน" / "รายปี" */
+  kind?: 'month' | 'year';
 }
 
 export type NotificationKind = 'access-request' | 'expiring' | 'system';
