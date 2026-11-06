@@ -2,7 +2,7 @@ import { cn } from "@/utils/cn";
 
 // แท่งสีเทาแทนเนื้อหาระหว่างรอข้อมูล
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn("animate-pulse rounded bg-mist", className)} />;
+  return <div aria-hidden="true" className={cn("animate-pulse motion-reduce:animate-none rounded bg-mist", className)} />;
 }
 
 // ห่อทั้งหน้า: หน่วงก่อนแสดง ถ้าข้อมูลมาเร็วผู้ใช้จะไม่เห็นการกระพริบ (ช่วงนั้นมีแถบโหลดด้านบนบอกอยู่แล้ว)

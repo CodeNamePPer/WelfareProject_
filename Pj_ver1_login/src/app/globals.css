@@ -12,8 +12,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * {
+  /* ต้องมี iteration-count: 1 ด้วย ไม่งั้นแอนิเมชันวนไม่รู้จบ (spin/pulse) จะวนทุก 0.01ms
+     ทำให้ spinner หมุนรัวและ skeleton กระพริบถี่ */
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
