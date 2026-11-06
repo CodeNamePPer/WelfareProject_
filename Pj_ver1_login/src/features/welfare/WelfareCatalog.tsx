@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { KeyboardEvent } from 'react';
 import { MoreVertical, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -34,9 +35,14 @@ interface WelfareCatalogProps {
   onItemsChange: (items: WelfareItem[]) => void;
   selectedCode: string;
   onSelect: (code: string) => void;
+  /** Create a draft and open its form on arrival (?new=1 from the shortcut menu). */
+  startCreating?: boolean;
 }
 
-export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }: WelfareCatalogProps) {
+export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, startCreating = false }: WelfareCatalogProps) {
+  const router = useRouter();
+  // Guards against a second draft from Strict Mode's double effect run; cleared once ?new=1 is gone.
+  const createdFromLinkRef = useRef(false);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -117,6 +123,19 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect }:
     onSelect(code);
     setEditingCode(code);
   };
+
+  useEffect(() => {
+    if (!startCreating) {
+      createdFromLinkRef.current = false;
+      return;
+    }
+    if (createdFromLinkRef.current) return;
+    createdFromLinkRef.current = true;
+    addItem();
+    // Drop ?new=1 so a refresh doesn't add another draft and the shortcut works again from this page.
+    router.replace('/admin/benefits', { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run only when the link asks for it
+  }, [startCreating]);
 
   return (
     <div className="grid grid-cols-1 gap-[20px] xl:grid-cols-[minmax(0,1fr)_350px]">

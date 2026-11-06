@@ -1,4 +1,4 @@
-import { Bell, FileSpreadsheet, History, PackagePlus, UserCog } from 'lucide-react';
+import { Bell, CircleUserRound, FileSpreadsheet, PackagePlus, UserCog } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface Shortcut {
@@ -11,12 +11,13 @@ export interface Shortcut {
 }
 
 // "ทางลัด" – งานที่ Admin ทำบ่อย แสดงในเมนูของปุ่มลอย (ShortcutFab) ทุกหน้า Admin
+// Logs ไม่ซ้ำไว้ที่นี่เพราะเมนูข้างพาไปได้ตรง ๆ อยู่แล้ว
 export function getShortcuts(notificationCount: number | null): Shortcut[] {
   return [
-    { id: 'add-benefit', label: 'เพิ่มสวัสดิการ', description: 'สร้างหรือแก้ไขรายการสวัสดิการ', icon: PackagePlus, href: '/admin/benefits' },
+    { id: 'add-benefit', label: 'เพิ่มสวัสดิการ', description: 'เปิดฟอร์มสร้างรายการใหม่ทันที', icon: PackagePlus, href: '/admin/benefits?new=1' },
     { id: 'import-claims', label: 'นำเข้าประวัติขอเบิก', description: 'อัปโหลดไฟล์ CSV', icon: FileSpreadsheet, href: '/admin/benefits?tab=import' },
-    { id: 'users', label: 'จัดการผู้ใช้งาน', description: 'เพิ่มผู้ใช้ กำหนดสิทธิ์ (Role)', icon: UserCog, href: '/admin/users' },
+    { id: 'users', label: 'ตั้งค่าผู้ใช้งาน', description: 'แก้ข้อมูล สิทธิ์ (Role) และรีเซ็ตรหัสผ่าน', icon: UserCog, href: '/admin/users' },
     { id: 'notifications', label: 'แจ้งเตือน', description: 'คำขอสิทธิ์และรายการใกล้หมดอายุ', icon: Bell, href: '/admin/notifications', badge: notificationCount ?? undefined },
-    { id: 'logs', label: 'ประวัติการแก้ไข', description: 'ตรวจสอบ Log การใช้งานระบบ', icon: History, href: '/admin/logs' },
+    { id: 'profile', label: 'โปรไฟล์ของฉัน', description: 'ข้อมูลบัญชีและเปลี่ยนรหัสผ่าน', icon: CircleUserRound, href: '/admin/profile' },
   ];
 }
