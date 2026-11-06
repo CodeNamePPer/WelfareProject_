@@ -26,11 +26,19 @@ interface WelfarePageProps {
   employees: Employee[];
   /** Tab to open first, e.g. from a dashboard shortcut (?tab=import). */
   initialTab?: TabId;
+  /** Open the "new welfare" form right away (?new=1 from the shortcut menu). */
+  startCreating?: boolean;
 }
 
 // Layout follows Figma "Admin / จัดการสวัสดิการและนำเข้าประวัติ" (node 163:180).
-export function WelfarePage({ initialItems, importPreview, claims, employees, initialTab = 'catalog' }: WelfarePageProps) {
+export function WelfarePage({ initialItems, importPreview, claims, employees, initialTab = 'catalog', startCreating = false }: WelfarePageProps) {
   const [tab, setTab] = useState<TabId>(initialTab);
+  // The shortcut can fire while this page is already open on the claims tab; the new-item form lives in the catalog.
+  const [prevStartCreating, setPrevStartCreating] = useState(startCreating);
+  if (startCreating !== prevStartCreating) {
+    setPrevStartCreating(startCreating);
+    if (startCreating && tab === 'claims') setTab('catalog');
+  }
   const [items, setItems] = useState(initialItems);
   const [selectedCode, setSelectedCode] = useState(initialItems[0]?.code ?? '');
   const [importedCount, setImportedCount] = useState(0);
@@ -95,7 +103,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
           <ImportPanel preview={importPreview} onImported={(count) => setImportedCount((total) => total + count)} />
         ) : null}
         {tab === 'catalog' || tab === 'import' ? (
-          <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} />
+          <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} startCreating={startCreating} />
         ) : null}
         {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} /> : null}
       </div>
