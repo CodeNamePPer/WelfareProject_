@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { EMPLOYMENT_STATUS_LABELS } from "@/lib/employmentStatus";
 
+type EmploymentStatus = "ACTIVE" | "RESIGNED" | "DECEASED";
 type Employee = {
   id: string;
   name: string;
@@ -13,6 +15,7 @@ type Employee = {
   tier: "Admin" | "ผู้จัดการ" | "พนักงาน";
   used: number;
   limit: number;
+  status?: EmploymentStatus;
   profile?: Record<string, string>;
 };
 
@@ -47,8 +50,8 @@ function PlusIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
 }
 
-function TrashIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 14h12l1-14M9 7V4h6v3" /></svg>;
+function StatusIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-3-3M17 17H7l3 3M17 7a7 7 0 0 1 1 10M7 17a7 7 0 0 1-1-10" /></svg>;
 }
 
 function EditIcon() {
@@ -61,6 +64,10 @@ function HistoryIcon() {
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("th-TH").format(value);
+}
+
+function employeeStatus(employee: Employee): EmploymentStatus {
+  return employee.status ?? "ACTIVE";
 }
 
 function isEmployee(value: unknown): value is Employee {
@@ -83,6 +90,7 @@ function isEmployee(value: unknown): value is Employee {
     typeof value.used === "number" &&
     "limit" in value &&
     typeof value.limit === "number" &&
+    (!("status" in value) || value.status === "ACTIVE" || value.status === "RESIGNED" || value.status === "DECEASED") &&
     (!("profile" in value) || (
       typeof value.profile === "object" &&
       value.profile !== null &&
@@ -108,7 +116,7 @@ export default function EmployeesPage() {
   const [tier, setTier] = useState("ทั้งหมด");
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [statusTarget, setStatusTarget] = useState<Employee | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -170,25 +178,6 @@ export default function EmployeesPage() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const savedIds = sessionStorage.getItem("deleted-employee-ids");
-        if (!savedIds) return;
-        const ids: unknown = JSON.parse(savedIds);
-        if (!Array.isArray(ids) || !ids.every((id): id is string => typeof id === "string")) {
-          setNotice("ไม่สามารถโหลดรายการพนักงานที่ลบไว้ได้");
-          return;
-        }
-        setEmployees((current) => current.filter((employee) => !ids.includes(employee.id)));
-      } catch {
-        setNotice("ไม่สามารถโหลดรายการพนักงานที่ลบไว้ได้");
-      }
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
   const filteredEmployees = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return employees.filter((employee) => {
@@ -216,25 +205,27 @@ export default function EmployeesPage() {
     setPage(1);
   }
 
-  function deleteEmployee() {
-    if (!deleteTarget) return;
+  function changeEmploymentStatus(status: EmploymentStatus) {
+    if (!statusTarget || employeeStatus(statusTarget) !== "ACTIVE" || status === "ACTIVE") return;
 
-    setEmployees((current) => current.filter((employee) => employee.id !== deleteTarget.id));
     try {
-      const savedIds = sessionStorage.getItem("deleted-employee-ids");
-      const parsedIds: unknown = savedIds ? JSON.parse(savedIds) : [];
-      if (!Array.isArray(parsedIds) || !parsedIds.every((id): id is string => typeof id === "string")) {
-        throw new Error("รายการรหัสพนักงานที่ลบไว้ไม่ถูกต้อง");
+      const savedOverrides = sessionStorage.getItem("employee-overrides");
+      const parsedOverrides: unknown = savedOverrides ? JSON.parse(savedOverrides) : {};
+      if (!isEmployeeOverrides(parsedOverrides)) {
+        throw new Error("ข้อมูลพนักงานที่แก้ไขไว้ไม่ถูกต้อง");
       }
+
+      const updatedEmployee = { ...statusTarget, status };
       sessionStorage.setItem(
-        "deleted-employee-ids",
-        JSON.stringify([...new Set([...parsedIds, deleteTarget.id])]),
+        "employee-overrides",
+        JSON.stringify({ ...parsedOverrides, [updatedEmployee.id]: updatedEmployee }),
       );
-      setNotice(`ลบข้อมูลพนักงาน ${deleteTarget.name} เรียบร้อยแล้ว`);
+      setEmployees((current) => current.map((employee) => employee.id === updatedEmployee.id ? updatedEmployee : employee));
+      setNotice(`เปลี่ยนสถานะ ${updatedEmployee.name} เป็น${EMPLOYMENT_STATUS_LABELS[status]}แล้ว`);
     } catch {
-      setNotice(`ลบพนักงาน ${deleteTarget.name} จากรายการนี้แล้ว แต่ไม่สามารถบันทึกสถานะการลบได้`);
+      setNotice("ไม่สามารถบันทึกสถานะพนักงานได้");
     }
-    setDeleteTarget(null);
+    setStatusTarget(null);
   }
 
   function openEdit(employee: Employee) {
@@ -323,6 +314,9 @@ export default function EmployeesPage() {
                         <td className="home-employee-identity">
                           <strong>{employee.id}</strong>
                           <span>{employee.name}</span>
+                          <span className={`employee-status-badge ${employeeStatus(employee).toLowerCase()}`}>
+                            {EMPLOYMENT_STATUS_LABELS[employeeStatus(employee)]}
+                          </span>
                         </td>
                         <td>{employee.department}</td>
                         <td>{employee.position}</td>
@@ -354,16 +348,18 @@ export default function EmployeesPage() {
                             <HistoryIcon />
                             <span>ดูประวัติ</span>
                           </button>
-                          <button
-                            type="button"
-                            className="employee-action-button employee-delete-button"
-                            onClick={() => setDeleteTarget(employee)}
-                            aria-label={`ลบพนักงาน ${employee.name}`}
-                            title="ลบพนักงาน"
-                          >
-                            <TrashIcon />
-                            <span>ลบ</span>
-                          </button>
+                          {employeeStatus(employee) === "ACTIVE" ? (
+                            <button
+                              type="button"
+                              className="employee-action-button employee-status-button"
+                              onClick={() => setStatusTarget(employee)}
+                              aria-label={`เปลี่ยนสถานะของ ${employee.name}`}
+                              title="เปลี่ยนสถานะ"
+                            >
+                              <StatusIcon />
+                              <span>สถานะ</span>
+                            </button>
+                          ) : null}
                         </td>
                       </tr>
                     );
@@ -394,21 +390,49 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      {deleteTarget ? (
+      {statusTarget ? (
         <div
           className="decision-backdrop"
-          onMouseDown={(event) => { if (event.target === event.currentTarget) setDeleteTarget(null); }}
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setStatusTarget(null); }}
         >
-          <section className="decision-dialog employee-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-delete-title">
-            <button type="button" className="decision-close" onClick={() => setDeleteTarget(null)} aria-label="ปิดหน้าต่าง">×</button>
-            <div className="decision-icon reject" aria-hidden="true"><TrashIcon /></div>
-            <h2 id="employee-delete-title">ยืนยันการลบพนักงาน</h2>
+          <section className="decision-dialog employee-status-dialog" role="dialog" aria-modal="true" aria-labelledby="employee-status-title">
+            <button type="button" className="decision-close" onClick={() => setStatusTarget(null)} aria-label="ปิดหน้าต่าง">×</button>
+            <div className="decision-icon" aria-hidden="true"><StatusIcon /></div>
+            <h2 id="employee-status-title">เปลี่ยนสถานะพนักงาน</h2>
             <p className="decision-description">
-              ต้องการลบข้อมูลของ <strong>{deleteTarget.name}</strong> (รหัส {deleteTarget.id}) หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              <strong>{statusTarget.name}</strong> (รหัส {statusTarget.id}) กำลังมีสถานะ{EMPLOYMENT_STATUS_LABELS[employeeStatus(statusTarget)]}
             </p>
+            <p className="employee-status-warning">เมื่อเปลี่ยนเป็นลาออกหรือเสียชีวิตแล้ว จะไม่สามารถเปลี่ยนกลับเป็นทำงานอยู่ได้</p>
             <div className="decision-actions">
-              <button type="button" className="button button-secondary" onClick={() => setDeleteTarget(null)}>ยกเลิก</button>
-              <button type="button" className="button employee-confirm-delete" onClick={deleteEmployee}>ยืนยันลบ</button>
+              <button
+                type="button"
+                className="button employee-status-current"
+                aria-pressed="true"
+                disabled
+              >
+                ทำงานอยู่
+              </button>
+              <button
+                type="button"
+                className="button employee-confirm-resignation"
+                onClick={() => changeEmploymentStatus("RESIGNED")}
+              >
+                ลาออก
+              </button>
+              <button
+                type="button"
+                className="button employee-confirm-deceased"
+                onClick={() => changeEmploymentStatus("DECEASED")}
+              >
+                เสียชีวิต
+              </button>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setStatusTarget(null)}
+              >
+                ยกเลิก
+              </button>
             </div>
           </section>
         </div>
