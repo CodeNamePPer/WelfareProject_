@@ -314,9 +314,6 @@ export default function EmployeesPage() {
                         <td className="home-employee-identity">
                           <strong>{employee.id}</strong>
                           <span>{employee.name}</span>
-                          <span className={`employee-status-badge ${employeeStatus(employee).toLowerCase()}`}>
-                            {EMPLOYMENT_STATUS_LABELS[employeeStatus(employee)]}
-                          </span>
                         </td>
                         <td>{employee.department}</td>
                         <td>{employee.position}</td>
@@ -348,18 +345,25 @@ export default function EmployeesPage() {
                             <HistoryIcon />
                             <span>ดูประวัติ</span>
                           </button>
-                          {employeeStatus(employee) === "ACTIVE" ? (
-                            <button
-                              type="button"
-                              className="employee-action-button employee-status-button"
-                              onClick={() => setStatusTarget(employee)}
-                              aria-label={`เปลี่ยนสถานะของ ${employee.name}`}
-                              title="เปลี่ยนสถานะ"
-                            >
-                              <StatusIcon />
-                              <span>สถานะ</span>
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            className={`employee-action-button employee-status-button ${employeeStatus(employee).toLowerCase()}`}
+                            onClick={employeeStatus(employee) === "ACTIVE" ? () => setStatusTarget(employee) : undefined}
+                            aria-label={
+                              employeeStatus(employee) === "ACTIVE"
+                                ? `เปลี่ยนสถานะของ ${employee.name}`
+                                : `สถานะพนักงาน ${employee.name}: ${EMPLOYMENT_STATUS_LABELS[employeeStatus(employee)]}`
+                            }
+                            title={
+                              employeeStatus(employee) === "ACTIVE"
+                                ? "เปลี่ยนสถานะ"
+                                : EMPLOYMENT_STATUS_LABELS[employeeStatus(employee)]
+                            }
+                            disabled={employeeStatus(employee) !== "ACTIVE"}
+                          >
+                            {employeeStatus(employee) === "ACTIVE" ? <StatusIcon /> : null}
+                            <span>{EMPLOYMENT_STATUS_LABELS[employeeStatus(employee)]}</span>
+                          </button>
                         </td>
                       </tr>
                     );
