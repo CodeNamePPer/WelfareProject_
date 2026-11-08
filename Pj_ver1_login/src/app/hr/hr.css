@@ -959,6 +959,15 @@
   font-weight: 700;
 }
 
+.hr-app .toast.toast-error {
+  border-color: #fecaca;
+  color: #b3261e;
+}
+
+.hr-app .toast.toast-error .toast-check {
+  background: #fee2e2;
+}
+
 .hr-app .toast button {
   margin-left: 6px;
   border: 0;
@@ -1305,6 +1314,39 @@
 .hr-app .benefits-track-button {
   min-height: 44px;
   text-decoration: none;
+}
+
+.hr-app .benefits-approve-button {
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(1) { width: 13%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(2) { width: 14%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(3) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(4) { width: 24%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(5) { width: 17%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(6) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(7) { width: 10%; }
+
+.hr-app .benefit-approval-action {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.hr-app .benefit-approval-dialog {
+  width: min(100%, 620px);
+}
+
+.hr-app .benefit-approval-dialog .decision-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hr-app .benefits-heading h1,
@@ -3545,6 +3587,10 @@
 
   .hr-app .benefits-heading-actions .button {
     width: 100%;
+  }
+
+  .hr-app .benefit-approval-action {
+    justify-self: start;
   }
 
   .hr-app .benefit-request-filters {
