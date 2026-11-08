@@ -252,7 +252,14 @@ export default function EmployeesPage() {
         <div className="page-content employee-management-content">
           <div className="employee-management-heading">
             <h1>จัดการพนักงานและสิทธิ์สวัสดิการ</h1>
-            <Link href="/hr/employees/requests" className="employee-track-requests-button">ติดตามคำขอเพิ่มบุคคล</Link>
+            <div className="employee-management-heading-actions">
+              <Link href="/hr/employees/approvals" className="button button-primary employee-approve-requests-button">
+                อนุมัติคำขอเพิ่มบุคคล
+              </Link>
+              <Link href="/hr/employees/requests" className="employee-track-requests-button">
+                ติดตามคำขอเพิ่มบุคคล
+              </Link>
+            </div>
           </div>
           <section className="employee-management-panel" aria-label="รายการพนักงาน">
             <div className="employee-management-filters">
