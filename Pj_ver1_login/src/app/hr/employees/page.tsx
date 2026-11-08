@@ -254,10 +254,10 @@ export default function EmployeesPage() {
             <h1>จัดการพนักงานและสิทธิ์สวัสดิการ</h1>
             <div className="employee-management-heading-actions">
               <Link href="/hr/employees/approvals" className="button button-primary employee-approve-requests-button">
-                อนุมัติคำขอเพิ่มบุคคล
+                อนุมัติคำขอเพิ่มพนักงาน
               </Link>
               <Link href="/hr/employees/requests" className="employee-track-requests-button">
-                ติดตามคำขอเพิ่มบุคคล
+                ติดตามคำขอเพิ่มพนักงาน
               </Link>
             </div>
           </div>

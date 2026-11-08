@@ -2512,16 +2512,29 @@
   background: #f8fafc;
 }
 
-.hr-app .person-approval-table {
-  min-width: 900px;
+.hr-app .person-requests-table.employee-requests-table {
+  min-width: 1100px;
 }
 
-.hr-app .person-requests-table.person-approval-table th:nth-child(1) { width: 17%; }
-.hr-app .person-requests-table.person-approval-table th:nth-child(2) { width: 21%; }
-.hr-app .person-requests-table.person-approval-table th:nth-child(3) { width: 22%; }
-.hr-app .person-requests-table.person-approval-table th:nth-child(4) { width: 13%; }
-.hr-app .person-requests-table.person-approval-table th:nth-child(5) { width: 15%; }
-.hr-app .person-requests-table.person-approval-table th:nth-child(6) { width: 12%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(1) { width: 15%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(2) { width: 20%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(3) { width: 11%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(4) { width: 14%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(5) { width: 13%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(6) { width: 8%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(7) { width: 10%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(8) { width: 9%; }
+
+.hr-app .person-requests-table.employee-approval-table {
+  min-width: 1100px;
+}
+
+.hr-app .person-requests-table.employee-approval-table th:nth-child(1) { width: 17%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(2) { width: 22%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(3) { width: 12%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(4) { width: 15%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(5) { width: 14%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(6) { width: 20%; }
 
 .hr-app .person-approval-action {
   min-height: 34px;
