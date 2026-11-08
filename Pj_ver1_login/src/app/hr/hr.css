@@ -5425,3 +5425,25 @@
     padding-left: 0;
   }
 }
+
+/* ปุ่ม อนุมัติ / ปฏิเสธ / ส่งกลับ ในหน้าอนุมัติคำขอ */
+.hr-app .approval-request-actions {
+  flex-wrap: nowrap;
+}
+
+.hr-app .approval-request-actions .request-action {
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(4) { width: 20%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(7) { width: 14%; }
+
+.hr-app .person-requests-table.employee-approval-table th:nth-child(2) { width: 20%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(6) { width: 22%; }
+
+.hr-app .person-approval-dialog form,
+.hr-app .benefit-approval-dialog form {
+  margin-top: 16px;
+}
