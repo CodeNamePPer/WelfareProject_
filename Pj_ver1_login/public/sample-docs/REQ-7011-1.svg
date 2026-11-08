@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="560" viewBox="0 0 600 560">
+<style>
+text{font-family:"IBM Plex Sans Thai","Noto Sans Thai",Tahoma,sans-serif;fill:#1e293b}
+.h{font-size:26px;font-weight:700}.s{font-size:15px;fill:#475569}.l{font-size:16px;fill:#475569}
+.v{font-size:16px;font-weight:600}.t{font-size:22px;font-weight:700}.f{font-size:13px;fill:#64748b}
+.w{font-size:88px;font-weight:700;fill:#dc2626;opacity:.12}
+</style>
+<rect width="600" height="560" fill="#fffdf8"/>
+<rect x="12" y="12" width="576" height="536" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+<text x="48" y="78" class="h">โรงพยาบาลตัวอย่างเวชการ</text>
+<text x="48" y="108" class="s">เอกสารตัวอย่างสำหรับทดสอบระบบ</text>
+<line x1="48" y1="132" x2="552" y2="132" stroke="#1e293b" stroke-width="2"/>
+<text x="48" y="182" class="h" font-size="22">ใบเสร็จรับเงิน (ผู้ป่วยนอก)</text>
+<text x="48" y="250" class="l">ผู้ป่วย</text><text x="552" y="250" class="v" text-anchor="end">นางสาวณัฐธิดา บุญมา</text>
+<line x1="48" y1="264" x2="552" y2="264" stroke="#e2e8f0"/>
+<text x="48" y="290" class="l">ค่าตรวจรักษา</text><text x="552" y="290" class="v" text-anchor="end">800.00</text>
+<line x1="48" y1="304" x2="552" y2="304" stroke="#e2e8f0"/>
+<text x="48" y="330" class="l">ค่ายา</text><text x="552" y="330" class="v" text-anchor="end">1,200.00</text>
+<line x1="48" y1="344" x2="552" y2="344" stroke="#e2e8f0"/>
+<text x="48" y="370" class="l">เลขที่ใบเสร็จ</text><text x="552" y="370" class="v" text-anchor="end">OPD-2569-88213</text>
+<line x1="48" y1="384" x2="552" y2="384" stroke="#e2e8f0"/>
+<rect x="48" y="418" width="504" height="56" rx="6" fill="#f1f5f9"/>
+<text x="68" y="454" class="l" font-weight="600">รวมทั้งสิ้น</text>
+<text x="532" y="454" class="t" text-anchor="end">2,000.00 บาท</text>
+<text x="48" y="520" class="f">ชำระเงินสด</text>
+<text x="300" y="310" class="w" text-anchor="middle" transform="rotate(-24 300 280)">ตัวอย่าง</text>
+</svg>

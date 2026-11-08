@@ -35,7 +35,8 @@ export const revisionRequests: RevisionRequest[] = [...Array.from({ length: 123 
   const employeeIndex = index % employees.length;
   const employee = employees[employeeIndex];
   return {
-    requestId: `REQ-${String(6701 + index).padStart(4, "0")}`,
+    // แต่ละสถานะใช้ช่วงเลขของตัวเอง เลขที่คำขอจึงไม่ซ้ำกันข้ามรายการ (รอแก้ไข 4xxx, อนุมัติ 5xxx, ปฏิเสธ 69xx)
+    requestId: `REQ-${String(4001 + index).padStart(4, "0")}`,
     itemType: "benefit" as const,
     employeeId: employee.id,
     name: employee.name,

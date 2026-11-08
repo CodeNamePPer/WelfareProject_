@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { pendingRequests } from "./sample/pending";
+import { pendingRequests } from "./sample/queue";
 import { approvedRequests } from "./sample/approved";
 import { rejectedRequests } from "./sample/rejected";
 import { revisionRequests } from "./sample/revision";

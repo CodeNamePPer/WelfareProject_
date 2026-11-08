@@ -6250,3 +6250,276 @@
     display: none;
   }
 }
+
+/* -----------------------------------------------------------------------------
+ * รอบ 4: แถวคิวกดเปิดหน้ารายละเอียดคำขอ / หน้ารายละเอียดคำขอ
+ * -------------------------------------------------------------------------- */
+.hr-app .queue-bulkbar {
+  background: #f8fafc;
+}
+
+.hr-app .queue-link-row {
+  cursor: pointer;
+}
+
+.hr-app .queue-table tbody tr.queue-link-row:hover td {
+  background: #f1f5fb;
+}
+
+.hr-app .queue-table tbody tr.queue-link-row.queue-row-blocked:hover td {
+  background: #fef6dc;
+}
+
+.hr-app .queue-request-link {
+  display: block;
+  color: var(--primary-700);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.hr-app .queue-request-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hr-app .queue-request-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .queue-open {
+  width: 32px;
+  color: #94a3b8;
+  vertical-align: middle;
+}
+
+.hr-app .queue-open svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hr-app .queue-link-row:hover .queue-open {
+  color: var(--primary-600);
+}
+
+.hr-app .queue-date {
+  white-space: nowrap;
+}
+
+/* หน้ารายละเอียดคำขอ */
+.hr-app .request-page {
+  container: request-page / inline-size;
+}
+
+.hr-app .request-heading .request-id {
+  margin: 0 0 2px;
+  color: var(--primary-700);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-app .request-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+@container request-page (max-width: 900px) {
+  .hr-app .request-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.hr-app .request-main,
+.hr-app .request-aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hr-app .request-section {
+  padding: 16px;
+}
+
+.hr-app .request-section h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.hr-app .request-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.hr-app .request-section .queue-changes {
+  margin: 16px 0 0;
+}
+
+.hr-app .request-blockers {
+  margin: 0;
+}
+
+.hr-app .request-amount {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-app .request-attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hr-app .request-attachments li {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hr-app .request-attachment {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+.hr-app .request-attachment img {
+  display: block;
+  width: 100%;
+  height: 240px;
+  object-fit: contain;
+  object-position: top;
+  background: white;
+}
+
+.hr-app .request-attachment:hover {
+  border-color: var(--primary-500);
+}
+
+.hr-app .request-attachment:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .request-attachment-name {
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-app .request-employee-name {
+  margin: 10px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hr-app .request-employee-facts {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .request-employee-facts dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hr-app .request-employee-facts dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.hr-app .request-employee-facts .queue-meta {
+  font-weight: 400;
+}
+
+.hr-app .request-decision {
+  border-color: #c7d2fe;
+}
+
+.hr-app .request-decision p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .request-decision-title {
+  font-weight: 600;
+}
+
+.hr-app .request-decision-form .decision-reason {
+  margin-top: 12px;
+}
+
+.hr-app .request-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hr-app .request-decision-actions .queue-secondary {
+  margin-left: 0;
+  border-color: #cbd5e1;
+}
+
+.hr-app .request-decision-choices > * {
+  flex: 1 1 auto;
+}
+
+.hr-app .request-undo {
+  margin: 12px 0 0;
+  border-color: #cbd5e1;
+}
+
+/* ดูเอกสารขนาดเต็ม */
+.hr-app .request-preview figure {
+  position: relative;
+  max-width: min(100%, 760px);
+  max-height: 100%;
+  margin: 0;
+  overflow: auto;
+  border-radius: 8px;
+  background: white;
+  padding: 40px 16px 16px;
+}
+
+.hr-app .request-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@container queue (max-width: 719px) {
+  .hr-app .queue-open {
+    display: none;
+  }
+}

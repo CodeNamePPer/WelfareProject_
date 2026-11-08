@@ -17,6 +17,7 @@ export default async function HrHomePage({ searchParams }: { searchParams: Promi
       // รหัสพนักงานของผู้ที่เข้าระบบ ใช้กันไม่ให้อนุมัติคำขอของตัวเอง
       viewerCode={session?.sub ?? null}
       initialFilters={readRequestFilters(params)}
+      done={typeof params.done === "string" && typeof params.action === "string" ? { id: params.done, action: params.action } : null}
     />
   );
 }

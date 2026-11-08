@@ -37,7 +37,7 @@ export const approvedRequests: ApprovedRequest[] = [...Array.from({ length: 142 
   const employee = employees[employeeIndex];
   const quota = quotas[employeeIndex];
   return {
-    requestId: `REQ-${String(6801 + index).padStart(4, "0")}`,
+    requestId: `REQ-${String(5001 + index).padStart(4, "0")}`,
     itemType: "benefit" as const,
     employeeId: employee.id,
     name: employee.name,

@@ -5,8 +5,8 @@
 /** ค่าที่พนักงานขอแก้ (คำขอแก้ไขข้อมูล) */
 export type FieldChange = { field: string; before: string; after: string };
 
-/** เอกสารแนบของคำขอเบิก */
-export type Attachment = { name: string; size: string };
+/** เอกสารแนบของคำขอ: src = รูปตัวอย่างใน public/sample-docs (ยังไม่มีระบบจัดเก็บเอกสารจริง) */
+export type Attachment = { name: string; size: string; src: string };
 
 export type PendingRequest = {
   id: string;
@@ -37,22 +37,22 @@ export const pendingRequests: PendingRequest[] = [
   {
     id: "REQ-7012", itemType: "benefit", employeeCode: "E00015", fallbackName: "นายภูมิพัฒน์ จันทร์เพ็ญ", benefit: "ทันตกรรม",
     used: 7500, limit: 15000, amount: 900, submitted: daysAgo(0),
-    attachments: [{ name: "ใบเสร็จคลินิกทันตกรรม.pdf", size: "212 KB" }],
+    attachments: [{ name: "ใบเสร็จคลินิกทันตกรรม.jpg", size: "212 KB", src: "/sample-docs/REQ-7012-1.svg" }],
   },
   {
     id: "REQ-7011", itemType: "benefit", employeeCode: "E00013", fallbackName: "นางสาวณัฐธิดา บุญมา", benefit: "ค่ารักษาพยาบาล",
     used: 12000, limit: 30000, amount: 2000, submitted: daysAgo(1),
-    attachments: [{ name: "ใบเสร็จโรงพยาบาล.pdf", size: "340 KB" }, { name: "ใบรับรองแพทย์.jpg", size: "1.2 MB" }],
+    attachments: [{ name: "ใบเสร็จโรงพยาบาล.jpg", size: "340 KB", src: "/sample-docs/REQ-7011-1.svg" }, { name: "ใบรับรองแพทย์.jpg", size: "1.2 MB", src: "/sample-docs/REQ-7011-2.svg" }],
   },
   {
     id: "REQ-7010", itemType: "benefit", employeeCode: "E00016", fallbackName: "นางสาวศิริพร มีสุข", benefit: "ฟิตเนสรายปี",
     used: 7000, limit: 10000, amount: 5000, submitted: daysAgo(2),
-    attachments: [{ name: "สัญญาสมาชิกฟิตเนส.pdf", size: "480 KB" }],
+    attachments: [{ name: "สัญญาสมาชิกฟิตเนส.jpg", size: "480 KB", src: "/sample-docs/REQ-7010-1.svg" }],
   },
   {
     id: "REQ-7009", itemType: "benefit", employeeCode: "E00011", fallbackName: "นางสาวกมลวรรณ แก้วมณี", benefit: "ตรวจสุขภาพประจำปี",
     used: 0, limit: 8000, amount: 3500, submitted: daysAgo(3),
-    attachments: [{ name: "ใบเสร็จตรวจสุขภาพ.pdf", size: "198 KB" }],
+    attachments: [{ name: "ใบเสร็จตรวจสุขภาพ.jpg", size: "198 KB", src: "/sample-docs/REQ-7009-1.svg" }],
   },
   {
     id: "REQ-7008", itemType: "benefit", employeeCode: "E00017", fallbackName: "นายชยพล สายทอง", benefit: "ค่าอุปกรณ์ทำงาน",
@@ -66,7 +66,7 @@ export const pendingRequests: PendingRequest[] = [
       { field: "เบอร์โทรศัพท์", before: "081-234-5678", after: "089-765-4321" },
       { field: "ที่อยู่ปัจจุบัน", before: "12/3 ถ.สุขุมวิท แขวงคลองเตย กรุงเทพฯ", after: "45/6 ถ.พหลโยธิน แขวงสามเสนใน กรุงเทพฯ" },
     ],
-    attachments: [{ name: "สำเนาทะเบียนบ้าน.pdf", size: "520 KB" }],
+    attachments: [{ name: "สำเนาทะเบียนบ้าน.jpg", size: "520 KB", src: "/sample-docs/REQ-7007-1.svg" }],
   },
   {
     id: "REQ-7006", itemType: "edit", employeeCode: "E00014", fallbackName: "นายอนุชา ประเสริฐศรี", benefit: "แก้ไขข้อมูลบัญชีธนาคาร",
@@ -76,6 +76,6 @@ export const pendingRequests: PendingRequest[] = [
       { field: "เลขที่บัญชี", before: "123-4-56789-0", after: "987-6-54321-0" },
       { field: "ชื่อบัญชี", before: "อนุชา ประเสริฐศรี", after: "อนุชา ประเสริฐศรี" },
     ],
-    attachments: [{ name: "สำเนาหน้าสมุดบัญชี.jpg", size: "860 KB" }],
+    attachments: [{ name: "สำเนาหน้าสมุดบัญชี.jpg", size: "860 KB", src: "/sample-docs/REQ-7006-1.svg" }],
   },
 ];

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatThaiDate } from "@/lib/format";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { StatusTabs } from "../StatusTabs";
+import { requestHref } from "./queueRules";
 import { ALL, filtersToQuery, replaceUrlQuery, type RequestFilters } from "../urlFilters";
 
 /** แถวคำขอที่ดำเนินการแล้ว (อนุมัติ / ปฏิเสธ / ส่งกลับ) ในรูปแบบเดียวกันทั้ง 3 หน้า */
@@ -183,8 +184,9 @@ export function StatusList({
                     ) : null}
                   </td>
                   <td data-label="คำขอ">
-                    <span className="queue-item">{row.itemType === "edit" ? "แก้ไขข้อมูล" : row.benefit}</span>
-                    <span className="queue-meta">{row.itemType === "edit" ? `${row.requestId} · ${row.benefit}` : `${row.requestId} · เบิกสวัสดิการ`}</span>
+                    <Link className="queue-request-link" href={requestHref(row.requestId)}>{row.requestId}</Link>
+                    <span className="queue-item">{row.benefit}</span>
+                    <span className="queue-meta">{row.itemType === "edit" ? "แก้ไขข้อมูล" : "เบิกสวัสดิการ"}</span>
                   </td>
                   <td data-label="ยอดเบิก" className="queue-num">
                     {row.itemType === "benefit" ? <span className="queue-amount">{baht.format(row.amount)} บาท</span> : <span className="queue-meta" aria-label="ไม่มียอดเงิน">—</span>}

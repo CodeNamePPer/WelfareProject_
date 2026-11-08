@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getHrEmployees, type HrEmployee } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
-import { pendingRequests } from "../../sample/pending";
+import { pendingRequests } from "../../sample/queue";
 import { approvedRequests } from "../../sample/approved";
 import { rejectedRequests } from "../../sample/rejected";
 import { revisionRequests } from "../../sample/revision";
