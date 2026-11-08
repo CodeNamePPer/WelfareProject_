@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
-import { STATUS_LABEL, type RequestDetail } from "../../../sample/requests";
-import { readDecisions, removeDecisions, saveDecisions, type SampleDecision } from "../../../sampleDecisions";
+import { STATUS_LABEL, type RequestDetail } from "@/lib/claims/types";
 import {
   ACTION_COPY,
   OVERDUE_DAYS,
@@ -23,7 +22,7 @@ import {
 } from "../../queueRules";
 
 const STATUS_TONE = { pending: "pending", approved: "approved", rejected: "rejected", revision: "revision" } as const;
-const DONE_TONE: Record<RequestAction, keyof typeof STATUS_TONE> = { approve: "approved", reject: "rejected", return: "revision" };
+const ACTION_API: Record<RequestAction, string> = { approve: "hr_approve", reject: "hr_reject", return: "hr_return" };
 
 export function RequestDetailClient({
   detail,
@@ -31,26 +30,23 @@ export function RequestDetailClient({
   employeesFailed,
   actorName,
   viewerCode,
+  readOnly,
 }: {
   detail: RequestDetail;
   employee: HrEmployee | null;
   employeesFailed: boolean;
   actorName: string | null;
   viewerCode: string | null;
+  readOnly: boolean;
 }) {
   const router = useRouter();
   const { request, status, decision } = detail;
   const [action, setAction] = useState<RequestAction | null>(null);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
-  const [sampleDecision, setSampleDecision] = useState<SampleDecision | null>(null);
+  const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
-
-  // การตัดสินคำขอตัวอย่างที่ทำไว้ในแท็บนี้
-  useEffect(() => {
-    setSampleDecision(readDecisions()[request.id] ?? null);
-  }, [request.id]);
 
   useEffect(() => {
     if (!action) return;
@@ -66,12 +62,12 @@ export function RequestDetailClient({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [preview]);
 
-  const isPending = status === "pending" && !sampleDecision;
+  const isPending = status === "pending";
   const blockers = status === "pending" && !employeesFailed ? findBlockers(request, employee, viewerCode) : [];
   const suggested = suggestedAction(blockers);
   const remaining = remainingAfter(request);
   const waitingDays = daysBetween(request.submitted, todayIso());
-  const shownStatus = sampleDecision ? DONE_TONE[sampleDecision.action] : STATUS_TONE[status];
+  const shownStatus = STATUS_TONE[status];
 
   function startAction(next: RequestAction) {
     setAction(next);
@@ -85,20 +81,33 @@ export function RequestDetailClient({
     setReasonError("");
   }
 
-  function confirm(event: React.FormEvent<HTMLFormElement>) {
+  async function confirm(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!action) return;
+    if (!action || saving) return;
     if (action !== "approve" && !reason.trim()) {
       setReasonError(action === "reject" ? "กรุณาระบุเหตุผลที่ปฏิเสธ" : "กรุณาระบุสิ่งที่พนักงานต้องแก้ไข");
       return;
     }
-    saveDecisions([request.id], action, reason.trim());
-    router.push(`/hr/home?done=${encodeURIComponent(request.id)}&action=${action}`);
-  }
-
-  function undoSample() {
-    removeDecisions([request.id]);
-    setSampleDecision(null);
+    setSaving(true);
+    setReasonError("");
+    try {
+      const response = await fetch(`/api/claims/${encodeURIComponent(request.id)}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: ACTION_API[action], note: reason.trim() }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setReasonError(data.error ?? "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+      router.push(`/hr/home?done=${encodeURIComponent(request.id)}&action=${action}`);
+      router.refresh();
+    } catch {
+      setReasonError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const name = employee?.name ?? request.fallbackName;
@@ -119,7 +128,7 @@ export function RequestDetailClient({
         <ul className="queue-summary">
           <li>
             <span className={`request-status request-status-${shownStatus}`}>
-              {sampleDecision ? `${ACTION_COPY[sampleDecision.action].done}แล้ว (ตัวอย่าง)` : STATUS_LABEL[status]}
+              {STATUS_LABEL[status]}
             </span>
           </li>
           <li>{request.itemType === "edit" ? "คำขอแก้ไขข้อมูล" : "คำขอเบิกสวัสดิการ"}</li>
@@ -139,6 +148,9 @@ export function RequestDetailClient({
 
       <div className="request-layout">
         <div className="request-main">
+          {request.financeReturnNote ? (
+            <p className="queue-alert" role="status">ฝ่ายการเงินส่งกลับ: {request.financeReturnNote}</p>
+          ) : null}
           {blockers.length > 0 && isPending ? (
             <section className="queue-dialog-blockers request-blockers" aria-labelledby="blockers-title">
               <strong id="blockers-title">ต้องตรวจสอบก่อนอนุมัติ</strong>
@@ -153,6 +165,11 @@ export function RequestDetailClient({
               <div><dt>ประเภท</dt><dd>{request.itemType === "edit" ? "แก้ไขข้อมูล" : "เบิกสวัสดิการ"}</dd></div>
               <div><dt>รายการ</dt><dd>{request.benefit}</dd></div>
               <div><dt>วันที่ยื่น</dt><dd>{formatThaiDate(request.submitted)}</dd></div>
+              {request.expenseDate ? <div><dt>วันที่เกิดค่าใช้จ่าย</dt><dd>{formatThaiDate(request.expenseDate)}</dd></div> : null}
+              {request.providerName ? <div><dt>สถานพยาบาล / ผู้ให้บริการ</dt><dd>{request.providerName}</dd></div> : null}
+              {request.receiptNo ? <div><dt>เลขที่ใบเสร็จ</dt><dd>{request.receiptNo}</dd></div> : null}
+              {Object.entries(request.details ?? {}).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+              {request.note ? <div><dt>หมายเหตุจากผู้ยื่น</dt><dd>{request.note}</dd></div> : null}
               {request.itemType === "benefit" ? (
                 <>
                   <div><dt>ยอดเบิก</dt><dd className="request-amount">{baht.format(request.amount)} บาท</dd></div>
@@ -194,16 +211,20 @@ export function RequestDetailClient({
           <section className="queue-sheet request-section" aria-labelledby="attachments-title">
             <div className="request-section-head">
               <h2 id="attachments-title">เอกสารแนบ</h2>
-              <span className="queue-meta">เอกสารตัวอย่าง · กดที่รูปเพื่อดูขนาดเต็ม</span>
+              <span className="queue-meta">กดที่รูปเพื่อดูขนาดเต็ม</span>
             </div>
             {request.attachments && request.attachments.length > 0 ? (
               <ul className="request-attachments">
                 {request.attachments.map((file) => (
                   <li key={file.src}>
-                    <button type="button" className="request-attachment" onClick={() => setPreview(file.src)} aria-label={`ดู ${file.name} ขนาดเต็ม`}>
-                      {/* eslint-disable-next-line @next/next/no-img-element -- รูปตัวอย่างแบบ SVG ไม่ต้องผ่าน next/image */}
-                      <img src={file.src} alt={file.name} loading="lazy" />
-                    </button>
+                    {file.isImage ? (
+                      <button type="button" className="request-attachment" onClick={() => setPreview(file.src)} aria-label={`ดู ${file.name} ขนาดเต็ม`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- ไฟล์ส่วนตัวผ่านลิงก์ชั่วคราว ใช้ next/image ไม่ได้ */}
+                        <img src={file.src} alt={file.name} loading="lazy" />
+                      </button>
+                    ) : (
+                      <a className="queue-request-link" href={file.src} target="_blank" rel="noreferrer">เปิดไฟล์ PDF</a>
+                    )}
                     <span className="request-attachment-name">{file.name}</span>
                     <span className="queue-meta">{file.size}</span>
                   </li>
@@ -211,7 +232,7 @@ export function RequestDetailClient({
               </ul>
             ) : (
               <p className={status === "pending" && request.itemType === "benefit" ? "queue-meta-danger" : "queue-meta"}>
-                {status === "pending" ? "ไม่มีเอกสารแนบ" : "ข้อมูลตัวอย่างนี้ไม่มีเอกสารแนบ"}
+                ไม่มีเอกสารแนบ
               </p>
             )}
           </section>
@@ -254,12 +275,8 @@ export function RequestDetailClient({
           {status === "pending" ? (
             <section className="queue-sheet request-section request-decision" aria-labelledby="decide-title" ref={panelRef}>
               <h2 id="decide-title">การพิจารณา</h2>
-              {sampleDecision ? (
-                <div role="status">
-                  <p>(ตัวอย่าง) คุณ{ACTION_COPY[sampleDecision.action].done}คำขอนี้แล้ว ยังไม่ได้บันทึกลงระบบ</p>
-                  {sampleDecision.reason ? <p className="queue-meta">เหตุผล: {sampleDecision.reason}</p> : null}
-                  <button type="button" className="queue-secondary request-undo" onClick={undoSample}>เลิกทำ</button>
-                </div>
+              {readOnly ? (
+                <p className="queue-meta">การอนุมัติคำขอเป็นงานของฝ่ายบุคคล บัญชีนี้ดูข้อมูลได้อย่างเดียว</p>
               ) : !canDecide(blockers) ? (
                 <p className="queue-meta">เป็นคำขอของคุณเอง รอเจ้าหน้าที่คนอื่นเป็นผู้ตัดสิน</p>
               ) : action ? (
@@ -282,16 +299,19 @@ export function RequestDetailClient({
                       {reasonError ? <small id="decision-reason-error" className="decision-error">{reasonError}</small> : null}
                     </label>
                   ) : (
+                    <>
+                    {reasonError ? <p className="queue-meta-danger" role="alert">{reasonError}</p> : null}
                     <p className="queue-meta">
                       {request.itemType === "benefit"
                         ? `อนุมัติยอด ${baht.format(request.amount)} บาท คงเหลือหลังอนุมัติ ${baht.format(remaining ?? 0)} บาท`
                         : `อนุมัติการแก้ไขข้อมูล ${request.changes?.filter((c) => c.before !== c.after).length ?? 0} รายการตามตารางด้านซ้าย`}
                     </p>
+                    </>
                   )}
                   <div className="request-decision-actions">
                     <button type="button" className="queue-secondary" onClick={cancelAction} data-initial-focus>ยกเลิก</button>
-                    <button type="submit" className={`queue-primary${action === "reject" ? " queue-primary-danger" : ""}`}>
-                      {ACTION_COPY[action].confirm}
+                    <button type="submit" disabled={saving} className={`queue-primary${action === "reject" ? " queue-primary-danger" : ""}`}>
+                      {saving ? "กำลังบันทึก..." : ACTION_COPY[action].confirm}
                     </button>
                   </div>
                 </form>
@@ -325,7 +345,7 @@ export function RequestDetailClient({
         <div className="decision-backdrop request-preview" onMouseDown={(event) => { if (event.target === event.currentTarget) setPreview(null); }}>
           <figure role="dialog" aria-modal="true" aria-label="ดูเอกสารขนาดเต็ม">
             <button type="button" className="decision-close" onClick={() => setPreview(null)} aria-label="ปิด" autoFocus>×</button>
-            {/* eslint-disable-next-line @next/next/no-img-element -- รูปตัวอย่างแบบ SVG */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- ไฟล์ส่วนตัวผ่านลิงก์ชั่วคราว */}
             <img src={preview} alt={request.attachments?.find((file) => file.src === preview)?.name ?? "เอกสารแนบ"} />
           </figure>
         </div>

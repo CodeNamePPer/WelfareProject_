@@ -1,9 +1,6 @@
-// ที่เก็บข้อมูลกลางของเมนู Payroll (ชั่วคราว ก่อนมี backend)
-//   settings  = การตั้งค่าวันจ่ายของรอบที่บันทึกแล้ว
-//   overrides = วันจ่ายที่เลื่อนรายคำขอ { เลขที่คำขอ: วันที่ ISO }
-// เก็บไว้ใน localStorage ของ browser: เปลี่ยนหน้าหรือรีเฟรชแล้วค่ายังอยู่ แต่เห็นแค่ใน browser เครื่องนั้น
-//
-// ตอนต่อ backend: แก้แค่ read() / write() ในไฟล์นี้ให้ดึง/บันทึกกับ server หน้าอื่นไม่ต้องแก้
+// ที่เก็บข้อมูลกลางของเมนู Payroll: อ่าน/บันทึกกับฐานข้อมูลผ่าน /api/payroll/state
+//   settings  = การตั้งค่าวันจ่ายของรอบ (system_setting.pay_schedule)
+//   overrides = วันจ่ายที่เลื่อนรายคำขอ { เลขที่คำขอ: วันที่ ISO } (welfare_claim.pay_date_override)
 
 import { useSyncExternalStore } from "react";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "./pay-settings";
@@ -14,91 +11,73 @@ export interface PayrollState {
   overrides: Record<string, string>;
 }
 
-const STORAGE_KEY = "payroll-demo-state-v1";
+const API = "/api/payroll/state";
 const DEFAULT_STATE: PayrollState = { settings: DEFAULT_PAY_SETTINGS, overrides: {} };
 
-let cache: PayrollState | null = null; // ค่าล่าสุดที่อ่านแล้ว (ต้องคืน object เดิมถ้าไม่มีอะไรเปลี่ยน)
+let cache: PayrollState = DEFAULT_STATE;
+let loaded = false;
+let loading = false;
 const listeners = new Set<() => void>();
 
-/** ตรวจข้อมูลที่อ่านจาก localStorage: ช่องไหนผิดรูปแบบใช้ค่าเริ่มต้นแทน */
-function sanitize(raw: unknown): PayrollState {
-  const obj = (raw && typeof raw === "object" ? raw : {}) as Partial<PayrollState>;
-  const s = (obj.settings ?? {}) as Partial<PaySettings>;
-  const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
-  const settings: PaySettings = {
-    round1PayDay: num(s.round1PayDay, DEFAULT_PAY_SETTINGS.round1PayDay),
-    round1MonthOffset: num(s.round1MonthOffset, DEFAULT_PAY_SETTINGS.round1MonthOffset),
-    round2PayDay: num(s.round2PayDay, DEFAULT_PAY_SETTINGS.round2PayDay),
-    round2MonthOffset: num(s.round2MonthOffset, DEFAULT_PAY_SETTINGS.round2MonthOffset),
-  };
-  const overrides: Record<string, string> = {};
-  if (obj.overrides && typeof obj.overrides === "object") {
-    for (const [id, date] of Object.entries(obj.overrides)) {
-      if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) overrides[id] = date;
-    }
-  }
-  return { settings, overrides };
+function emit() {
+  listeners.forEach((listener) => listener());
 }
 
-function read(): PayrollState {
-  if (cache) return cache;
+async function load() {
+  if (loading) return;
+  loading = true;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    cache = raw ? sanitize(JSON.parse(raw)) : DEFAULT_STATE;
-  } catch {
-    cache = DEFAULT_STATE; // เปิดแบบไม่ระบุตัวตน / ปิด storage ก็ยังใช้งานได้ แค่ไม่จำค่า
+    const response = await fetch(API, { cache: "no-store" });
+    if (!response.ok) throw new Error(`load failed ${response.status}`);
+    cache = (await response.json()) as PayrollState;
+  } catch (err) {
+    console.error("[payroll] load state failed", err);
+  } finally {
+    loaded = true;
+    loading = false;
+    emit();
   }
-  return cache;
-}
-
-function write(next: PayrollState) {
-  cache = next;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // บันทึกไม่ได้ก็ยังใช้ค่าในหน่วยความจำต่อได้
-  }
-  listeners.forEach((l) => l());
 }
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  // เปิดหลายแท็บ: แท็บอื่นแก้ค่า แท็บนี้อัปเดตตาม
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      cache = null;
-      listener();
-    }
-  };
-  window.addEventListener("storage", onStorage);
+  if (!loaded) void load();
   return () => {
     listeners.delete(listener);
-    window.removeEventListener("storage", onStorage);
   };
+}
+
+const read = () => cache;
+
+/** ส่งค่าไป server แล้วโหลดค่าจริงกลับมา คืนข้อความเมื่อไม่สำเร็จ */
+async function send(method: "PUT" | "POST", body: unknown): Promise<string | null> {
+  try {
+    const response = await fetch(API, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!response.ok) {
+      const data = await response.json();
+      return data.error ?? "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+    }
+    await load();
+    return null;
+  } catch {
+    return "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+  }
 }
 
 /**
  * Hook อ่าน/แก้ข้อมูลกลาง ใช้ใน client component
- *   ตอน render บน server ได้ค่าเริ่มต้น แล้วใน browser จะอ่านค่าที่บันทึกไว้ (ไม่เกิด hydration error)
+ *   ตอน render บน server ได้ค่าเริ่มต้น แล้วใน browser จะโหลดค่าจริงจากฐานข้อมูล
  */
 export function usePayrollStore() {
   const state = useSyncExternalStore(subscribe, read, () => DEFAULT_STATE);
   return {
     ...state,
     /** บันทึกการตั้งค่าวันจ่ายของรอบ */
-    saveSettings: (settings: PaySettings) => write({ ...read(), settings }),
+    saveSettings: (settings: PaySettings) => send("PUT", settings),
     /** เลื่อนวันจ่ายของคำขอหลายรายการเป็นวันเดียวกัน */
-    reschedule: (ids: Iterable<string>, date: string) => {
-      const overrides = { ...read().overrides };
-      for (const id of ids) overrides[id] = date;
-      write({ ...read(), overrides });
-    },
+    reschedule: (ids: Iterable<string>, date: string, reason: string) => send("POST", { ids: [...ids], date, reason }),
     /** ยกเลิกการเลื่อนของคำขอ 1 รายการ */
-    undoReschedule: (id: string) => {
-      const overrides = { ...read().overrides };
-      delete overrides[id];
-      write({ ...read(), overrides });
-    },
+    undoReschedule: (id: string) => send("POST", { ids: [id], date: null, reason: "ยกเลิกการเลื่อนวันจ่าย" }),
   };
 }
 
@@ -123,12 +102,7 @@ export function useEffectiveRequests(requests: PaymentRequest[]) {
   return applyPayroll(requests, state);
 }
 
-const noopSubscribe = () => () => {};
-
-/**
- * true เมื่อทำงานใน browser แล้ว (อ่านค่าที่บันทึกไว้ได้), false ตอน render บน server / ก่อน hydrate
- * ใช้แสดง skeleton แทนการโชว์ค่าเริ่มต้นแว้บหนึ่งแล้วเปลี่ยนเป็นค่าที่บันทึกไว้
- */
+/** true เมื่อโหลดค่าจากฐานข้อมูลแล้ว ใช้แสดง skeleton แทนการโชว์ค่าเริ่มต้นแว้บหนึ่ง */
 export function useHydrated() {
-  return useSyncExternalStore(noopSubscribe, () => true, () => false);
+  return useSyncExternalStore(subscribe, () => loaded, () => false);
 }

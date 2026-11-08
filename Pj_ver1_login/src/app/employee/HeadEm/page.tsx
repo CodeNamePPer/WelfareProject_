@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getSubordinates } from "@/lib/employee/subordinates";
+import { getEmployeeBenefits } from "@/lib/claims/service";
+import type { EmployeeBenefit } from "@/lib/claims/types";
 import HeadEmClient from "./HeadEmClient";
 
 // เข้าได้เฉพาะคนที่มีลูกน้องโดยตรงที่ยังทำงานอยู่ ไม่พึ่งการซ่อนเมนูอย่างเดียว
@@ -18,5 +20,8 @@ export default async function HeadEmPage() {
     redirect("/access-denied?reason=role");
   }
 
-  return <HeadEmClient employees={subordinates} />;
+  const benefitLists = await Promise.all(subordinates.map((employee) => getEmployeeBenefits(employee.id)));
+  const benefitsByEmployee: Record<string, EmployeeBenefit[]> = Object.fromEntries(subordinates.map((employee, index) => [employee.id, benefitLists[index] ?? []]));
+
+  return <HeadEmClient employees={subordinates} benefitsByEmployee={benefitsByEmployee} />;
 }

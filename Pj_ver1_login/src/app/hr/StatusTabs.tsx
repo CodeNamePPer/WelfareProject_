@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { pendingRequests } from "./sample/queue";
-import { approvedRequests } from "./sample/approved";
-import { rejectedRequests } from "./sample/rejected";
-import { revisionRequests } from "./sample/revision";
+import type { HrStatusCounts } from "@/lib/claims/types";
 
 type Status = "home" | "revision" | "rejected" | "approved";
 
@@ -15,20 +12,19 @@ const count = new Intl.NumberFormat("th-TH");
  */
 export function StatusTabs({
   active,
-  pendingCount = pendingRequests.length,
+  counts,
   query = "",
 }: {
   active: Status;
-  /** จำนวนที่ยังรอตรวจบนหน้าจอ (ลดลงเมื่อ HR ดำเนินการแล้ว) */
-  pendingCount?: number;
+  counts: HrStatusCounts;
   /** "?q=...&dept=..." ของตัวกรองปัจจุบัน */
   query?: string;
 }) {
   const tabs: { id: Status; label: string; value: number; href: string }[] = [
-    { id: "home", label: "รอตรวจ", value: pendingCount, href: "/hr/home" },
-    { id: "revision", label: "รอพนักงานแก้ไข", value: revisionRequests.length, href: "/hr/home/revision" },
-    { id: "rejected", label: "ปฏิเสธแล้ว", value: rejectedRequests.length, href: "/hr/home/rejected" },
-    { id: "approved", label: "อนุมัติแล้ว", value: approvedRequests.length, href: "/hr/home/approved" },
+    { id: "home", label: "รอตรวจ", value: counts.pending, href: "/hr/home" },
+    { id: "revision", label: "รอพนักงานแก้ไข", value: counts.revision, href: "/hr/home/revision" },
+    { id: "rejected", label: "ปฏิเสธแล้ว", value: counts.rejected, href: "/hr/home/rejected" },
+    { id: "approved", label: "อนุมัติแล้ว", value: counts.approved, href: "/hr/home/approved" },
   ];
 
   return (
@@ -50,7 +46,6 @@ export function StatusTabs({
           </Link>
         ))}
       </nav>
-      <p className="sample-data-note" role="note">ข้อมูลคำขอเป็นข้อมูลตัวอย่าง ยังไม่ได้เชื่อมกับฐานข้อมูล ส่วนข้อมูลพนักงานมาจากระบบจริง</p>
     </div>
   );
 }

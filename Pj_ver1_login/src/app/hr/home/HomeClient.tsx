@@ -6,8 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
 import { StatusTabs } from "../StatusTabs";
-import { pendingRequests as allRequests, type PendingRequest } from "../sample/queue";
-import { readDecisions, removeDecisions, saveDecisions } from "../sampleDecisions";
+import type { HrStatusCounts, PendingRequest } from "@/lib/claims/types";
 import { ALL, filtersToQuery, replaceUrlQuery, type QueueView, type RequestFilters } from "../urlFilters";
 import { DepartmentOptions, departmentTree, matchesDepartment } from "../departmentTree";
 import {
@@ -52,14 +51,20 @@ function isAction(value: string | null): value is RequestAction {
 
 export function HomeClient({
   employees,
+  requests: allRequests,
+  counts,
   viewerCode,
+  readOnly,
   initialFilters,
   done,
 }: {
   employees: HrEmployee[] | null;
+  requests: PendingRequest[];
+  counts: HrStatusCounts;
   viewerCode: string | null;
+  readOnly: boolean;
   initialFilters: RequestFilters;
-  /** กลับมาจากหน้ารายละเอียดหลังตัดสินคำขอ: แสดงข้อความพร้อมปุ่มเลิกทำ */
+  /** กลับมาจากหน้ารายละเอียดหลังตัดสินคำขอ: แสดงข้อความยืนยัน */
   done: { id: string; action: string } | null;
 }) {
   const router = useRouter();
@@ -67,8 +72,10 @@ export function HomeClient({
   const [department, setDepartment] = useState(initialFilters.dept);
   const [itemType, setItemType] = useState(initialFilters.type);
   const [view, setView] = useState<QueueView>(initialFilters.view);
-  // คำขอที่ตัดสินแล้วในแท็บนี้ (ข้อมูลตัวอย่าง) ถูกซ่อนจากคิว อ่านค่าหลัง mount เพราะ sessionStorage มีเฉพาะฝั่งเบราว์เซอร์
+  // คำขอที่เพิ่งอนุมัติในหน้านี้ ซ่อนจากคิวทันทีระหว่างรอข้อมูลใหม่จาก server
   const [decidedIds, setDecidedIds] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [lastDone, setLastDone] = useState<{ ids: string[]; message: string } | null>(null);
@@ -82,13 +89,8 @@ export function HomeClient({
   const tabQuery = filtersToQuery({ q: query, dept: department, type: itemType }, false);
 
   useEffect(() => {
-    setDecidedIds(Object.keys(readDecisions()));
     if (done && isAction(done.action)) {
-      const row = allRequests.find((request) => request.id === done.id);
-      setLastDone({
-        ids: [done.id],
-        message: `(ตัวอย่าง) ${ACTION_COPY[done.action].done}คำขอ ${done.id}${row ? ` ของ ${row.fallbackName}` : ""}แล้ว ยังไม่ได้บันทึกลงระบบ`,
-      });
+      setLastDone({ ids: [done.id], message: `${ACTION_COPY[done.action].done}คำขอ ${done.id} แล้ว` });
     }
   }, [done]);
 
@@ -115,7 +117,7 @@ export function HomeClient({
       })
       // คิวเรียงจากรอนานที่สุดก่อน
       .sort((a, b) => b.waitingDays - a.waitingDays);
-  }, [decidedIds, employees, viewerCode]);
+  }, [allRequests, decidedIds, employees, viewerCode]);
 
   const tree = useMemo(() => departmentTree(rows.map((row) => row.employee)), [rows]);
 
@@ -143,7 +145,7 @@ export function HomeClient({
   ].filter((group) => group.rows.length > 0);
 
   // อนุมัติหลายรายการได้เฉพาะคำขอเบิกที่พร้อมอนุมัติ คำขอแก้ไขข้อมูลต้องเปิดดูหลักฐานทีละรายการ
-  const bulkCandidates = readyRows.filter((row) => row.itemType === "benefit");
+  const bulkCandidates = readOnly ? [] : readyRows.filter((row) => row.itemType === "benefit");
   const selectedRows = bulkCandidates.filter((row) => selectedIds.includes(row.id));
   const allBulkSelected = bulkCandidates.length > 0 && selectedRows.length === bulkCandidates.length;
   const selectedTotal = selectedRows.reduce((sum, row) => sum + row.amount, 0);
@@ -198,23 +200,39 @@ export function HomeClient({
     setBulkOpen(false);
   }
 
-  function confirmBulk(event: React.FormEvent<HTMLFormElement>) {
+  async function confirmBulk(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const ids = selectedRows.map((row) => row.id);
-    saveDecisions(ids, "approve");
-    setDecidedIds((current) => [...current, ...ids]);
-    setSelectedIds([]);
-    setLastDone({ ids, message: `(ตัวอย่าง) อนุมัติคำขอ ${ids.length} รายการ รวม ${baht.format(selectedTotal)} บาทแล้ว ยังไม่ได้บันทึกลงระบบ` });
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    setBulkError("");
+    const approved: string[] = [];
+    let failure = "";
+    for (const row of selectedRows) {
+      const response = await fetch(`/api/claims/${encodeURIComponent(row.id)}/actions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "hr_approve" }),
+      }).catch(() => null);
+      if (response?.ok) {
+        approved.push(row.id);
+      } else {
+        const data = await response?.json().catch(() => null);
+        failure = `${row.id}: ${data?.error ?? "อนุมัติไม่สำเร็จ"}`;
+        break;
+      }
+    }
+    setBulkBusy(false);
+    setDecidedIds((current) => [...current, ...approved]);
+    setSelectedIds((current) => current.filter((id) => !approved.includes(id)));
+    router.refresh();
+    if (failure) {
+      setBulkError(approved.length > 0 ? `อนุมัติแล้ว ${approved.length} รายการ แต่ ${failure}` : failure);
+      return;
+    }
+    setLastDone({ ids: approved, message: `อนุมัติคำขอ ${approved.length} รายการแล้ว` });
     setUndoPaused(false);
     setBulkOpen(false);
     restoreFocusRef.current = false;
-  }
-
-  function undo() {
-    if (!lastDone) return;
-    removeDecisions(lastDone.ids);
-    setDecidedIds((current) => current.filter((id) => !lastDone.ids.includes(id)));
-    setLastDone(null);
   }
 
   function resetFilters() {
@@ -277,7 +295,7 @@ export function HomeClient({
           ) : null}
         </header>
 
-        <StatusTabs active="home" pendingCount={rows.length} query={tabQuery} />
+        <StatusTabs active="home" counts={{ ...counts, pending: rows.length }} query={tabQuery} />
 
         {employees === null ? (
           <p className="queue-alert" role="alert">
@@ -466,10 +484,11 @@ export function HomeClient({
                 ))}
               </tbody>
             </table>
+            {bulkError ? <p className="queue-alert" role="alert">{bulkError}</p> : null}
             <form onSubmit={confirmBulk}>
               <div className="decision-actions">
                 <button type="button" className="button button-secondary" onClick={closeBulk} data-initial-focus>ยกเลิก</button>
-                <button type="submit" className="button queue-confirm-button">ยืนยันอนุมัติ {selectedRows.length} รายการ</button>
+                <button type="submit" disabled={bulkBusy} className="button queue-confirm-button">{bulkBusy ? "กำลังบันทึก..." : `ยืนยันอนุมัติ ${selectedRows.length} รายการ`}</button>
               </div>
             </form>
           </section>
@@ -486,7 +505,6 @@ export function HomeClient({
           onBlur={() => setUndoPaused(false)}
         >
           <span>{lastDone.message}</span>
-          <button type="button" className="queue-undo" onClick={undo}>เลิกทำ</button>
           <button type="button" onClick={() => setLastDone(null)} aria-label="ปิดข้อความ">×</button>
         </div>
       ) : null}

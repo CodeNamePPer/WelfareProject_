@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployees } from "@/lib/hr/employees";
-import { findRequest } from "../../../sample/requests";
+import { getClaim } from "@/lib/claims/service";
+import { toRequestDetail } from "@/lib/claims/mappers";
 import { RequestDetailClient } from "./RequestDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function RequestDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const detail = findRequest(decodeURIComponent(id));
+  const claim = await getClaim(decodeURIComponent(id));
+  const detail = claim ? toRequestDetail(claim) : null;
   if (!detail) notFound();
 
   const [employees, session] = await Promise.all([getHrEmployees(), getSession()]);
@@ -30,6 +32,7 @@ export default async function RequestDetailPage({ params }: { params: Params }) 
       employeesFailed={employees === null}
       actorName={actor?.name ?? detail.decision?.actorCode ?? null}
       viewerCode={session?.sub ?? null}
+      readOnly={session?.role !== "HR"}
     />
   );
 }

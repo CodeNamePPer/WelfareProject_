@@ -1,10 +1,10 @@
 // ชนิดข้อมูล (TypeScript types) ที่ใช้ร่วมกันทุกหน้า
 
 /** ประเภทสวัสดิการ */
-export type WelfareType = "medical" | "education" | "dental" | "self_dev" | "accident";
+export type WelfareType = "medical" | "education" | "dental" | "self_dev" | "accident" | "other";
 
 /** สถานะของคำขอเบิก/การจ่ายเงิน */
-export type PaymentStatus = "draft" | "review" | "approved" | "pending" | "returned" | "paid";
+export type PaymentStatus = "draft" | "review" | "approved" | "pending" | "returned" | "paid" | "rejected";
 
 /** รอบจ่าย: รอบที่ 1 = วันที่ 1–15, รอบที่ 2 = วันที่ 16–สิ้นเดือน */
 export type RoundNo = 1 | 2;

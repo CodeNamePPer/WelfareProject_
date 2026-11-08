@@ -13,15 +13,15 @@ import { TableContainer, TdFull, THead, Th, Td, Tr } from "@/features/payroll/co
 import { useToast } from "@/features/payroll/components/ui/Toast";
 import { ROUND_LABEL, WELFARE_LABEL } from "@/features/payroll/lib/constants";
 import { ALL, filterRequests, sumBy, WELFARE_FILTER_OPTIONS } from "@/features/payroll/lib/filters";
-import { formatBaht, formatThaiDate, parseISODate } from "@/features/payroll/lib/format";
-import { MOCK_TODAY } from "@/features/payroll/lib/mock-data";
+import { formatBaht, formatThaiDate, parseISODate, todayBangkok } from "@/features/payroll/lib/format";
 import { MAX_MONTH_OFFSET } from "@/features/payroll/lib/pay-settings";
 import { roundPayDate, usePayrollStore } from "@/features/payroll/lib/payroll-store";
 import { usePagination } from "@/features/payroll/lib/use-pagination";
 import type { PaymentRequest } from "@/features/payroll/lib/types";
 
 // ปฏิทินเลื่อนวันจ่ายเริ่มที่เดือนปัจจุบัน
-const BASE = parseISODate(MOCK_TODAY);
+const TODAY = todayBangkok();
+const BASE = parseISODate(TODAY);
 const WEEKDAY = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -53,6 +53,8 @@ export function RescheduleList({ requests }: { requests: PaymentRequest[] }) {
   const [open, setOpen] = useState(false);
   const [newDate, setNewDate] = useState<CalendarValue | null>(null);
   const [error, setError] = useState("");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // ตัวกรอง: กรองทันทีเมื่อพิมพ์/เลือก
   const [filter, setFilter] = useState({ q: "", welfare: ALL });
@@ -85,26 +87,38 @@ export function RescheduleList({ requests }: { requests: PaymentRequest[] }) {
   function openReschedule() {
     setNewDate(null);
     setError("");
+    setReason("");
     setOpen(true);
   }
 
   /** ยืนยันเลื่อนวันจ่าย: บันทึกวันใหม่ให้ทุกคำขอที่เลือก */
-  function confirmReschedule() {
+  async function confirmReschedule() {
     if (!newDate) {
       setError("กรุณาเลือกวันจ่ายใหม่จากปฏิทิน");
       return;
     }
+    if (!reason.trim()) {
+      setError("กรุณาระบุเหตุผลที่เลื่อนวันจ่าย");
+      return;
+    }
     const iso = calendarToISO(newDate);
-    store.reschedule(selected, iso);
+    setSaving(true);
+    const failure = await store.reschedule(selected, iso, reason.trim());
+    setSaving(false);
+    if (failure) {
+      setError(failure);
+      return;
+    }
     toast(`เลื่อนวันจ่าย ${selected.size} รายการ เป็น ${formatThaiDate(iso)} แล้ว`);
     setSelected(new Set());
     setOpen(false);
   }
 
   /** ยกเลิกการเลื่อนของคำขอ 1 รายการ (กลับไปใช้กำหนดจ่ายตามรอบ) */
-  function undoReschedule(id: string) {
-    store.undoReschedule(id);
-    toast(`ยกเลิกการเลื่อนวันจ่าย ${id} แล้ว`);
+  async function undoReschedule(id: string) {
+    const failure = await store.undoReschedule(id);
+    if (failure) toast(failure, "error");
+    else toast(`ยกเลิกการเลื่อนวันจ่าย ${id} แล้ว`);
   }
 
   return (
@@ -219,7 +233,7 @@ export function RescheduleList({ requests }: { requests: PaymentRequest[] }) {
             <Button variant="ghost" onClick={() => setOpen(false)}>
               ยกเลิก
             </Button>
-            <Button onClick={confirmReschedule} icon="check">
+            <Button onClick={() => void confirmReschedule()} icon="check" disabled={saving}>
               ยืนยันวันจ่าย
             </Button>
           </>
@@ -237,7 +251,7 @@ export function RescheduleList({ requests }: { requests: PaymentRequest[] }) {
                 minOffset={0}
                 maxOffset={MAX_MONTH_OFFSET}
                 value={newDate}
-                isDisabled={(v) => calendarToISO(v) < MOCK_TODAY} // วันที่ผ่านมาแล้วเลือกไม่ได้
+                isDisabled={(v) => calendarToISO(v) < TODAY} // วันที่ผ่านมาแล้วเลือกไม่ได้
                 onPick={(v) => {
                   setNewDate(v);
                   setError("");
@@ -245,6 +259,20 @@ export function RescheduleList({ requests }: { requests: PaymentRequest[] }) {
               />
             )}
           </div>
+          <Field label="เหตุผลที่เลื่อนวันจ่าย *">
+            {(id) => (
+              <textarea
+                id={id}
+                rows={2}
+                value={reason}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  setError("");
+                }}
+                className="w-full rounded-lg border border-line bg-white p-3 text-13 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 focus:outline-none"
+              />
+            )}
+          </Field>
           <p className={`rounded-lg px-3 py-2 text-12 ${error ? "bg-status-rejected/10 text-status-rejected" : "bg-surface text-ink"}`} role={error ? "alert" : undefined}>
             {error ||
               (newDate ? (

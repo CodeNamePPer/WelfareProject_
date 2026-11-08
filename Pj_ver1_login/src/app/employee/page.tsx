@@ -1,36 +1,47 @@
-'use client';
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-export default function Home() {
-  const requests = [
-    {
-      id: 'WF-2569-014',
-      type: 'ค่ารักษาพยาบาล',
-      date: '12 ต.ค. 2569',
-      amount: '1,000',
-      status: 'กำลังตรวจสอบ',
-      budget: '10,000',
-      remaining: '7,500',
-    },
-    {
-      id: 'WF-2569-011',
-      type: 'ค่าทันตกรรม',
-      date: '20 ก.ย. 2569',
-      amount: '1,200',
-      status: 'อนุมัติแล้ว',
-      budget: '3,000',
-      remaining: '1,800',
-    },
-    {
-      id: 'WF-2569-006',
-      type: 'ค่ารักษาพยาบาล',
-      date: '15 มิ.ย. 2569',
-      amount: '1,500',
-      status: 'อนุมัติแล้ว',
-      budget: '10,000',
-      remaining: '8,500',
-    },
-  ];
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/get-session";
+import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
+import type { ClaimRecord } from "@/lib/claims/types";
+
+const number = new Intl.NumberFormat("th-TH");
+const thaiDate = (iso: string) => new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" });
+
+const PENDING: ClaimRecord["status"][] = ["pending_hr", "needs_revision", "pending_finance", "finance_returned"];
+const APPROVED: ClaimRecord["status"][] = ["awaiting_payment", "paid"];
+
+const STATUS_TEXT: Record<ClaimRecord["status"], string> = {
+  draft: "ฉบับร่าง",
+  pending_hr: "กำลังตรวจสอบ",
+  needs_revision: "รอคุณแก้ไข",
+  pending_finance: "การเงินกำลังตรวจสอบ",
+  finance_returned: "กำลังตรวจสอบ",
+  awaiting_payment: "อนุมัติแล้ว รอจ่าย",
+  paid: "จ่ายแล้ว",
+  rejected: "ไม่อนุมัติ",
+  cancelled: "ยกเลิกแล้ว",
+};
+
+export default async function Home() {
+  const session = await getSession();
+  if (!session) {
+    redirect("/login");
+  }
+
+  const [benefits, claims] = await Promise.all([getEmployeeBenefits(session.sub), listClaims({ employeeCode: session.sub })]);
+  if (!benefits || !claims) {
+    return <p className="text-13 text-status-rejected">โหลดข้อมูลสวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
+  }
+
+  const visible = claims.filter((claim) => claim.status !== "cancelled");
+  const pendingCount = visible.filter((claim) => PENDING.includes(claim.status)).length;
+  const approvedCount = visible.filter((claim) => APPROVED.includes(claim.status)).length;
+  const draftCount = visible.filter((claim) => claim.status === "draft").length;
+  const recent = visible.slice(0, 3);
+  // สิทธิ์ที่ใช้ไปแล้วขึ้นก่อน เพื่อให้เห็นยอดที่เปลี่ยนแปลงจริง
+  const topBenefits = [...benefits].sort((a, b) => b.used + b.pending - (a.used + a.pending)).slice(0, 3);
+  const year = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 4);
 
   return (
     <>
@@ -46,75 +57,45 @@ export default function Home() {
       <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className='font-medium text-ink'>สิทธิ์คงเหลือของฉัน</h2>
         <div className='flex items-center justify-between gap-4 text-13'>
-          <span className='text-muted'>1 ม.ค. – 31 ธ.ค. 2569</span>
+          <span className='text-muted'>1 ม.ค. – 31 ธ.ค. {Number(year) + 543}</span>
           <Link href="/employee/welfare" className='inline-flex shrink-0 items-center gap-1 text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'>
             ดูสิทธิ์ทั้งหมด <ArrowRight className="inline-block size-4" aria-hidden="true" />
           </Link>
         </div>
       </div>
       <div className="mt-3 grid gap-3 text-13 lg:grid-cols-3">
-        <article className='rounded-lg border border-line bg-white p-5 transition-colors hover:border-primary-100'>
-          <div className='mb-4 flex items-center justify-between gap-3'>
-            <p className='text-14 font-semibold text-ink'>ค่ารักษาพยาบาล</p>
-            <span className='rounded-full bg-primary-50 px-2.5 py-1 text-12 font-medium text-primary-700'>ประจำปี</span>
-          </div>
-          <div className='mb-3 flex items-end gap-2'>
-            <span className='text-24 font-semibold tabular-nums text-ink'>7,500</span>
-            <span className='pb-1 text-12 text-muted'>บาทคงเหลือ</span>
-          </div>
-          <div className='mb-3 h-2 w-full overflow-hidden rounded-full bg-primary-50' role='progressbar' aria-label='วงเงินค่ารักษาพยาบาลคงเหลือ' aria-valuemin={0} aria-valuemax={10000} aria-valuenow={7500}>
-            <div className='h-full w-[75%] rounded-full bg-primary-600'></div>
-          </div>
-          <div className='flex items-center justify-between text-12 text-muted'>
-            <span>ใช้แล้ว</span>
-            <span className='font-medium tabular-nums text-ink-soft'>2,500 / 10,000 บาท</span>
-          </div>
-        </article>
-
-        <article className='rounded-lg border border-line bg-white p-5 transition-colors hover:border-primary-100'>
-          <div className='mb-4 flex items-center justify-between gap-3'>
-            <p className='text-14 font-semibold text-ink'>ค่าทันตกรรม</p>
-            <span className='rounded-full bg-primary-50 px-2.5 py-1 text-12 font-medium text-ink-soft'>ประจำปี</span>
-          </div>
-          <div className='mb-3 flex items-end gap-2'>
-            <span className='text-24 font-semibold tabular-nums text-ink'>1,800</span>
-            <span className='pb-1 text-12 text-muted'>บาทคงเหลือ</span>
-          </div>
-          <div className='mb-3 h-2 w-full overflow-hidden rounded-full bg-primary-50' role='progressbar' aria-label='วงเงินค่าทันตกรรมคงเหลือ' aria-valuemin={0} aria-valuemax={3000} aria-valuenow={1800}>
-            <div className='h-full w-[60%] rounded-full bg-primary-600'></div>
-          </div>
-          <div className='flex items-center justify-between text-12 text-muted'>
-            <span>ใช้แล้ว</span>
-            <span className='font-medium tabular-nums text-ink-soft'>1,200 / 3,000 บาท</span>
-          </div>
-        </article>
-
-        <article className='rounded-lg border border-line bg-white p-5 transition-colors hover:border-primary-100'>
-          <div className='mb-4 flex items-center justify-between gap-3'>
-            <p className='text-14 font-semibold text-ink'>ค่าอบรมและพัฒนา</p>
-            <span className='rounded-full bg-primary-50 px-2.5 py-1 text-12 font-medium text-ink-soft'>ถึงสิทธิ์</span>
-          </div>
-          <div className='mb-3 flex items-end gap-2'>
-            <span className='text-24 font-semibold tabular-nums text-ink'>5,000</span>
-            <span className='pb-1 text-12 text-muted'>บาทคงเหลือ</span>
-          </div>
-          <div className='mb-3 h-2 w-full overflow-hidden rounded-full bg-primary-50' role='progressbar' aria-label='วงเงินค่าอบรมและพัฒนาคงเหลือ' aria-valuemin={0} aria-valuemax={5000} aria-valuenow={5000}>
-            <div className='h-full w-full rounded-full bg-primary-600'></div>
-          </div>
-          <div className='flex items-center justify-between text-12 text-muted'>
-            <span>ใช้แล้ว</span>
-            <span className='font-medium tabular-nums text-ink-soft'>5,000 / 5,000 บาท</span>
-          </div>
-        </article>
+        {topBenefits.map((benefit) => {
+          const percent = benefit.limit > 0 ? Math.min(100, Math.round((benefit.remaining / benefit.limit) * 100)) : 0;
+          return (
+            <article key={benefit.code} className='rounded-lg border border-line bg-white p-5 transition-colors hover:border-primary-100'>
+              <div className='mb-4 flex items-center justify-between gap-3'>
+                <p className='text-14 font-semibold text-ink'>{benefit.name}</p>
+                <span className='shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-12 font-medium text-primary-700'>ต่อ{benefit.budgetLabel}</span>
+              </div>
+              <div className='mb-3 flex items-end gap-2'>
+                <span className='text-24 font-semibold tabular-nums text-ink'>{number.format(benefit.remaining)}</span>
+                <span className='pb-1 text-12 text-muted'>บาทคงเหลือ</span>
+              </div>
+              <div className='mb-3 h-2 w-full overflow-hidden rounded-full bg-primary-50' role='progressbar' aria-label={`วงเงิน${benefit.name}คงเหลือ`} aria-valuemin={0} aria-valuemax={benefit.limit} aria-valuenow={benefit.remaining}>
+                <div className='h-full rounded-full bg-primary-600' style={{ width: `${percent}%` }}></div>
+              </div>
+              <div className='flex items-center justify-between text-12 text-muted'>
+                <span>ใช้แล้ว{benefit.pending > 0 ? ` · รอตรวจ ${number.format(benefit.pending)}` : ""}</span>
+                <span className='font-medium tabular-nums text-ink-soft'>{number.format(benefit.used)} / {number.format(benefit.limit)} บาท</span>
+              </div>
+            </article>
+          );
+        })}
+        {topBenefits.length === 0 ? <p className='text-muted'>ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้</p> : null}
       </div>
       <div className='my-2'>
-        <p className='text-13 text-muted'>วงเงินคงเหลือหักเฉพาะรายการที่อนุมัติแล้ว</p>
+        <p className='text-13 text-muted'>วงเงินคงเหลือหักทั้งรายการที่อนุมัติแล้วและรายการที่รอตรวจ</p>
       </div>
       <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>คำขอทั้งหมด <span className='text-22 font-semibold tabular-nums text-ink'>4</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>รออนุมัติ <span className='text-22 font-semibold tabular-nums text-ink'>2</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>อนุมัติแล้ว <span className='text-22 font-semibold tabular-nums text-ink'>1</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>ฉบับร่าง <span className='text-22 font-semibold tabular-nums text-ink'>1</span></div>
+        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>คำขอทั้งหมด <span className='text-22 font-semibold tabular-nums text-ink'>{visible.length}</span></div>
+        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>รออนุมัติ <span className='text-22 font-semibold tabular-nums text-ink'>{pendingCount}</span></div>
+        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>อนุมัติแล้ว <span className='text-22 font-semibold tabular-nums text-ink'>{approvedCount}</span></div>
+        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>ฉบับร่าง <span className='text-22 font-semibold tabular-nums text-ink'>{draftCount}</span></div>
       </div>
       <div className='mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]'>
         <section className='min-w-0 rounded-lg border border-line bg-white p-4 sm:p-5' aria-labelledby='recent-requests-title'>
@@ -125,42 +106,35 @@ export default function Home() {
             </Link>
           </div>
           <div className='overflow-x-auto'>
-            <table className='w-full min-w-[680px] table-fixed border-collapse text-left text-13'>
+            <table className='w-full min-w-[560px] table-fixed border-collapse text-left text-13'>
               <thead className='bg-surface text-12 text-ink-soft'>
                 <tr>
-                  <th scope='col' className='w-[18%] px-3 py-3 font-medium'>เลขที่คำขอ</th>
-                  <th scope='col' className='w-[24%] px-3 py-3 font-medium'>ประเภท / วันที่ยื่น</th>
-                  <th scope='col' className='w-[15%] px-3 py-3 font-medium'>จำนวนเงิน (บาท)</th>
-                  <th scope='col' className='w-[23%] px-3 py-3 font-medium'>สถานะ / ความคืบหน้า</th>
-                  <th scope='col' className='w-[20%] px-3 py-3 font-medium'>เงินต้นคงเหลือ (บาท)</th>
+                  <th scope='col' className='w-[26%] px-3 py-3 font-medium'>เลขที่คำขอ</th>
+                  <th scope='col' className='w-[34%] px-3 py-3 font-medium'>ประเภท / วันที่ยื่น</th>
+                  <th scope='col' className='w-[16%] px-3 py-3 font-medium'>จำนวนเงิน (บาท)</th>
+                  <th scope='col' className='w-[24%] px-3 py-3 font-medium'>สถานะ</th>
                 </tr>
               </thead>
-              {requests.map((request) => (
-                <tbody key={request.id}>
-                  <tr className='h-16 border-b border-slate-100'>
-                    <th scope='row' className='px-3 py-2 font-semibold'>{request.id}</th>
+              <tbody>
+                {recent.map((claim) => (
+                  <tr key={claim.id} className='h-16 border-b border-slate-100'>
+                    <th scope='row' className='px-3 py-2 font-semibold'>{claim.claimNo}</th>
                     <td className='px-3 py-2'>
-                      <div className='font-medium'>{request.type}</div>
-                      <div className='mt-1 text-12 text-gray-500'>{request.date}</div>
+                      <div className='font-medium'>{claim.benefitName}</div>
+                      <div className='mt-1 text-12 text-gray-500'>{thaiDate(claim.submittedAt ?? claim.createdAt)}</div>
                     </td>
-                    <td className='px-3 py-2 font-semibold'>{request.amount}</td>
+                    <td className='px-3 py-2 font-semibold'>{number.format(claim.amountRequested)}</td>
                     <td className='px-3 py-2'>
-                      <span className={`inline-block rounded-full border px-2.5 py-1 text-12 ${request.status === 'กำลังตรวจสอบ' ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-primary-100 bg-primary-50 text-primary-700'}`}>
-                        {request.status}
+                      <span className={`inline-block rounded-full border px-2.5 py-1 text-12 ${APPROVED.includes(claim.status) ? 'border-primary-100 bg-primary-50 text-primary-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
+                        {STATUS_TEXT[claim.status]}
                       </span>
                     </td>
-                    <td className='px-3 py-2'>
-                      <div className='font-semibold'>{request.budget} เงินต้น</div>
-                      <div className='mt-1 text-12 text-gray-500'>{request.remaining} เงินคงเหลือ</div>
-                    </td>
                   </tr>
-                  <tr className='border-b border-line bg-surface/70'>
-                    <td colSpan={5} className='px-3 py-2 text-12 text-muted'>
-                      ผู้ดูแลคำขอ: [ชื่อผู้ดูแล] · ฝ่ายบุคคล
-                    </td>
-                  </tr>
-                </tbody>
-              ))}
+                ))}
+                {recent.length === 0 ? (
+                  <tr><td colSpan={4} className='px-3 py-8 text-center text-muted'>ยังไม่มีคำขอ</td></tr>
+                ) : null}
+              </tbody>
             </table>
           </div>
         </section>
@@ -179,8 +153,6 @@ export default function Home() {
           </article>
         </section>
       </div>
-
-
     </>
-  )
+  );
 }

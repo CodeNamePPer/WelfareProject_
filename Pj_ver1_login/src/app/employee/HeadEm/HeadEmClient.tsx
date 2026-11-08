@@ -3,74 +3,10 @@
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { Subordinate } from '@/lib/employee/subordinates';
+import { fieldsFor, toClaimPayload } from '@/lib/claims/forms';
+import type { EmployeeBenefit } from '@/lib/claims/types';
 
-const benefits = [
-  { name: 'ค่ารักษาพยาบาล', limit: 10000, remaining: 7500 },
-  { name: 'ค่าทันตกรรม', limit: 5000, remaining: 3200 },
-  { name: 'ตรวจสุขภาพประจำปี', limit: 3000, remaining: 2250 },
-  { name: 'ค่าลงทะเบียนอบรม', limit: 12000, remaining: 8500 },
-  { name: 'ค่ารักษาพยาบาลบุตร', limit: 8000, remaining: 5200 },
-  { name: 'ค่าภูมิคุ้มกันบุตร', limit: 4500, remaining: 2900 },
-];
-
-type BenefitField = {
-  key: string;
-  label: string;
-  type: 'text' | 'date' | 'number' | 'textarea' | 'select';
-  placeholder?: string;
-  options?: string[];
-  wide?: boolean;
-};
-
-const benefitFields: Record<string, BenefitField[]> = {
-  'ค่ารักษาพยาบาล': [
-    { key: 'patientName', label: 'ชื่อผู้เข้ารับการรักษา', type: 'text', placeholder: 'ระบุชื่อผู้ป่วย' },
-    { key: 'hospital', label: 'ชื่อสถานพยาบาล / คลินิก', type: 'text', placeholder: 'ระบุชื่อสถานพยาบาล' },
-    { key: 'serviceDate', label: 'วันที่เข้ารับการรักษา', type: 'date' },
-    { key: 'diagnosis', label: 'อาการหรือรายละเอียดการรักษา', type: 'textarea', placeholder: 'ระบุอาการ การวินิจฉัย หรือรายละเอียดการรักษา', wide: true },
-    { key: 'amount', label: 'จำนวนเงินที่ขอเบิก', type: 'number' },
-  ],
-  'ค่าทันตกรรม': [
-    { key: 'patientName', label: 'ชื่อผู้เข้ารับบริการ', type: 'text', placeholder: 'ระบุชื่อผู้เข้ารับบริการ' },
-    { key: 'clinic', label: 'ชื่อคลินิก / ทันตแพทย์', type: 'text', placeholder: 'ระบุชื่อคลินิกหรือทันตแพทย์' },
-    { key: 'serviceDate', label: 'วันที่เข้ารับบริการ', type: 'date' },
-    { key: 'treatmentType', label: 'ประเภทการรักษา', type: 'select', options: ['ขูดหินปูน', 'อุดฟัน', 'ถอนฟัน', 'รักษารากฟัน', 'จัดฟัน', 'อื่น ๆ'] },
-    { key: 'toothArea', label: 'ตำแหน่ง / ซี่ฟันที่รักษา', type: 'text', placeholder: 'เช่น ฟันกรามซี่ที่ 36' },
-    { key: 'amount', label: 'จำนวนเงินที่ขอเบิก', type: 'number' },
-  ],
-  'ตรวจสุขภาพประจำปี': [
-    { key: 'facility', label: 'สถานพยาบาลที่ตรวจ', type: 'text', placeholder: 'ระบุชื่อโรงพยาบาลหรือคลินิก' },
-    { key: 'packageName', label: 'ชื่อโปรแกรมตรวจสุขภาพ', type: 'text', placeholder: 'ระบุแพ็กเกจหรือรายการตรวจ' },
-    { key: 'checkupDate', label: 'วันที่เข้ารับการตรวจ', type: 'date' },
-    { key: 'checkupType', label: 'รูปแบบการตรวจ', type: 'select', options: ['ตรวจสุขภาพประจำปี', 'ตรวจตามความเสี่ยงของงาน', 'ตรวจเพิ่มเติมตามแพทย์แนะนำ'] },
-    { key: 'amount', label: 'ค่าใช้จ่ายตามใบเสร็จ', type: 'number' },
-  ],
-  'ค่าลงทะเบียนอบรม': [
-    { key: 'courseName', label: 'ชื่อหลักสูตร', type: 'text', placeholder: 'ระบุชื่อหลักสูตรอบรม' },
-    { key: 'institution', label: 'สถาบัน / ผู้จัดอบรม', type: 'text', placeholder: 'ระบุชื่อหน่วยงานผู้จัด' },
-    { key: 'courseFormat', label: 'รูปแบบการอบรม', type: 'select', options: ['อบรมในสถานที่', 'อบรมออนไลน์', 'อบรมแบบผสมผสาน'] },
-    { key: 'courseDate', label: 'วันที่เริ่มอบรม', type: 'date' },
-    { key: 'registrationType', label: 'ประเภทค่าใช้จ่าย', type: 'select', options: ['ค่าลงทะเบียน', 'ค่าธรรมเนียมหลักสูตร', 'ค่าอบรมและเอกสารประกอบ'] },
-    { key: 'amount', label: 'ค่าลงทะเบียนที่ขอเบิก', type: 'number' },
-  ],
-  'ค่ารักษาพยาบาลบุตร': [
-    { key: 'childName', label: 'ชื่อบุตรผู้เข้ารับการรักษา', type: 'text', placeholder: 'ระบุชื่อ-นามสกุลบุตร' },
-    { key: 'relationship', label: 'ความสัมพันธ์กับพนักงาน', type: 'select', options: ['บุตรโดยชอบด้วยกฎหมาย', 'บุตรบุญธรรม'] },
-    { key: 'hospital', label: 'ชื่อสถานพยาบาล / คลินิก', type: 'text', placeholder: 'ระบุชื่อสถานพยาบาล' },
-    { key: 'serviceDate', label: 'วันที่เข้ารับการรักษา', type: 'date' },
-    { key: 'treatmentDetail', label: 'อาการหรือรายละเอียดการรักษา', type: 'textarea', placeholder: 'ระบุอาการและการรักษาของบุตร', wide: true },
-    { key: 'amount', label: 'จำนวนเงินที่ขอเบิก', type: 'number' },
-  ],
-  'ค่าภูมิคุ้มกันบุตร': [
-    { key: 'childName', label: 'ชื่อบุตรผู้รับวัคซีน', type: 'text', placeholder: 'ระบุชื่อ-นามสกุลบุตร' },
-    { key: 'relationship', label: 'ความสัมพันธ์กับพนักงาน', type: 'select', options: ['บุตรโดยชอบด้วยกฎหมาย', 'บุตรบุญธรรม'] },
-    { key: 'vaccineName', label: 'ชื่อวัคซีน', type: 'text', placeholder: 'เช่น วัคซีนไข้หวัดใหญ่' },
-    { key: 'doseNumber', label: 'ครั้งที่ / เข็มที่', type: 'select', options: ['เข็มที่ 1', 'เข็มที่ 2', 'เข็มที่ 3', 'เข็มกระตุ้น', 'ไม่ระบุ'] },
-    { key: 'injectionDate', label: 'วันที่รับวัคซีน', type: 'date' },
-    { key: 'clinic', label: 'สถานพยาบาลที่ให้วัคซีน', type: 'text', placeholder: 'ระบุชื่อโรงพยาบาลหรือคลินิก' },
-    { key: 'amount', label: 'ค่าใช้จ่ายที่ขอเบิก', type: 'number' },
-  ],
-};
+const EMPTY_BENEFIT: EmployeeBenefit = { code: '', name: 'ไม่มีสิทธิ์สวัสดิการ', description: null, category: '', formType: 'general', budgetType: 'yearly', budgetLabel: 'ปี', limit: 0, used: 0, pending: 0, remaining: 0 };
 
 const steps = ['ข้อมูลพนักงานและคำขอ', 'เอกสารและยืนยัน'];
 
@@ -81,28 +17,25 @@ function formatAmount(amount: number) {
   }).format(amount);
 }
 
-export default function HeadEmClient({ employees }: { employees: Subordinate[] }) {
+export default function HeadEmClient({ employees, benefitsByEmployee }: { employees: Subordinate[]; benefitsByEmployee: Record<string, EmployeeBenefit[]> }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [employeeId, setEmployeeId] = useState(employees[0].id);
-  const [benefitName, setBenefitName] = useState(benefits[0].name);
-  const [formData, setFormData] = useState<Record<string, Record<string, string>>>({
-    'ค่ารักษาพยาบาล': {
-      patientName: employees[0].name,
-      hospital: 'โรงพยาบาลบำรุงราษฎร์',
-      serviceDate: '2026-10-12',
-      diagnosis: 'ค่ารักษาพยาบาลตามใบเสร็จ',
-      amount: '1800',
-    },
-  });
+  const benefits = benefitsByEmployee[employeeId] ?? [];
+  const [benefitName, setBenefitName] = useState(benefitsByEmployee[employees[0].id]?.[0]?.name ?? '');
+  const [formData, setFormData] = useState<Record<string, Record<string, string>>>({});
   const [files, setFiles] = useState<File[]>([]);
   const [agreed, setAgreed] = useState(false);
   const [formError, setFormError] = useState('');
   const [draftSaved, setDraftSaved] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [claimNo, setClaimNo] = useState('');
+  const [receiptNo, setReceiptNo] = useState('');
+  const [receiptDate, setReceiptDate] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const employee = employees.find((item) => item.id === employeeId) ?? employees[0];
-  const benefit = benefits.find((item) => item.name === benefitName) ?? benefits[0];
-  const fields = benefitFields[benefitName];
+  const benefit = benefits.find((item) => item.name === benefitName) ?? benefits[0] ?? EMPTY_BENEFIT;
+  const fields = fieldsFor(benefit.formType);
   const currentFormData = formData[benefitName] ?? {};
   const requestedAmount = Number(currentFormData.amount) || 0;
   const remainingAfterRequest = Math.max(benefit.remaining - requestedAmount, 0);
@@ -169,8 +102,41 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
     setCurrentStep(1);
   }
 
+  async function send(submit: boolean) {
+    if (busy || !benefit.code) return;
+    setBusy(true);
+    setFormError('');
+    setDraftSaved(false);
+    try {
+      const body = new FormData();
+      body.append('payload', JSON.stringify({ ...toClaimPayload(benefit.formType, currentFormData), claimNo, employeeCode: employeeId, benefitCode: benefit.code, receiptNo, receiptDate, submit }));
+      files.forEach((file) => body.append('files', file));
+      const response = await fetch('/api/claims', { method: 'POST', body });
+      const data = await response.json();
+      if (data.claimNo) {
+        setClaimNo(data.claimNo);
+        setFiles([]);
+      }
+      if (!response.ok) {
+        setFormError(data.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+      if (submit) setSubmitted(true);
+      else setDraftSaved(true);
+    } catch {
+      setFormError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function submitRequest() {
-    if (files.length === 0) {
+    if (!receiptNo.trim() || !receiptDate) {
+      setFormError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
+      return;
+    }
+
+    if (files.length === 0 && !claimNo) {
       setFormError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
       return;
     }
@@ -180,8 +146,7 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
       return;
     }
 
-    setFormError('');
-    setSubmitted(true);
+    void send(true);
   }
 
   return (
@@ -377,6 +342,17 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
                     <p className="mt-1 text-13 text-muted">แนบหลักฐานการเบิกและตรวจสอบข้อมูลก่อนส่ง</p>
                   </div>
 
+                  <div className="mb-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="receiptNo" className="mb-1.5 block text-13 font-medium text-ink-soft">เลขที่ใบเสร็จ <span className="text-status-rejected">*</span></label>
+                      <input id="receiptNo" value={receiptNo} onChange={(event) => setReceiptNo(event.target.value)} className="h-10 w-full rounded-md border border-line bg-white px-3 text-13 text-ink outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+                    </div>
+                    <div>
+                      <label htmlFor="receiptDate" className="mb-1.5 block text-13 font-medium text-ink-soft">วันที่ในใบเสร็จ <span className="text-status-rejected">*</span></label>
+                      <input id="receiptDate" type="date" value={receiptDate} onChange={(event) => setReceiptDate(event.target.value)} className="h-10 w-full rounded-md border border-line bg-white px-3 text-13 text-ink outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+                    </div>
+                  </div>
+
                   <div className="rounded-lg border border-dashed border-line bg-surface p-5 text-center">
                     <p className="mb-1 text-13 font-medium text-ink">
                       เอกสารประกอบคำขอ <span className="text-status-rejected">*</span>
@@ -467,7 +443,7 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
               )}
               {draftSaved && (
                 <p role="status" className="mt-4 rounded-md border border-status-approved-soft bg-status-approved-soft px-3 py-2 text-13 text-status-approved-ink">
-                  บันทึกฉบับร่างไว้ในหน้านี้แล้ว
+                  บันทึกฉบับร่าง {claimNo} แล้ว
                 </p>
               )}
 
@@ -486,8 +462,9 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setDraftSaved(true)}
-                    className="rounded-md border border-line bg-white px-4 py-2.5 text-13 font-medium text-ink-soft hover:bg-surface"
+                    disabled={busy}
+                    onClick={() => void send(false)}
+                    className="rounded-md border border-line bg-white px-4 py-2.5 text-13 font-medium text-ink-soft hover:bg-surface disabled:opacity-40"
                   >
                     บันทึกร่าง
                   </button>
@@ -503,7 +480,7 @@ export default function HeadEmClient({ employees }: { employees: Subordinate[] }
                     <button
                       type="button"
                       onClick={submitRequest}
-                      disabled={!agreed}
+                      disabled={!agreed || busy}
                       className="rounded-md bg-primary-600 px-5 py-2.5 text-13 font-medium text-white hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                     >
                       ส่งคำขอแทนพนักงาน

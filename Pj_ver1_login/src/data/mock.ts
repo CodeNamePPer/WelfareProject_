@@ -1,8 +1,6 @@
 // Mock data only. Replace with API calls when the database is connected.
 import type {
   AuditEntry,
-  Claim,
-  ClaimEvent,
   ImportRecord,
   NotificationItem,
   RoleCount,
@@ -42,123 +40,6 @@ export const roleCounts: RoleCount[] = [
   { id: 'hr', role: 'HR', count: 6 },
   { id: 'finance', role: 'การเงิน', count: 4 },
   { id: 'employee', role: 'พนักงานทั่วไป', count: 118 },
-];
-
-// TODO: แทนด้วยตารางคำขอเบิกจริง – ข้อมูลจำลอง 5 คน ช่วง ก.ย.–พ.ย. 2569 ครบทุกสถานะและทุกขั้นตอน
-// ผู้อนุมัติใช้ชื่อ HR / การเงินจาก systemUsers ด้านล่าง · รอบจ่ายเงินทุกวันที่ 25
-const HR_VIPA = 'วิภา สุขสันต์ (HR)';
-const HR_THANAKORN = 'ธนากร แสงทอง (HR)';
-const FIN_PIMCHANOK = 'พิมพ์ชนก รัตนวงศ์ (การเงิน)';
-const FIN_PRASERT = 'ประเสริฐ มั่งมี (การเงิน)';
-
-/** วงเงินต่อปีต่อคน ของสวัสดิการที่ใช้ใน mock */
-const ANNUAL_LIMITS: Record<string, number> = {
-  'ผู้ป่วยนอก': 20000,
-  'ผู้ป่วยใน': 50000,
-  'ทันตกรรม': 5000,
-  'ค่าเดินทาง': 9600,
-  'ค่าเล่าเรียนบุตร': 30000,
-  'ตรวจสุขภาพประจำปี': 4000,
-  'ค่าแว่นสายตา': 5000,
-};
-
-const hr = (at: string, by: string, note?: string): ClaimEvent => ({ kind: 'hr-approved', at, by, note });
-const fin = (at: string, by: string, note?: string): ClaimEvent => ({ kind: 'finance-approved', at, by, note });
-const reject = (at: string, by: string, note: string): ClaimEvent => ({ kind: 'rejected', at, by, note });
-const paid = (at: string, round: string): ClaimEvent => ({ kind: 'paid', at, by: 'ฝ่ายการเงิน', note: `โอนเข้าบัญชีเงินเดือน รอบ ${round}` });
-
-type ClaimInput = Omit<Claim, 'annualLimit' | 'timeline' | 'attachments'> & { attachments?: string[] };
-
-function claim(input: ClaimInput, ...events: ClaimEvent[]): Claim {
-  return {
-    attachments: ['ใบเสร็จรับเงิน.pdf'],
-    ...input,
-    annualLimit: ANNUAL_LIMITS[input.benefit] ?? null,
-    timeline: [{ kind: 'submitted', at: input.date }, ...events],
-  };
-}
-
-export const claims: Claim[] = [
-  // ภูมิพัฒน์ – เบิกบ่อยสุด มีรอตรวจในเดือนนี้
-  claim(
-    { id: 'c1', code: 'CLM-2569-0002', employeeId: 'E00015', benefit: 'ผู้ป่วยนอก', amount: 1850, approvedAmount: 1850, status: 'approved', date: '2026-09-08', expenseDate: '2026-09-05', attachments: ['ใบเสร็จโรงพยาบาล.pdf', 'ใบรับรองแพทย์.pdf'] },
-    hr('2026-09-09', HR_VIPA),
-    fin('2026-09-11', FIN_PIMCHANOK),
-    paid('2026-09-25', 'ก.ย. 2569'),
-  ),
-  claim(
-    { id: 'c2', code: 'CLM-2569-0007', employeeId: 'E00015', benefit: 'ค่าเดินทาง', amount: 1200, approvedAmount: 1000, status: 'approved', date: '2026-10-06', expenseDate: '2026-10-03', note: 'เดินทางไปพบลูกค้าที่ชลบุรี', attachments: ['ใบเสร็จค่าน้ำมัน.jpg', 'ใบเสร็จทางด่วน.jpg'] },
-    hr('2026-10-07', HR_THANAKORN),
-    fin('2026-10-09', FIN_PIMCHANOK, 'ปรับยอดเป็น 1,000 บาท: ค่าทางด่วน 200 บาทไม่อยู่ในเงื่อนไขสิทธิ์'),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
-  claim(
-    { id: 'c3', code: 'CLM-2569-0010', employeeId: 'E00015', benefit: 'ทันตกรรม', amount: 2400, approvedAmount: 2400, status: 'approved', date: '2026-10-14', expenseDate: '2026-10-12' },
-    hr('2026-10-15', HR_VIPA),
-    fin('2026-10-17', FIN_PRASERT),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
-  claim(
-    { id: 'c4', code: 'CLM-2569-0012', employeeId: 'E00015', benefit: 'ผู้ป่วยนอก', amount: 650, approvedAmount: null, status: 'rejected', date: '2026-10-27', expenseDate: '2026-10-24', attachments: ['ใบเสร็จร้านขายยา.jpg'] },
-    reject('2026-10-28', HR_VIPA, 'ใบเสร็จไม่ระบุชื่อผู้รับบริการ กรุณายื่นใหม่พร้อมใบเสร็จฉบับเต็ม'),
-  ),
-  claim({ id: 'c5', code: 'CLM-2569-0015', employeeId: 'E00015', benefit: 'ค่าเล่าเรียนบุตร', amount: 12000, approvedAmount: null, status: 'pending', date: '2026-11-02', expenseDate: '2026-10-30', note: 'ค่าเทอม 2/2569 บุตรคนที่ 1', attachments: ['ใบเสร็จค่าเทอม.pdf', 'สำเนาสูติบัตรบุตร.pdf'] }),
-  claim({ id: 'c6', code: 'CLM-2569-0016', employeeId: 'E00015', benefit: 'ค่าเดินทาง', amount: 980, approvedAmount: null, status: 'pending', date: '2026-11-03', expenseDate: '2026-11-01' }),
-  // ศิริพร – ผู้ป่วยในยอดสูง อนุมัติไม่เต็มจำนวน
-  claim(
-    { id: 'c7', code: 'CLM-2569-0003', employeeId: 'E00016', benefit: 'ผู้ป่วยใน', amount: 14500, approvedAmount: 12000, status: 'approved', date: '2026-09-19', expenseDate: '2026-09-15', attachments: ['ใบเสร็จโรงพยาบาล.pdf', 'ใบสรุปค่ารักษา.pdf', 'ใบรับรองแพทย์.pdf'] },
-    hr('2026-09-21', HR_THANAKORN),
-    fin('2026-09-24', FIN_PRASERT, 'อนุมัติ 12,000 บาท: ค่าห้องพักเกินสิทธิ์ 2,500 บาท'),
-    paid('2026-09-25', 'ก.ย. 2569'),
-  ),
-  claim(
-    { id: 'c8', code: 'CLM-2569-0009', employeeId: 'E00016', benefit: 'ตรวจสุขภาพประจำปี', amount: 3500, approvedAmount: 3500, status: 'approved', date: '2026-10-11', expenseDate: '2026-10-08' },
-    hr('2026-10-12', HR_VIPA),
-    fin('2026-10-14', FIN_PIMCHANOK),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
-  claim({ id: 'c9', code: 'CLM-2569-0014', employeeId: 'E00016', benefit: 'ค่าแว่นสายตา', amount: 4200, approvedAmount: null, status: 'pending', date: '2026-11-01', expenseDate: '2026-10-29', attachments: ['ใบเสร็จร้านแว่น.jpg', 'ใบวัดสายตา.jpg'] }),
-  // กมลวรรณ – มีรายการรอการเงิน
-  claim(
-    { id: 'c10', code: 'CLM-2569-0001', employeeId: 'E00011', benefit: 'ค่าเดินทาง', amount: 1500, approvedAmount: 1500, status: 'approved', date: '2026-09-03', expenseDate: '2026-08-29' },
-    hr('2026-09-04', HR_THANAKORN),
-    fin('2026-09-08', FIN_PIMCHANOK),
-    paid('2026-09-25', 'ก.ย. 2569'),
-  ),
-  claim(
-    { id: 'c11', code: 'CLM-2569-0005', employeeId: 'E00011', benefit: 'ทันตกรรม', amount: 1800, approvedAmount: 1800, status: 'approved', date: '2026-10-02', expenseDate: '2026-09-29' },
-    hr('2026-10-03', HR_THANAKORN),
-    fin('2026-10-06', FIN_PRASERT),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
-  claim(
-    { id: 'c12', code: 'CLM-2569-0013', employeeId: 'E00011', benefit: 'ผู้ป่วยนอก', amount: 2200, approvedAmount: null, status: 'pending', date: '2026-10-29', expenseDate: '2026-10-26', attachments: ['ใบเสร็จคลินิก.pdf'] },
-    hr('2026-10-31', HR_VIPA),
-  ),
-  // ณัฐธิดา – ถูกปฏิเสธเพราะเกินวงเงิน แล้วยื่นใหม่ · มีรายการอนุมัติแล้วรอจ่าย
-  claim(
-    { id: 'c13', code: 'CLM-2569-0004', employeeId: 'E00013', benefit: 'ค่าแว่นสายตา', amount: 6500, approvedAmount: null, status: 'rejected', date: '2026-09-22', expenseDate: '2026-09-18', attachments: ['ใบเสร็จร้านแว่น.jpg'] },
-    hr('2026-09-23', HR_VIPA),
-    reject('2026-09-26', FIN_PIMCHANOK, 'ยอดเกินวงเงินค่าแว่นสายตา 5,000 บาท/ปี กรุณายื่นใหม่ภายในวงเงิน'),
-  ),
-  claim(
-    { id: 'c14', code: 'CLM-2569-0006', employeeId: 'E00013', benefit: 'ค่าแว่นสายตา', amount: 5000, approvedAmount: 5000, status: 'approved', date: '2026-10-05', expenseDate: '2026-09-18', note: 'ยื่นใหม่แทนคำขอ CLM-2569-0004', attachments: ['ใบเสร็จร้านแว่น.jpg'] },
-    hr('2026-10-06', HR_THANAKORN),
-    fin('2026-10-08', FIN_PRASERT),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
-  claim(
-    { id: 'c15', code: 'CLM-2569-0011', employeeId: 'E00013', benefit: 'ผู้ป่วยนอก', amount: 900, approvedAmount: 900, status: 'approved', date: '2026-10-18', expenseDate: '2026-10-16' },
-    hr('2026-10-20', HR_VIPA),
-    fin('2026-10-28', FIN_PIMCHANOK),
-  ),
-  // อนุชา – เบิกน้อย
-  claim(
-    { id: 'c16', code: 'CLM-2569-0008', employeeId: 'E00014', benefit: 'ตรวจสุขภาพประจำปี', amount: 3500, approvedAmount: 3500, status: 'approved', date: '2026-10-09', expenseDate: '2026-10-07' },
-    hr('2026-10-10', HR_THANAKORN),
-    fin('2026-10-13', FIN_PRASERT),
-    paid('2026-10-25', 'ต.ค. 2569'),
-  ),
 ];
 
 // ─── ข้อมูลผู้ใช้งานระบบ (Mock) ────────────────────────────────────────────

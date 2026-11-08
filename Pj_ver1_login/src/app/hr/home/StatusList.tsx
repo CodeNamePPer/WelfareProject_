@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { formatThaiDate } from "@/lib/format";
 import type { HrEmployee } from "@/lib/hr/employees";
+import type { HrStatusCounts } from "@/lib/claims/types";
 import { StatusTabs } from "../StatusTabs";
 import { requestHref } from "./queueRules";
 import { ALL, filtersToQuery, replaceUrlQuery, type RequestFilters } from "../urlFilters";
@@ -44,11 +45,13 @@ function SearchIcon() {
 export function StatusList({
   kind,
   rows,
+  counts,
   employees,
   initialFilters,
 }: {
   kind: Kind;
   rows: StatusRow[];
+  counts: HrStatusCounts;
   employees: HrEmployee[] | null;
   initialFilters: RequestFilters;
 }) {
@@ -111,7 +114,7 @@ export function StatusList({
         <h1>{copy.title}</h1>
       </header>
 
-      <StatusTabs active={kind} query={filterQuery} />
+      <StatusTabs active={kind} counts={counts} query={filterQuery} />
 
       {employees === null ? (
         <p className="queue-alert" role="alert">โหลดข้อมูลพนักงานไม่สำเร็จ จึงแสดงชื่อจากคำขอแทน กรุณารีเฟรชหน้าอีกครั้ง</p>

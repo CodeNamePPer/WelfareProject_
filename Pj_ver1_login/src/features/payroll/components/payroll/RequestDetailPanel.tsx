@@ -30,18 +30,22 @@ function Row({ label, value }: { label: string; value: string }) {
  *   จอ ≥ 1280px : วางติดข้างตาราง (sticky เลื่อนตามจอ)
  *   จอเล็กกว่า   : เลื่อนออกมาจากขอบขวา มีพื้นหลังทึบ กดพื้นหลังหรือ Esc เพื่อปิด
  *
- * ปุ่ม "ส่งกลับ" / "บันทึกจ่ายแล้ว" ท้ายแผง แสดงเฉพาะคำขอที่สถานะ "รอจ่าย"
- * onReturn / onPaid ส่งมาจาก ApprovalsView ซึ่งเปิด Modal ยืนยันก่อนทำจริง
+ * ปุ่มท้ายแผงขึ้นกับสถานะ: "รอการเงินตรวจ" = ปฏิเสธ / ส่งกลับ / อนุมัติ, "รอจ่าย" = ส่งกลับ / บันทึกจ่ายแล้ว
+ * callback ทั้งหมดส่งมาจาก ApprovalsView ซึ่งเปิด Modal ยืนยันก่อนทำจริง
  */
 export function RequestDetailPanel({
   request: r,
   onClose,
   onReturn,
+  onReject,
+  onApprove,
   onPaid,
 }: {
   request: PaymentRequest;
   onClose: () => void;
   onReturn: () => void;
+  onReject: () => void;
+  onApprove: () => void;
   onPaid: () => void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -120,6 +124,19 @@ export function RequestDetailPanel({
 
         {/* ท้ายแผง: คำสั่ง (เฉพาะรอจ่าย) + ลิงก์ไปหน้ารายละเอียดเต็ม */}
         <footer className="flex flex-col gap-2 border-t border-line p-4">
+          {r.status === "approved" && (
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="danger" onClick={onReject}>
+                ปฏิเสธ
+              </Button>
+              <Button variant="ghost" icon="undo" onClick={onReturn}>
+                ส่งกลับ
+              </Button>
+              <Button icon="check" onClick={onApprove}>
+                อนุมัติ
+              </Button>
+            </div>
+          )}
           {r.status === "pending" && (
             <div className="grid grid-cols-2 gap-2">
               <Button variant="danger" icon="undo" onClick={onReturn}>

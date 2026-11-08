@@ -14,8 +14,7 @@ import { TableContainer, TdFull, THead, Th, Td, Tr } from "@/features/payroll/co
 import { useToast } from "@/features/payroll/components/ui/Toast";
 import { ROUND_LABEL, STATUS_META, WELFARE_LABEL } from "@/features/payroll/lib/constants";
 import { ALL, filterRequests, sumBy, WELFARE_FILTER_OPTIONS } from "@/features/payroll/lib/filters";
-import { formatBaht, formatNumber, formatThaiDate, formatThaiMonthYear, parseISODate } from "@/features/payroll/lib/format";
-import { MOCK_TODAY } from "@/features/payroll/lib/mock-data";
+import { formatBaht, formatNumber, formatThaiDate, formatThaiMonthYear, parseISODate, todayBangkok } from "@/features/payroll/lib/format";
 import {
   DEFAULT_PAY_SETTINGS,
   MAX_MONTH_OFFSET,
@@ -31,7 +30,7 @@ import { usePagination } from "@/features/payroll/lib/use-pagination";
 import type { PaymentRequest, RoundNo } from "@/features/payroll/lib/types";
 
 // ปฏิทินเริ่มจาก "เดือนที่ยื่นคำขอ" ตัวอย่าง = เดือนปัจจุบัน แล้วเลือกวันจ่ายในเดือนนั้นหรือเดือนถัดๆ ไป
-const BASE = parseISODate(MOCK_TODAY);
+const BASE = parseISODate(todayBangkok());
 
 const same = (a: PaySettings, b: PaySettings) => (Object.keys(a) as (keyof PaySettings)[]).every((k) => a[k] === b[k]);
 
@@ -84,8 +83,12 @@ export function PaySettingsView({ requests }: { requests: PaymentRequest[] }) {
   // จำนวนคำขอที่กำหนดจ่ายจะเปลี่ยน ถ้าบันทึกค่าที่กำลังแก้ (ไม่นับรายการที่เลื่อนวันจ่ายไว้แล้ว)
   const changedCount = requests.filter((r) => !store.overrides[r.id] && payDateFor(r, draft) !== payDateFor(r, saved)).length;
 
-  function confirmSave() {
-    store.saveSettings(draft);
+  async function confirmSave() {
+    const failure = await store.saveSettings(draft);
+    if (failure) {
+      toast(failure, "error");
+      return;
+    }
     setEdit(null);
     setConfirmOpen(false);
     toast("บันทึกการตั้งค่าการจ่ายเงินแล้ว");

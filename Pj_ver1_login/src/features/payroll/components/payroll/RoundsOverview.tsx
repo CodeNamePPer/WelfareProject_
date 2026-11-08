@@ -5,7 +5,7 @@ import { Card, PageStack, StatCard } from "@/features/payroll/components/ui/Card
 import { ROUND_LABEL, ROUND_RANGE } from "@/features/payroll/lib/constants";
 import { sumBy } from "@/features/payroll/lib/filters";
 import { formatBaht, formatThaiDate } from "@/features/payroll/lib/format";
-import { buildRounds } from "@/features/payroll/lib/mock-data";
+import { buildRounds } from "@/features/payroll/lib/rounds";
 import { applyPayroll, useHydrated, usePayrollStore } from "@/features/payroll/lib/payroll-store";
 import type { PaymentRequest } from "@/features/payroll/lib/types";
 import { RescheduleList } from "./RescheduleList";
