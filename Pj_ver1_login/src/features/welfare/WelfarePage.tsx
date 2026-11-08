@@ -46,7 +46,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
 
   return (
     <div className="flex flex-col gap-[20px]">
-      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตอนนี้ยังใช้ข้อมูลตัวอย่าง" />
+      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที คำขอเบิกและการนำเข้าประวัติยังเป็นข้อมูลตัวอย่าง" />
 
       {/* แผ่นเดียว: แถบหมวด, ตัวเลขสรุป, เนื้อหาแต่ละหมวด คั่นด้วยเส้น ไม่แยกเป็นการ์ด
           ไม่ใส่ overflow-hidden เพราะ panel รายละเอียดด้านขวาต้อง sticky ได้ */}

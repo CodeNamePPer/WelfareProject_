@@ -158,12 +158,16 @@ export interface WelfareItem {
   budgetType: BudgetType;
   maxClaims: string;
   eligible: string;
+  /** วันที่เริ่มใช้วงเงินปัจจุบัน – ISO date, YYYY-MM-DD ('' = ยังไม่กำหนด) */
   startDate: string;
+  /** รหัสบทบาทผู้อนุมัติ เช่น HR */
   approver: string;
   estimatedBudget: string;
   documents: string[];
-  /** 0–3: เพิ่มข้อมูล → ตรวจข้อมูล → บันทึก → แจ้งอีเมล */
-  step: number;
+  /** วงเงินใหม่ที่ตั้งไว้ล่วงหน้า */
+  nextLimit?: { amount: number; from: string } | null;
+  /** รายการใหม่ที่ยังไม่ได้บันทึกลงฐานข้อมูล */
+  unsaved?: boolean;
 }
 
 export type ImportStatus = 'approved' | 'needs-fix' | 'rejected';

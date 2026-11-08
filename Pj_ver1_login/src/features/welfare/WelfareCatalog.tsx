@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { KeyboardEvent } from 'react';
+import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
 import { MoreVertical, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -10,6 +10,7 @@ import { FilterChips } from '../../components/ui/FilterChips';
 import { Pagination, paginate } from '../../components/ui/Pagination';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Tag } from '../../components/ui/Tag';
+import { useToast } from '../../components/ui/Toast';
 import { revealDetail, table } from '../../components/ui/table';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
@@ -32,7 +33,7 @@ function nextCode(items: WelfareItem[]): string {
 
 interface WelfareCatalogProps {
   items: WelfareItem[];
-  onItemsChange: (items: WelfareItem[]) => void;
+  onItemsChange: Dispatch<SetStateAction<WelfareItem[]>>;
   selectedCode: string;
   onSelect: (code: string) => void;
   /** Create a draft and open its form on arrival (?new=1 from the shortcut menu). */
@@ -41,6 +42,9 @@ interface WelfareCatalogProps {
 
 export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, startCreating = false }: WelfareCatalogProps) {
   const router = useRouter();
+  const { notify } = useToast();
+  // เพิ่มทุกครั้งที่บันทึกสำเร็จ เพื่อให้ฟอร์มรายละเอียดเริ่มจากค่าล่าสุดในฐานข้อมูล
+  const [saveCount, setSaveCount] = useState(0);
   // Guards against a second draft from Strict Mode's double effect run; cleared once ?new=1 is gone.
   const createdFromLinkRef = useRef(false);
   const [filter, setFilter] = useState<Filter>('all');
@@ -90,13 +94,51 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
         pick(item.code);
         setEditingCode(item.code);
       }}
-      onToggle={() => (item.status === 'active' ? setDisablingCode(item.code) : update(item.code, { status: 'active' }))}
+      onToggle={() => {
+        if (item.status === 'active') return setDisablingCode(item.code);
+        // รายการใหม่ต้องบันทึกลงฐานข้อมูลก่อนจึงจะเปิดใช้งานได้
+        if (item.unsaved) {
+          pick(item.code);
+          setEditingCode(item.code);
+          return;
+        }
+        void changeStatus(item.code, 'active');
+      }}
     />
   );
   const disabling = items.find((item) => item.code === disablingCode);
 
-  const update = (code: string, patch: Partial<WelfareItem>) =>
-    onItemsChange(items.map((item) => (item.code === code ? { ...item, ...patch, updatedAt: todayIso() } : item)));
+  /** บันทึกลงฐานข้อมูล แล้วแทนที่แถวด้วยค่าที่ server คืนมา – คืนข้อความเมื่อไม่สำเร็จ */
+  const save = async (code: string, values: Partial<WelfareItem>): Promise<string | null> => {
+    try {
+      const response = await fetch('/api/admin/welfare', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, values }),
+      });
+      const data = await response.json();
+      if (!response.ok) return data.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+      onItemsChange((current) => current.map((item) => (item.code === code ? (data.item as WelfareItem) : item)));
+      setSaveCount((count) => count + 1);
+      return null;
+    } catch {
+      return 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    }
+  };
+
+  const changeStatus = async (code: string, status: WelfareItem['status']) => {
+    const error = await save(code, { status });
+    if (error) notify(error);
+  };
+
+  /** ยกเลิกรายการใหม่ที่ยังไม่ได้บันทึก = เอาออกจากตาราง */
+  const cancelEdit = (item: WelfareItem) => {
+    setEditingCode(null);
+    if (!item.unsaved) return;
+    const remaining = items.filter((other) => other.code !== item.code);
+    onItemsChange(remaining);
+    onSelect(remaining[0]?.code ?? '');
+  };
 
   const addItem = () => {
     const code = nextCode(items);
@@ -111,10 +153,10 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
       maxClaims: '',
       eligible: 'พนักงานประจำ',
       startDate: '',
-      approver: 'HR (Reviewer)',
+      approver: 'HR',
       estimatedBudget: '—',
       documents: [],
-      step: 0,
+      unsaved: true,
     };
     onItemsChange([draft, ...items]);
     setFilter('all');
@@ -305,14 +347,15 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
 
       {selected ? (
         <WelfareDetail
-          key={selected.code}
+          key={`${selected.code}-${saveCount}`}
           item={selected}
           editing={editingCode === selected.code}
           onEdit={() => setEditingCode(selected.code)}
-          onCancel={() => setEditingCode(null)}
-          onSave={(patch) => {
-            update(selected.code, patch);
-            setEditingCode(null);
+          onCancel={() => cancelEdit(selected)}
+          onSave={async (patch) => {
+            const error = await save(selected.code, patch);
+            if (!error) setEditingCode(null);
+            return error;
           }}
         />
       ) : (
@@ -334,7 +377,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
         confirmLabel="หยุดใช้"
         onCancel={() => setDisablingCode(null)}
         onConfirm={() => {
-          if (disablingCode) update(disablingCode, { status: 'inactive' });
+          if (disablingCode) void changeStatus(disablingCode, 'inactive');
           setDisablingCode(null);
         }}
       />

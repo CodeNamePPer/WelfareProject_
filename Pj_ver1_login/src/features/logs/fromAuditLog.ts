@@ -34,6 +34,24 @@ const FIELD_LABELS: Record<string, string> = {
 };
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'ทำงานอยู่', RESIGNED: 'ลาออก' };
 
+// ป้ายชื่อตรงกับ saveWelfareItem ใน src/lib/admin/welfare.ts (ค่าใน log แปลงเป็นข้อความอ่านได้แล้ว)
+const WELFARE_FIELD_LABELS: Record<string, string> = {
+  name: 'ชื่อสวัสดิการ',
+  amount: 'วงเงิน',
+  budgetType: 'ประเภทวงเงิน',
+  maxClaims: 'จำนวนครั้งที่เบิกได้',
+  eligible: 'ผู้มีสิทธิ์',
+  startDate: 'วันที่เริ่มใช้',
+  approver: 'ผู้อนุมัติการเบิก',
+  status: 'สถานะ',
+};
+
+function welfareTitle(action: DbAuditAction, fields: string[]): string {
+  if (action === 'WELFARE_CREATE') return 'เพิ่มสวัสดิการใหม่';
+  if (fields.length === 1 && fields[0] === 'status') return 'เปลี่ยนสถานะสวัสดิการ';
+  return fields.includes('amount') || fields.includes('startDate') ? 'ปรับวงเงินสวัสดิการ' : 'แก้ไขสวัสดิการ';
+}
+
 const SECURITY_TITLES: Partial<Record<DbAuditAction, string>> = {
   LOGIN_FAILED: 'ล็อกอินไม่สำเร็จ',
   LOGIN_BLOCKED_LOCKED: 'บล็อกการล็อกอิน: บัญชีถูกล็อก',
@@ -98,6 +116,29 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
               label: FIELD_LABELS[f] ?? f,
               before: fieldValue(f, changes[f].old),
               after: fieldValue(f, changes[f].new),
+            })),
+            reason: row.reason,
+          },
+        },
+      ];
+    }
+
+    if (row.action === 'WELFARE_CREATE' || row.action === 'WELFARE_UPDATE') {
+      const changes = row.changes ?? {};
+      const fields = Object.keys(changes);
+      return [
+        {
+          ...base,
+          title: welfareTitle(row.action, fields),
+          detail: fields.map((f) => WELFARE_FIELD_LABELS[f] ?? f).join(', '),
+          category: 'settings' as AuditCategory,
+          action: 'welfare',
+          target: row.targetId ? { code: row.targetId, name: row.detail } : undefined,
+          change: {
+            fields: fields.map((f) => ({
+              label: WELFARE_FIELD_LABELS[f] ?? f,
+              before: changes[f].old == null ? '—' : String(changes[f].old),
+              after: changes[f].new == null ? '—' : String(changes[f].new),
             })),
             reason: row.reason,
           },

@@ -135,7 +135,7 @@ function hrQueueStats(): SummaryStats["hrQueue"] {
   };
 }
 
-function fetchEmployees(): Promise<Employee[] | null> {
+export function fetchEmployees(): Promise<Employee[] | null> {
   return safe("employees", async () => {
     const [{ data, error }, departments] = await Promise.all([
       supabaseAdmin

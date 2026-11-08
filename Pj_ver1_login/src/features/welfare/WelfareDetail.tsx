@@ -2,22 +2,17 @@
 
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Check, FileText } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Tag } from '../../components/ui/Tag';
 import { useToast } from '../../components/ui/Toast';
+import { ROLE_LABELS, type Role } from '../../lib/auth/roles';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { BudgetType, WelfareItem } from '../../types';
 
-const steps = [
-  { label: 'เพิ่มข้อมูล', by: 'Admin' },
-  { label: 'ตรวจข้อมูล', by: 'HR' },
-  { label: 'บันทึก', by: 'HR' },
-  { label: 'แจ้งอีเมล', by: 'ประกาศในระบบ' },
-];
-
 const budgetTypes: BudgetType[] = ['รายปี', 'รายเดือน', 'ต่อครั้ง'];
+const approverRoles: Role[] = ['HR', 'FINANCE'];
 
 type EditableFields = Pick<WelfareItem, 'name' | 'amount' | 'budgetType' | 'maxClaims' | 'eligible' | 'startDate' | 'approver'>;
 
@@ -26,7 +21,8 @@ interface WelfareDetailProps {
   editing: boolean;
   onEdit: () => void;
   onCancel: () => void;
-  onSave: (patch: Partial<WelfareItem>) => void;
+  /** คืนข้อความเมื่อบันทึกไม่สำเร็จ */
+  onSave: (patch: Partial<WelfareItem>) => Promise<string | null>;
 }
 
 // Figma 163:180 – right-hand "รายละเอียดสวัสดิการ" card.
@@ -34,15 +30,21 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
   const { notifyPending } = useToast();
   const [form, setForm] = useState<EditableFields>(item);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const set = <K extends keyof EditableFields>(key: K, value: EditableFields[K]) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (saving) return;
     if (!form.name.trim()) return setError('กรุณาระบุชื่อสวัสดิการ');
     if (!(form.amount > 0)) return setError('วงเงินต้องมากกว่า 0');
     setError('');
-    onSave({ ...form, name: form.name.trim(), step: Math.max(item.step, 1) });
+    setSaving(true);
+    const { amount, budgetType, maxClaims, eligible, startDate, approver } = form;
+    const failure = await onSave({ name: form.name.trim(), amount, budgetType, maxClaims, eligible, startDate, approver });
+    setSaving(false);
+    if (failure) setError(failure);
   };
 
   const rows: Array<{ label: string; value: string; field?: keyof EditableFields }> = [
@@ -50,8 +52,11 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
     { label: 'วงเงินต่อปี', value: formatBahtWhole(item.amount), field: 'amount' },
     { label: 'จำนวนครั้งที่เบิกได้', value: item.maxClaims || '—', field: 'maxClaims' },
     { label: 'ผู้มีสิทธิ์', value: item.eligible || '—', field: 'eligible' },
-    { label: 'วันที่เริ่มใช้', value: item.startDate || '—', field: 'startDate' },
-    { label: 'ผู้อนุมัติการเบิก', value: item.approver || '—', field: 'approver' },
+    { label: 'วันที่เริ่มใช้', value: item.startDate ? formatShortThaiDate(item.startDate) : '—', field: 'startDate' },
+    ...(item.nextLimit
+      ? [{ label: 'วงเงินใหม่ที่ตั้งไว้', value: `${formatBahtWhole(item.nextLimit.amount)} ตั้งแต่ ${formatShortThaiDate(item.nextLimit.from)}` }]
+      : []),
+    { label: 'ผู้อนุมัติการเบิก', value: ROLE_LABELS[item.approver as Role] ?? '—', field: 'approver' },
     { label: 'งบรวมโดยประมาณ', value: item.estimatedBudget },
   ];
 
@@ -94,6 +99,9 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
             </div>
           ))}
         </dl>
+        {editing ? (
+          <p className="text-11 text-muted">ปรับวงเงินต้องเลือกวันที่เริ่มใช้ตั้งแต่วันนี้เป็นต้นไป วงเงินเดิมจะเก็บไว้เป็นประวัติ</p>
+        ) : null}
       </div>
 
       <section aria-labelledby="welfare-docs-title" className="flex flex-col gap-[8px]">
@@ -117,35 +125,6 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
         )}
       </section>
 
-      <section aria-labelledby="welfare-steps-title" className="flex flex-col gap-[12px]">
-        <h3 id="welfare-steps-title" className="text-13 font-medium text-ink">
-          ขั้นตอนการจัดการสวัสดิการ
-        </h3>
-        <ol className="grid grid-cols-4">
-          {steps.map((step, index) => {
-            const done = index < item.step;
-            const current = index === item.step;
-            return (
-              <li key={step.label} className="relative flex flex-col items-center gap-[4px] text-center" aria-current={current ? 'step' : undefined}>
-                {index > 0 ? (
-                  <span className={cx('absolute top-[7px] right-1/2 h-[2px] w-full', index <= item.step ? 'bg-primary-600' : 'bg-line')} aria-hidden="true" />
-                ) : null}
-                <span
-                  className={cx(
-                    'relative z-[1] inline-flex size-[16px] items-center justify-center rounded-full border-2 bg-white',
-                    done ? 'border-primary-600 bg-primary-600 text-white' : current ? 'border-primary-600' : 'border-line',
-                  )}
-                >
-                  {done ? <Check className="size-[10px]" strokeWidth={3} aria-hidden="true" /> : null}
-                </span>
-                <span className={cx('text-12', current || done ? 'font-medium text-ink' : 'text-muted')}>{step.label}</span>
-                <span className="text-11 text-muted">{step.by}</span>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-
       {error ? (
         <p role="alert" className="text-12 text-danger">
           {error}
@@ -164,8 +143,8 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
             >
               ยกเลิก
             </Button>
-            <Button type="submit" variant="primary">
-              บันทึก
+            <Button type="submit" variant="primary" disabled={saving}>
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </Button>
           </>
         ) : (
@@ -213,6 +192,22 @@ function EditInput({
           <option key={type}>{type}</option>
         ))}
       </select>
+    );
+  }
+  if (field === 'approver') {
+    return (
+      <select aria-label={label} className={cx(inputClass, 'w-[140px]')} value={form.approver} onChange={(event) => set('approver', event.target.value)}>
+        {approverRoles.map((role) => (
+          <option key={role} value={role}>
+            {ROLE_LABELS[role]}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (field === 'startDate') {
+    return (
+      <input aria-label={label} type="date" className={cx(inputClass, 'w-[140px]')} value={form.startDate} onChange={(event) => set('startDate', event.target.value)} />
     );
   }
   if (field === 'amount') {

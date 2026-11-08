@@ -4,8 +4,6 @@ import type {
   Claim,
   ClaimEvent,
   ImportRecord,
-  WelfareItem,
-  Employee,
   NotificationItem,
   RoleCount,
   SystemUser,
@@ -44,15 +42,6 @@ export const roleCounts: RoleCount[] = [
   { id: 'hr', role: 'HR', count: 6 },
   { id: 'finance', role: 'การเงิน', count: 4 },
   { id: 'employee', role: 'พนักงานทั่วไป', count: 118 },
-];
-
-// พนักงาน demo จาก supabase/seed.sql – id = รหัสพนักงาน ให้ตรงกับรายชื่อจริงที่ Dashboard ดึงจากตาราง users
-export const employees: Employee[] = [
-  { id: 'E00011', code: 'E00011', name: 'กมลวรรณ แก้วมณี', department: 'ฝ่ายบุคคล' },
-  { id: 'E00013', code: 'E00013', name: 'ณัฐธิดา บุญมา', department: 'ฝ่ายการเงิน' },
-  { id: 'E00014', code: 'E00014', name: 'อนุชา ประเสริฐศรี', department: 'ฝ่ายไอที' },
-  { id: 'E00015', code: 'E00015', name: 'ภูมิพัฒน์ จันทร์เพ็ญ', department: 'ฝ่ายไอที · พัฒนาระบบ' },
-  { id: 'E00016', code: 'E00016', name: 'ศิริพร มีสุข', department: 'ฝ่ายไอที · พัฒนาระบบ' },
 ];
 
 // TODO: แทนด้วยตารางคำขอเบิกจริง – ข้อมูลจำลอง 5 คน ช่วง ก.ย.–พ.ย. 2569 ครบทุกสถานะและทุกขั้นตอน
@@ -246,43 +235,6 @@ export const systemUsers: SystemUser[] = [
     lastLoginAt: '2026-10-31T09:00:00Z',
     updatedAt: '2026-10-15T14:00:00Z',
   },
-];
-
-// ─── สวัสดิการ (Mock) ──────────────────────────────────────────────────────
-const welfareDefaults: Omit<WelfareItem, 'code' | 'name' | 'updatedAt' | 'amount' | 'status' | 'estimatedBudget'> = {
-  owner: 'Admin',
-  budgetType: 'รายปี',
-  maxClaims: 'ไม่เกิน 12 ครั้ง/ปี',
-  eligible: 'พนักงานประจำ',
-  startDate: '1 ม.ค. 2570',
-  approver: 'HR (Reviewer)',
-  documents: [],
-  step: 3,
-};
-
-export const welfareItems: WelfareItem[] = [
-  {
-    ...welfareDefaults,
-    code: 'WEL-001',
-    name: 'ค่าเครื่องมือ AI สำหรับพนักงาน',
-    updatedAt: '2026-10-10',
-    amount: 6000,
-    status: 'active',
-    estimatedBudget: '฿720,000/ปี · 120 คน',
-    documents: ['บันทึกขออนุมัติ.pdf', 'เปรียบเทียบอัตราตลาด.xlsx'],
-    step: 1,
-  },
-  { ...welfareDefaults, code: 'WEL-002', name: 'ค่าออกกำลังกาย / ฟิตเนส', updatedAt: '2026-10-09', amount: 12000, status: 'active', estimatedBudget: '฿1,440,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-003', name: 'ค่าตัดแว่นสายตา', updatedAt: '2026-10-07', amount: 3000, status: 'active', maxClaims: '1 ครั้ง/ปี', estimatedBudget: '฿360,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-004', name: 'วัคซีนไข้หวัดใหญ่', updatedAt: '2026-10-03', amount: 1500, status: 'active', maxClaims: '1 ครั้ง/ปี', estimatedBudget: '฿180,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-005', name: 'ทุนอบรมหลักสูตรภายนอก', updatedAt: '2026-09-30', amount: 20000, status: 'active', maxClaims: '2 ครั้ง/ปี', estimatedBudget: '฿2,400,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-006', name: 'ค่าเดินทางมาทำงาน', updatedAt: '2026-09-26', amount: 9600, status: 'active', budgetType: 'รายเดือน', estimatedBudget: '฿1,152,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-007', name: 'ค่าฝากครรภ์ / คลอดบุตร', updatedAt: '2026-09-20', amount: 25000, status: 'active', maxClaims: 'ต่อการคลอด 1 ครั้ง', estimatedBudget: '฿250,000/ปี · ประมาณ 10 คน' },
-  { ...welfareDefaults, code: 'WEL-008', name: 'ค่าอาหารกลางวัน', updatedAt: '2026-09-15', amount: 2500, status: 'inactive', budgetType: 'รายเดือน', estimatedBudget: '—' },
-  { ...welfareDefaults, code: 'WEL-009', name: 'ค่าเครื่องมือ AI', updatedAt: '2026-09-10', amount: 6000, status: 'active', estimatedBudget: '฿720,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-010', name: 'ค่าเดินทางไปอบรม', updatedAt: '2026-09-08', amount: 5000, status: 'active', budgetType: 'ต่อครั้ง', estimatedBudget: '฿600,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-011', name: 'ค่าตรวจสุขภาพ', updatedAt: '2026-09-05', amount: 4000, status: 'active', maxClaims: '1 ครั้ง/ปี', estimatedBudget: '฿480,000/ปี · 120 คน' },
-  { ...welfareDefaults, code: 'WEL-012', name: 'ค่าใช้จ่ายอื่น ๆ', updatedAt: '2026-09-01', amount: 8000, status: 'inactive', estimatedBudget: '—' },
 ];
 
 /** Sample rows shown as the import preview until file parsing is connected to the backend. */

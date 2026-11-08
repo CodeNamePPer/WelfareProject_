@@ -147,9 +147,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
           <p className="queue-meta">
             {entitlements === null
               ? "โหลดข้อมูลสวัสดิการไม่สำเร็จ"
-              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · ${
-                  entitlementResult?.source === "sample" ? "ข้อมูลตัวอย่าง (ฐานข้อมูลยังไม่มีตารางสวัสดิการ)" : "จากตารางสวัสดิการ"
-                } · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
+              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · จากตารางสวัสดิการ · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
           </p>
         </div>
         {entitlements && entitlements.length > 0 ? (

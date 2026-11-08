@@ -1,13 +1,10 @@
 import "server-only";
 import { supabaseAdmin } from "../supabase";
-import { welfareItems } from "../../data/mock";
 import type { HrEmployee } from "./employees";
 
 /**
  * สิทธิสวัสดิการของพนักงานหนึ่งคน
  * อ่านจากตารางสวัสดิการจริง (v_welfare_benefit_current + welfare_benefit_department)
- * ถ้าฐานข้อมูลยังไม่มีตาราง (migration 20261104090000 ยังไม่ได้ติดตั้ง) จะใช้รายการเดียวกับหน้า /admin/benefits
- * และบอกหน้าจอว่าเป็นข้อมูลตัวอย่าง
  * ยอดที่ใช้ไปยังไม่มีแหล่งข้อมูล เพราะยังไม่มีตารางคำขอเบิก (claims)
  */
 export type BudgetLabel = "ต่อปี" | "ต่อเดือน" | "ต่อครั้ง";
@@ -27,7 +24,7 @@ export interface Entitlement {
   note: string | null;
 }
 
-export type EntitlementResult = { source: "database" | "sample"; items: Entitlement[] };
+export type EntitlementResult = { items: Entitlement[] };
 
 type BenefitRow = {
   id: string;
@@ -46,32 +43,9 @@ type DepartmentRow = { benefit_id: string; department: { name_th: string } | nul
 const DB_BUDGET: Record<BenefitRow["budget_type"], BudgetLabel> = { yearly: "ต่อปี", monthly: "ต่อเดือน", per_claim: "ต่อครั้ง" };
 const toNumber = (value: number | string | null) => (value === null ? null : Number(value));
 
-/** ฐานข้อมูลยังไม่มีตาราง/วิวนี้ (PostgREST: PGRST205 / Postgres: 42P01) */
-function isMissingTable(error: { code?: string } | null) {
-  return error?.code === "PGRST205" || error?.code === "42P01";
-}
-
 function applyStatus(employee: HrEmployee, eligible: boolean, note: string | null): { eligible: boolean; note: string | null } {
   if (employee.status !== "ACTIVE") return { eligible: false, note: `พนักงาน${employee.statusLabel} ไม่มีสิทธิ์` };
   return { eligible, note };
-}
-
-function fromSample(employee: HrEmployee): Entitlement[] {
-  return welfareItems
-    .filter((item) => item.status === "active")
-    .map((item) => {
-      const budget: BudgetLabel = item.budgetType === "รายเดือน" ? "ต่อเดือน" : item.budgetType === "ต่อครั้ง" ? "ต่อครั้ง" : "ต่อปี";
-      const status = applyStatus(employee, true, item.eligible ? `เงื่อนไข: ${item.eligible}` : null);
-      return {
-        code: item.code,
-        name: item.name,
-        budget,
-        limit: item.amount,
-        nextLimit: null,
-        claims: item.maxClaims || "ไม่จำกัด",
-        ...status,
-      };
-    });
 }
 
 /** คืน null เมื่อโหลดไม่สำเร็จด้วยเหตุอื่น ให้หน้าจอแจ้งตามจริงแทนการแสดงรายการว่าง */
@@ -85,9 +59,8 @@ export async function getEntitlements(employee: HrEmployee): Promise<Entitlement
         .order("code", { ascending: true }),
       supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department:department_id(name_th)"),
     ]);
-    if (isMissingTable(benefits.error)) return { source: "sample", items: fromSample(employee) };
     if (benefits.error) throw benefits.error;
-    if (departments.error && !isMissingTable(departments.error)) throw departments.error;
+    if (departments.error) throw departments.error;
 
     // สวัสดิการที่จำกัดแผนก: benefit_id -> ชื่อแผนกที่มีสิทธิ์ (ไม่มีแถว = ทุกแผนก)
     const allowed = new Map<string, string[]>();
@@ -117,7 +90,7 @@ export async function getEntitlements(employee: HrEmployee): Promise<Entitlement
         ...status,
       };
     });
-    return { source: "database", items };
+    return { items };
   } catch (err) {
     console.error("[hr] getEntitlements failed", err);
     return null;
