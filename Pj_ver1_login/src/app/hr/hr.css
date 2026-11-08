@@ -959,6 +959,24 @@
   font-weight: 700;
 }
 
+.hr-app .toast.toast-error {
+  border-color: #fecaca;
+  color: #b3261e;
+}
+
+.hr-app .toast.toast-error .toast-check {
+  background: #fee2e2;
+}
+
+.hr-app .toast.toast-error {
+  border-color: #fecaca;
+  color: #b3261e;
+}
+
+.hr-app .toast.toast-error .toast-check {
+  background: #fee2e2;
+}
+
 .hr-app .toast button {
   margin-left: 6px;
   border: 0;
@@ -1305,6 +1323,39 @@
 .hr-app .benefits-track-button {
   min-height: 44px;
   text-decoration: none;
+}
+
+.hr-app .benefits-approve-button {
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(1) { width: 13%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(2) { width: 14%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(3) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(4) { width: 24%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(5) { width: 17%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(6) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(7) { width: 10%; }
+
+.hr-app .benefit-approval-action {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.hr-app .benefit-approval-dialog {
+  width: min(100%, 620px);
+}
+
+.hr-app .benefit-approval-dialog .decision-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hr-app .benefits-heading h1,
@@ -2151,7 +2202,7 @@
 }
 
 .hr-app .home-employee-identity strong,
-.hr-app .home-employee-identity span {
+.hr-app .home-employee-identity > span {
   display: block;
 }
 
@@ -2160,11 +2211,36 @@
   font-variant-numeric: tabular-nums;
 }
 
-.hr-app .home-employee-identity span {
+.hr-app .home-employee-identity > span {
   margin-top: 4px;
   color: #18253f;
   font-weight: 600;
   white-space: normal;
+}
+
+.hr-app .home-employee-identity .employee-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hr-app .employee-status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.hr-app .employee-status-badge.resigned {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.hr-app .employee-status-badge.deceased {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .hr-app .request-role-department strong,
@@ -2402,6 +2478,12 @@
   margin-bottom: 24px;
 }
 
+.hr-app .employee-management-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .hr-app .employee-management-heading h1 {
   margin: 0;
   font-size: 25px;
@@ -2426,8 +2508,59 @@
   white-space: nowrap;
 }
 
+.hr-app .employee-approve-requests-button {
+  min-height: 42px;
+  padding: 0 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .hr-app .employee-track-requests-button:hover {
   background: #f8fafc;
+}
+
+.hr-app .person-requests-table.employee-requests-table {
+  min-width: 1100px;
+}
+
+.hr-app .person-requests-table.employee-requests-table th:nth-child(1) { width: 15%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(2) { width: 20%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(3) { width: 11%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(4) { width: 14%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(5) { width: 13%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(6) { width: 8%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(7) { width: 10%; }
+.hr-app .person-requests-table.employee-requests-table th:nth-child(8) { width: 9%; }
+
+.hr-app .person-requests-table.employee-approval-table {
+  min-width: 1100px;
+}
+
+.hr-app .person-requests-table.employee-approval-table th:nth-child(1) { width: 17%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(2) { width: 22%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(3) { width: 12%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(4) { width: 15%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(5) { width: 14%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(6) { width: 20%; }
+
+.hr-app .person-approval-action {
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.hr-app .person-approval-dialog {
+  width: min(100%, 620px);
+}
+
+.hr-app .person-approval-dialog .decision-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hr-app .employee-management-panel {
@@ -2543,7 +2676,7 @@
 
 .hr-app .employee-add-button svg,
 .hr-app .employee-action-button svg,
-.hr-app .employee-delete-dialog .decision-icon svg {
+.hr-app .employee-status-dialog .decision-icon svg {
   width: 18px;
   height: 18px;
   fill: none;
@@ -2576,28 +2709,25 @@
   font-weight: 600;
 }
 
-.hr-app .employee-management-table th:nth-child(2) {
-  width: 17%;
+.hr-app .employee-management-table th:nth-child(1) {
+  width: 24%;
 }
 
+.hr-app .employee-management-table th:nth-child(2),
 .hr-app .employee-management-table th:nth-child(3) {
   width: 10%;
 }
 
 .hr-app .employee-management-table th:nth-child(4) {
-  width: 10%;
-}
-
-.hr-app .employee-management-table th:nth-child(5) {
   width: 12%;
 }
 
-.hr-app .employee-management-table th:nth-child(6) {
+.hr-app .employee-management-table th:nth-child(5) {
   width: 20%;
 }
 
-.hr-app .employee-management-table th:nth-child(7) {
-  width: 23%;
+.hr-app .employee-management-table th:nth-child(6) {
+  width: 24%;
   text-align: center;
 }
 
@@ -2612,14 +2742,6 @@
 
 .hr-app .employee-management-table tbody tr:hover {
   background: var(--primary-50);
-}
-
-.hr-app .employee-management-id {
-  font-variant-numeric: tabular-nums;
-}
-
-.hr-app .employee-management-name {
-  font-weight: 600;
 }
 
 .hr-app .employee-management-actions {
@@ -2657,14 +2779,31 @@
   stroke-linejoin: round;
 }
 
-.hr-app .employee-delete-button {
-  border-color: #fecaca;
-  color: #b91c1c;
+.hr-app .employee-status-button {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #166534;
 }
 
-.hr-app .employee-delete-button:hover {
-  border-color: #f87171;
-  background: #fef2f2;
+.hr-app .employee-status-button.active:hover {
+  border-color: #16a34a;
+  background: #bbf7d0;
+}
+
+.hr-app .employee-status-button.resigned {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.hr-app .employee-status-button.deceased {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.hr-app .employee-status-button:disabled {
+  cursor: default;
 }
 
 .hr-app .employee-history-empty {
@@ -2707,18 +2846,43 @@
   font-size: 12px;
 }
 
-.hr-app .employee-confirm-delete {
+.hr-app .employee-confirm-resignation {
   border: 1px solid #dc2626;
   background: #dc2626;
   color: white;
 }
 
-.hr-app .employee-confirm-delete:hover {
+.hr-app .employee-confirm-resignation:hover {
   border-color: #b91c1c;
   background: #b91c1c;
 }
 
-.hr-app .employee-delete-dialog .decision-icon svg {
+.hr-app .employee-confirm-deceased {
+  border: 1px solid #b45309;
+  background: #b45309;
+  color: white;
+}
+
+.hr-app .employee-confirm-deceased:hover {
+  border-color: #92400e;
+  background: #92400e;
+}
+
+.hr-app .employee-status-current,
+.hr-app .employee-status-current:disabled {
+  border: 1px solid #86efac;
+  background: #dcfce7;
+  color: #166534;
+  cursor: default;
+  opacity: 1;
+}
+
+.hr-app .employee-status-dialog .decision-icon {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.hr-app .employee-status-dialog .decision-icon svg {
   width: 20px;
   height: 20px;
   fill: none;
@@ -2728,8 +2892,18 @@
   stroke-linejoin: round;
 }
 
-.hr-app .employee-delete-dialog .decision-description strong {
+.hr-app .employee-status-dialog .decision-description strong {
   color: #33415c;
+}
+
+.hr-app .employee-status-warning {
+  margin: 0;
+  color: #9a3412;
+  font-size: 13px;
+}
+
+.hr-app .employee-status-dialog .decision-actions {
+  flex-wrap: wrap;
 }
 
 .hr-app .tier-badge {
@@ -3321,6 +3495,12 @@
     margin-bottom: 18px;
   }
 
+  .hr-app .employee-management-heading-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .hr-app .employee-management-heading h1 {
     font-size: 21px;
   }
@@ -3343,36 +3523,35 @@
     width: 100%;
   }
 
+  .hr-app .employee-approve-requests-button {
+    width: 100%;
+  }
+
+  .hr-app .employee-management-table th:nth-child(2),
+  .hr-app .employee-management-table td:nth-child(2),
   .hr-app .employee-management-table th:nth-child(3),
-  .hr-app .employee-management-table td:nth-child(3),
-  .hr-app .employee-management-table th:nth-child(4),
-  .hr-app .employee-management-table td:nth-child(4) {
+  .hr-app .employee-management-table td:nth-child(3) {
     display: none;
   }
 
   .hr-app .employee-management-table th:nth-child(1),
   .hr-app .employee-management-table td:nth-child(1) {
-    width: 14%;
+    width: 34%;
   }
 
-  .hr-app .employee-management-table th:nth-child(2),
-  .hr-app .employee-management-table td:nth-child(2) {
-    width: 24%;
+  .hr-app .employee-management-table th:nth-child(4),
+  .hr-app .employee-management-table td:nth-child(4) {
+    width: 12%;
   }
 
   .hr-app .employee-management-table th:nth-child(5),
   .hr-app .employee-management-table td:nth-child(5) {
-    width: 12%;
+    width: 24%;
   }
 
   .hr-app .employee-management-table th:nth-child(6),
   .hr-app .employee-management-table td:nth-child(6) {
-    width: 22%;
-  }
-
-  .hr-app .employee-management-table th:nth-child(7),
-  .hr-app .employee-management-table td:nth-child(7) {
-    width: 28%;
+    width: 30%;
   }
 
   .hr-app .employee-management-table th,
@@ -3407,6 +3586,10 @@
 
   .hr-app .employee-action-button span {
     display: none;
+  }
+
+  .hr-app .employee-status-button span {
+    display: inline;
   }
 
   .hr-app .employee-management-footer {
@@ -3532,6 +3715,10 @@
     width: 100%;
   }
 
+  .hr-app .benefit-approval-action {
+    justify-self: start;
+  }
+
   .hr-app .benefit-request-filters {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
@@ -3588,31 +3775,25 @@
 }
 
 @media (max-width: 420px) {
-  .hr-app .employee-management-table th:nth-child(5),
-  .hr-app .employee-management-table td:nth-child(5) {
+  .hr-app .employee-management-table th:nth-child(4),
+  .hr-app .employee-management-table td:nth-child(4) {
     display: none;
   }
 
   .hr-app .employee-management-table th:nth-child(1),
   .hr-app .employee-management-table td:nth-child(1) {
-    width: 16%;
+    width: 40%;
   }
 
-  .hr-app .employee-management-table th:nth-child(2),
-  .hr-app .employee-management-table td:nth-child(2) {
-    width: 29%;
+  .hr-app .employee-management-table th:nth-child(5),
+  .hr-app .employee-management-table td:nth-child(5) {
+    width: 27%;
   }
 
   .hr-app .employee-management-table th:nth-child(6),
   .hr-app .employee-management-table td:nth-child(6) {
-    width: 25%;
+    width: 33%;
   }
-
-  .hr-app .employee-management-table th:nth-child(7),
-  .hr-app .employee-management-table td:nth-child(7) {
-    width: 30%;
-  }
-
 }
 
 .hr-app .employee-history-content {
@@ -6597,4 +6778,26 @@
     bottom: 0;
     box-shadow: 0 -6px 16px rgb(15 23 42 / 8%);
   }
+}
+
+/* ปุ่ม อนุมัติ / ปฏิเสธ / ส่งกลับ ในหน้าอนุมัติคำขอ */
+.hr-app .approval-request-actions {
+  flex-wrap: nowrap;
+}
+
+.hr-app .approval-request-actions .request-action {
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(4) { width: 20%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(7) { width: 14%; }
+
+.hr-app .person-requests-table.employee-approval-table th:nth-child(2) { width: 20%; }
+.hr-app .person-requests-table.employee-approval-table th:nth-child(6) { width: 22%; }
+
+.hr-app .person-approval-dialog form,
+.hr-app .benefit-approval-dialog form {
+  margin-top: 16px;
 }

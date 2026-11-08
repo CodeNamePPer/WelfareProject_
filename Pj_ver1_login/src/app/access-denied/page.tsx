@@ -1,4 +1,7 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "ไม่มีสิทธิ์เข้าถึง" };
 
 const MESSAGES: Record<string, { title: string; body: string }> = {
   network: {

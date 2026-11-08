@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { WelfarePage, type TabId } from "@/features/welfare/WelfarePage";
 import { claims, employees, importPreview, welfareItems } from "@/data/mock";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "จัดการสวัสดิการ" };
 
 const TABS: TabId[] = ["catalog", "claims", "import"];
 

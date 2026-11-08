@@ -131,7 +131,8 @@ export function EmployeesClient({ employees, initialQuery = "" }: { employees: H
           </ul>
         </div>
         <div className="queue-heading-buttons">
-          <Link href="/hr/employees/requests" className="queue-secondary-link">ติดตามคำขอเพิ่มบุคคล</Link>
+          <Link href="/hr/employees/approvals" className="queue-secondary-link">อนุมัติคำขอเพิ่มพนักงาน</Link>
+          <Link href="/hr/employees/requests" className="queue-secondary-link">ติดตามคำขอเพิ่มพนักงาน</Link>
           <Link href="/hr/employees/add" className="queue-primary queue-primary-link">เพิ่มพนักงาน</Link>
         </div>
       </header>

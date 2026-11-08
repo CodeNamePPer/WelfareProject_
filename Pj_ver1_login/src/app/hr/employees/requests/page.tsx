@@ -1,112 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  applyEmployeeRequestStatuses,
+  initialEmployeeRequests,
+  readEmployeeRequestStatuses,
+  type EmployeeRequest,
+  type RequestStatus,
+} from "./data";
 
-type RequestStatus = "รอตรวจสอบ" | "รอแก้ไข" | "อนุมัติแล้ว" | "ปฏิเสธแล้ว";
-
-type PersonRequest = {
-  requestNumber: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  position: string;
-  personName: string;
-  relationship: string;
-  dateOfBirth: string;
-  phone: string;
-  submittedAt: string;
-  status: RequestStatus;
-  statusNote: string;
-  updatedAt: string;
-  documents: string[];
-};
-
-const requests: PersonRequest[] = [
-  {
-    requestNumber: "PER-2026-00128",
-    employeeId: "0124",
-    employeeName: "นายสมชาย ใจดี",
-    department: "IT",
-    position: "Developer",
-    personName: "นางสาวกมลวรรณ ใจดี",
-    relationship: "คู่สมรส",
-    dateOfBirth: "15 มี.ค. 2535",
-    phone: "08X-XXX-2145",
-    submittedAt: "04 พ.ย. 2569 09:14",
-    status: "รอแก้ไข",
-    statusNote: "กรุณาแนบสำเนาทะเบียนสมรสที่เห็นข้อมูลครบถ้วน",
-    updatedAt: "04 พ.ย. 2569 13:20",
-    documents: ["สำเนาบัตรประชาชน", "สำเนาทะเบียนสมรส (รอแก้ไข)"],
-  },
-  {
-    requestNumber: "PER-2026-00127",
-    employeeId: "0352",
-    employeeName: "น.ส.สมหญิง รักดี",
-    department: "Marketing",
-    position: "Marketing Officer",
-    personName: "เด็กชายณัฐวุฒิ รักดี",
-    relationship: "บุตร",
-    dateOfBirth: "22 ก.ค. 2562",
-    phone: "09X-XXX-8831",
-    submittedAt: "03 พ.ย. 2569 16:42",
-    status: "รอตรวจสอบ",
-    statusNote: "เอกสารครบถ้วน อยู่ระหว่างตรวจสอบข้อมูล",
-    updatedAt: "03 พ.ย. 2569 16:42",
-    documents: ["สูติบัตร", "สำเนาทะเบียนบ้าน"],
-  },
-  {
-    requestNumber: "PER-2026-00126",
-    employeeId: "0411",
-    employeeName: "นายมานะ มุ่งมั่น",
-    department: "Sales",
-    position: "Sales Executive",
-    personName: "นางอรทัย มุ่งมั่น",
-    relationship: "บิดา/มารดา",
-    dateOfBirth: "08 ธ.ค. 2503",
-    phone: "08X-XXX-6402",
-    submittedAt: "02 พ.ย. 2569 11:08",
-    status: "อนุมัติแล้ว",
-    statusNote: "ตรวจสอบเอกสารและอนุมัติเรียบร้อย",
-    updatedAt: "03 พ.ย. 2569 10:16",
-    documents: ["สำเนาบัตรประชาชน", "สำเนาทะเบียนบ้าน"],
-  },
-  {
-    requestNumber: "PER-2026-00125",
-    employeeId: "0278",
-    employeeName: "น.ส.ปวีณา ตั้งใจ",
-    department: "HR",
-    position: "HR Officer",
-    personName: "เด็กหญิงพิมพ์ชนก ตั้งใจ",
-    relationship: "บุตร",
-    dateOfBirth: "10 ม.ค. 2564",
-    phone: "09X-XXX-5107",
-    submittedAt: "01 พ.ย. 2569 14:36",
-    status: "ปฏิเสธแล้ว",
-    statusNote: "ข้อมูลชื่อในแบบคำขอไม่ตรงกับเอกสารสูติบัตร",
-    updatedAt: "02 พ.ย. 2569 09:25",
-    documents: ["สูติบัตร", "สำเนาทะเบียนบ้าน"],
-  },
-  {
-    requestNumber: "PER-2026-00124",
-    employeeId: "0506",
-    employeeName: "นายธนกร ก้าวหน้า",
-    department: "Finance",
-    position: "Accountant",
-    personName: "นางสาวธัญญารัตน์ ก้าวหน้า",
-    relationship: "คู่สมรส",
-    dateOfBirth: "19 ก.ย. 2534",
-    phone: "06X-XXX-7724",
-    submittedAt: "31 ต.ค. 2569 10:02",
-    status: "รอแก้ไข",
-    statusNote: "กรุณาแนบสำเนาบัตรประชาชนด้านหลังเพิ่มเติม",
-    updatedAt: "01 พ.ย. 2569 15:10",
-    documents: ["สำเนาบัตรประชาชน (ไม่ครบถ้วน)", "สำเนาทะเบียนสมรส"],
-  },
-];
-
-const departments = [...new Set(requests.map((request) => request.department))];
-const positions = [...new Set(requests.map((request) => request.position))];
+const departments = [...new Set(initialEmployeeRequests.map((request) => request.department))];
+const positions = [...new Set(initialEmployeeRequests.map((request) => request.position))];
 const statuses: RequestStatus[] = ["รอตรวจสอบ", "รอแก้ไข", "อนุมัติแล้ว", "ปฏิเสธแล้ว"];
 const pageSize = 5;
 
@@ -119,28 +24,37 @@ function DocumentIcon() {
 }
 
 export default function EmployeeRequestsPage() {
+  const [requests, setRequests] = useState(initialEmployeeRequests);
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("ทั้งหมด");
   const [position, setPosition] = useState("ทั้งหมด");
   const [status, setStatus] = useState("ทั้งหมด");
   const [page, setPage] = useState(1);
-  const [selectedRequest, setSelectedRequest] = useState<PersonRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
+  const [notice, setNotice] = useState("");
+  const [noticeIsError, setNoticeIsError] = useState(false);
+
+  useEffect(() => {
+    try {
+      setRequests(applyEmployeeRequestStatuses(readEmployeeRequestStatuses()));
+    } catch {
+      setNoticeIsError(true);
+      setNotice("ไม่สามารถโหลดสถานะคำขอเพิ่มพนักงานที่บันทึกไว้ได้");
+    }
+  }, []);
 
   const filteredRequests = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return requests.filter((request) =>
       (!normalizedQuery || [
         request.requestNumber,
-        request.employeeId,
         request.employeeName,
-        request.personName,
-        request.relationship,
       ].some((value) => value.toLocaleLowerCase().includes(normalizedQuery))) &&
       (department === "ทั้งหมด" || request.department === department) &&
       (position === "ทั้งหมด" || request.position === position) &&
       (status === "ทั้งหมด" || request.status === status),
     );
-  }, [department, position, query, status]);
+  }, [department, position, query, requests, status]);
 
   const pageCount = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -161,17 +75,17 @@ export default function EmployeeRequestsPage() {
           <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
             <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
             <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">ติดตามคำขอเพิ่มบุคคล</span>
+            <span aria-current="page">ติดตามคำขอเพิ่มพนักงาน</span>
           </nav>
           <div className="person-requests-heading">
-            <h1>ติดตามคำขอเพิ่มบุคคล</h1>
+            <h1>ติดตามคำขอเพิ่มพนักงาน</h1>
             <span className="result-count">{filteredRequests.length} รายการ</span>
             <Link href="/hr/employees" className="person-requests-back-button">
               <span aria-hidden="true">←</span> ย้อนกลับ
             </Link>
           </div>
 
-          <section className="person-requests-panel" aria-label="รายการคำขอเพิ่มบุคคล">
+          <section className="person-requests-panel" aria-label="รายการคำขอเพิ่มพนักงาน">
             <div className="person-request-filters">
               <label className="person-request-search">
                 <span>ค้นหา</span>
@@ -180,8 +94,8 @@ export default function EmployeeRequestsPage() {
                   <input
                     value={query}
                     onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-                    placeholder="เลขที่คำขอ / ชื่อพนักงาน / ชื่อบุคคล..."
-                    aria-label="ค้นหาคำขอเพิ่มบุคคล"
+                    placeholder="เลขที่คำขอ / ชื่อพนักงาน..."
+                    aria-label="ค้นหาคำขอเพิ่มพนักงาน"
                   />
                 </div>
               </label>
@@ -210,14 +124,13 @@ export default function EmployeeRequestsPage() {
             </div>
 
             <div className="person-requests-table-wrap">
-              <table className="person-requests-table">
+              <table className="person-requests-table employee-requests-table">
                 <thead>
                   <tr>
                     <th scope="col">เลขที่คำขอ</th>
-                    <th scope="col">รหัส / ชื่อพนักงาน</th>
-                    <th scope="col">แผนก / ตำแหน่ง</th>
-                    <th scope="col">บุคคลที่ขอเพิ่ม</th>
-                    <th scope="col">ความสัมพันธ์</th>
+                    <th scope="col">ชื่อพนักงานใหม่</th>
+                    <th scope="col">แผนก</th>
+                    <th scope="col">ตำแหน่ง</th>
                     <th scope="col">วันที่ยื่นคำขอ</th>
                     <th scope="col">เอกสาร</th>
                     <th scope="col">สถานะ</th>
@@ -228,20 +141,9 @@ export default function EmployeeRequestsPage() {
                   {pageRequests.map((request) => (
                     <tr key={request.requestNumber}>
                       <td data-label="เลขที่คำขอ" className="person-request-number">{request.requestNumber}</td>
-                      <td data-label="รหัส / ชื่อพนักงาน">
-                        <div className="person-request-cell-value">
-                          <strong>{request.employeeId}</strong>
-                          <span className="person-request-secondary">{request.employeeName}</span>
-                        </div>
-                      </td>
-                      <td data-label="แผนก / ตำแหน่ง">
-                        <div className="person-request-cell-value">
-                          <strong>{request.department}</strong>
-                          <span className="person-request-secondary">{request.position}</span>
-                        </div>
-                      </td>
-                      <td data-label="บุคคลที่ขอเพิ่ม">{request.personName}</td>
-                      <td data-label="ความสัมพันธ์">{request.relationship}</td>
+                      <td data-label="ชื่อพนักงานใหม่">{request.employeeName}</td>
+                      <td data-label="แผนก">{request.department}</td>
+                      <td data-label="ตำแหน่ง">{request.position}</td>
                       <td data-label="วันที่ยื่นคำขอ"><time>{request.submittedAt}</time></td>
                       <td data-label="เอกสาร">
                         <button type="button" className="person-request-documents" onClick={() => setSelectedRequest(request)} aria-label={`ดูเอกสาร ${request.requestNumber}`}>
@@ -254,7 +156,7 @@ export default function EmployeeRequestsPage() {
                       </td>
                     </tr>
                   ))}
-                  {!pageRequests.length ? <tr><td className="person-request-empty" colSpan={9}>ไม่พบคำขอที่ตรงกับตัวกรอง</td></tr> : null}
+                  {!pageRequests.length ? <tr><td className="person-request-empty" colSpan={8}>ไม่พบคำขอที่ตรงกับตัวกรอง</td></tr> : null}
                 </tbody>
               </table>
             </div>
@@ -288,14 +190,11 @@ export default function EmployeeRequestsPage() {
           <section className="person-request-dialog" role="dialog" aria-modal="true" aria-labelledby="person-request-dialog-title">
             <button type="button" className="decision-close" onClick={() => setSelectedRequest(null)} aria-label="ปิดหน้าต่าง">×</button>
             <span className={`person-request-status ${selectedRequest.status === "รอแก้ไข" ? "revision" : selectedRequest.status === "อนุมัติแล้ว" ? "approved" : selectedRequest.status === "ปฏิเสธแล้ว" ? "rejected" : "pending"}`}>{selectedRequest.status}</span>
-            <h2 id="person-request-dialog-title">รายละเอียดคำขอ {selectedRequest.requestNumber}</h2>
+            <h2 id="person-request-dialog-title">รายละเอียดคำขอเพิ่มพนักงาน {selectedRequest.requestNumber}</h2>
             <dl className="person-request-detail-grid">
-              <div><dt>พนักงาน</dt><dd>{selectedRequest.employeeName} ({selectedRequest.employeeId})</dd></div>
-              <div><dt>แผนก / ตำแหน่ง</dt><dd>{selectedRequest.department} / {selectedRequest.position}</dd></div>
-              <div><dt>บุคคลที่ขอเพิ่ม</dt><dd>{selectedRequest.personName}</dd></div>
-              <div><dt>ความสัมพันธ์</dt><dd>{selectedRequest.relationship}</dd></div>
-              <div><dt>วันเกิด</dt><dd>{selectedRequest.dateOfBirth}</dd></div>
-              <div><dt>เบอร์ติดต่อ</dt><dd>{selectedRequest.phone}</dd></div>
+              <div><dt>ชื่อพนักงานใหม่</dt><dd>{selectedRequest.employeeName}</dd></div>
+              <div><dt>แผนก</dt><dd>{selectedRequest.department}</dd></div>
+              <div><dt>ตำแหน่ง</dt><dd>{selectedRequest.position}</dd></div>
               <div><dt>วันที่ยื่นคำขอ</dt><dd>{selectedRequest.submittedAt}</dd></div>
               <div><dt>อัปเดตล่าสุด</dt><dd>{selectedRequest.updatedAt}</dd></div>
               <div className="person-request-detail-wide"><dt>เอกสารแนบ</dt><dd>{selectedRequest.documents.join(" · ")}</dd></div>
