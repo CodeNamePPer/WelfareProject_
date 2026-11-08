@@ -7,6 +7,7 @@ import type { HrEmployee } from "@/lib/hr/employees";
 import { StatusTabs } from "../StatusTabs";
 import { requestHref } from "./queueRules";
 import { ALL, filtersToQuery, replaceUrlQuery, type RequestFilters } from "../urlFilters";
+import { DepartmentOptions, departmentTree, matchesDepartment } from "../departmentTree";
 
 /** แถวคำขอที่ดำเนินการแล้ว (อนุมัติ / ปฏิเสธ / ส่งกลับ) ในรูปแบบเดียวกันทั้ง 3 หน้า */
 export type StatusRow = {
@@ -74,10 +75,7 @@ export function StatusList({
     });
   }, [employees, rows]);
 
-  const departments = useMemo(
-    () => Array.from(new Set(joined.map((row) => row.employee?.department).filter((name): name is string => Boolean(name)))).sort((a, b) => a.localeCompare(b, "th")),
-    [joined],
-  );
+  const tree = useMemo(() => departmentTree(joined.map((row) => row.employee)), [joined]);
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -88,7 +86,7 @@ export function StatusList({
         `${row.requestId} ${row.employeeCode} ${row.name} ${row.benefit} ${row.note ?? ""}`.toLocaleLowerCase().includes(normalizedQuery);
       return (
         matchesQuery &&
-        (department === ALL || row.employee?.department === department || row.employee?.parentDepartment === department) &&
+        matchesDepartment(row.employee, department, ALL) &&
         (itemType === ALL || row.itemType === itemType)
       );
     });
@@ -134,7 +132,7 @@ export function StatusList({
             <span>แผนก</span>
             <select value={department} onChange={(event) => { setDepartment(event.target.value); setPage(1); }}>
               <option>{ALL}</option>
-              {departments.map((name) => <option key={name}>{name}</option>)}
+              <DepartmentOptions tree={tree} />
             </select>
           </label>
           <label className="queue-select">
@@ -188,7 +186,7 @@ export function StatusList({
                     <span className="queue-item">{row.benefit}</span>
                     <span className="queue-meta">{row.itemType === "edit" ? "แก้ไขข้อมูล" : "เบิกสวัสดิการ"}</span>
                   </td>
-                  <td data-label="ยอดเบิก" className="queue-num">
+                  <td data-label="ยอดเบิก" className={`queue-num${row.itemType === "benefit" ? "" : " queue-cell-empty"}`}>
                     {row.itemType === "benefit" ? <span className="queue-amount">{baht.format(row.amount)} บาท</span> : <span className="queue-meta" aria-label="ไม่มียอดเงิน">—</span>}
                   </td>
                   {copy.noteLabel ? <td data-label={copy.noteLabel} className="queue-note">{row.note}</td> : null}

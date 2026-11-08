@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getHrEmployees, type HrEmployee } from "@/lib/hr/employees";
+import { getEntitlements } from "@/lib/hr/entitlements";
 import { formatThaiDate } from "@/lib/format";
 import { pendingRequests } from "../../sample/queue";
 import { approvedRequests } from "../../sample/approved";
@@ -75,6 +76,9 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
   if (!employee) notFound();
 
   const directReports: HrEmployee[] = employees.filter((item) => item.manager?.code === code);
+  const entitlementResult = await getEntitlements(employee);
+  const entitlements = entitlementResult?.items ?? null;
+  const eligibleCount = entitlements?.filter((item) => item.eligible).length ?? 0;
   const history = requestHistory(code);
   const approvedTotal = history.filter((item) => item.tone === "approved").reduce((sum, item) => sum + item.amount, 0);
   const endDate = employee.status === "ACTIVE" ? null : employee.statusDate;
@@ -135,6 +139,57 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
             {employee.email.endsWith(".invalid") ? <span className="queue-meta-danger">ไม่มีอีเมลจริง</span> : employee.email}
           </Fact>
         </dl>
+      </section>
+
+      <section className="queue-sheet" aria-labelledby="profile-entitlements">
+        <div className="profile-sheet-head">
+          <h2 id="profile-entitlements">สิทธิสวัสดิการ</h2>
+          <p className="queue-meta">
+            {entitlements === null
+              ? "โหลดข้อมูลสวัสดิการไม่สำเร็จ"
+              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · ${
+                  entitlementResult?.source === "sample" ? "ข้อมูลตัวอย่าง (ฐานข้อมูลยังไม่มีตารางสวัสดิการ)" : "จากตารางสวัสดิการ"
+                } · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
+          </p>
+        </div>
+        {entitlements && entitlements.length > 0 ? (
+          <div className="queue-table-scroll">
+            <table className="queue-table">
+              <thead>
+                <tr>
+                  <th scope="col">สวัสดิการ</th>
+                  <th scope="col" className="queue-num">วงเงิน</th>
+                  <th scope="col">จำนวนครั้ง</th>
+                  <th scope="col" className="queue-num">ใช้ไปแล้ว</th>
+                  <th scope="col">สิทธิ์</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entitlements.map((item) => (
+                  <tr key={item.code} className={item.eligible ? undefined : "profile-row-muted"}>
+                    <td data-label="สวัสดิการ">
+                      <span className="queue-item">{item.name}</span>
+                      <span className="queue-meta">{item.code}</span>
+                    </td>
+                    <td data-label="วงเงิน" className="queue-num">
+                      {item.limit !== null ? <span className="queue-amount">{baht.format(item.limit)} บาท</span> : <span className="queue-meta">ยังไม่กำหนด</span>}
+                      <span className="queue-meta">{item.budget}</span>
+                      {item.nextLimit ? <span className="queue-meta">{baht.format(item.nextLimit.amount)} บาท ตั้งแต่ {formatThaiDate(item.nextLimit.from)}</span> : null}
+                    </td>
+                    <td data-label="จำนวนครั้ง">
+                      {item.claims}
+                    </td>
+                    <td data-label="ใช้ไปแล้ว" className="queue-num"><span className="queue-meta">ยังไม่มีข้อมูล</span></td>
+                    <td data-label="สิทธิ์">
+                      <span className={`request-status request-status-${item.eligible ? "approved" : "rejected"}`}>{item.eligible ? "มีสิทธิ์" : "ไม่มีสิทธิ์"}</span>
+                      {item.note ? <span className="queue-meta">{item.note}</span> : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
       </section>
 
       <section className="queue-sheet" aria-labelledby="profile-requests">

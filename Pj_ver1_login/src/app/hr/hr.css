@@ -6523,3 +6523,78 @@
     display: none;
   }
 }
+
+/* -----------------------------------------------------------------------------
+ * รอบ 5: ตัวกรองจากตัวเลขสรุป, สิทธิสวัสดิการ, เก็บงานบนจอแคบ
+ * -------------------------------------------------------------------------- */
+.hr-app .queue-summary .queue-inline-link {
+  text-decoration: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.hr-app .queue-summary .queue-inline-link[aria-pressed="true"] {
+  border-radius: 4px;
+  background: var(--primary-50);
+  padding: 0 6px;
+  text-decoration: none;
+}
+
+.hr-app .queue-view-note {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.hr-app .profile-row-muted td {
+  color: var(--muted);
+}
+
+.hr-app .profile-row-muted .queue-amount {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* จอแคบ: บรรทัดสรุปเรียงลงมา ไม่มีจุดค้างต้นบรรทัด */
+@media (max-width: 640px) {
+  .hr-app .queue-summary {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .hr-app .queue-summary li + li::before {
+    content: none;
+  }
+}
+
+@container queue (max-width: 719px) {
+  /* พื้นเหลืองเต็มแถวของคำขอที่ต้องตรวจสอบ */
+  .hr-app .queue-table tbody tr.queue-row-blocked {
+    background: #fffbeb;
+  }
+
+  /* คำขอแก้ไขข้อมูลไม่มียอดเงิน ไม่ต้องแสดงบรรทัด "ยอดเบิก —" */
+  .hr-app .queue-table td.queue-cell-empty {
+    display: none;
+  }
+}
+
+/*
+ * หน้ารายละเอียดคำขอบนจอแคบ: ช่องการพิจารณาติดขอบล่างของจอ กดได้โดยไม่ต้องเลื่อนหา
+ * display: contents ทำให้ทุกส่วนเป็นลูกของ .request-layout โดยตรง sticky จึงติดได้ตลอดความยาวหน้า
+ */
+@container request-page (max-width: 900px) {
+  .hr-app .request-main,
+  .hr-app .request-aside {
+    display: contents;
+  }
+
+  .hr-app .request-decision {
+    order: 10;
+    position: sticky;
+    z-index: 5;
+    bottom: 0;
+    box-shadow: 0 -6px 16px rgb(15 23 42 / 8%);
+  }
+}
