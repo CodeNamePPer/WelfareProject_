@@ -1,105 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  applyBenefitRequestStatuses,
+  initialBenefitRequests,
+  readBenefitRequestStatuses,
+  type BenefitRequest,
+  type RequestStatus,
+} from "./data";
 
-type RequestStatus = "รออนุมัติ" | "อนุมัติแล้ว" | "ปฏิเสธแล้ว" | "รอแก้ไข";
-
-type BenefitRequest = {
-  requestNumber: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  position: string;
-  benefitType: string;
-  amount: number;
-  details: string;
-  submittedAt: string;
-  updatedAt: string;
-  status: RequestStatus;
-  statusNote: string;
-  documents: string[];
-};
-
-const requests: BenefitRequest[] = [
-  {
-    requestNumber: "WF-2569-014",
-    employeeId: "0124",
-    employeeName: "นายสมชาย ใจดี",
-    department: "IT",
-    position: "Developer",
-    benefitType: "ค่ารักษาพยาบาล",
-    amount: 10000,
-    details: "ขอเพิ่มสิทธิ์ค่ารักษาพยาบาลสำหรับปี 2569 พร้อมปรับวงเงินตามระดับตำแหน่ง",
-    submittedAt: "04 พ.ย. 2569 09:14",
-    updatedAt: "04 พ.ย. 2569 09:14",
-    status: "รออนุมัติ",
-    statusNote: "คำขอใหม่ รอผู้ดูแลตรวจสอบ",
-    documents: ["ใบเสนอแผนประกันกลุ่ม", "ตารางวงเงินค่ารักษาพยาบาล"],
-  },
-  {
-    requestNumber: "WF-2569-011",
-    employeeId: "0352",
-    employeeName: "น.ส.สมหญิง รักดี",
-    department: "Marketing",
-    position: "Marketing Officer",
-    benefitType: "ค่าทันตกรรม",
-    amount: 12000,
-    details: "ขอปรับวงเงินทันตกรรมประจำปีจาก 3,000 บาท เป็น 12,000 บาทต่อคน",
-    submittedAt: "03 พ.ย. 2569 16:42",
-    updatedAt: "04 พ.ย. 2569 10:30",
-    status: "รออนุมัติ",
-    statusNote: "อยู่ระหว่างตรวจสอบงบประมาณประจำปี",
-    documents: ["ใบเสนอราคาคลินิกคู่สัญญา", "ประมาณการผู้ใช้สิทธิ์"],
-  },
-  {
-    requestNumber: "WF-2569-006",
-    employeeId: "0411",
-    employeeName: "นายมานะ มุ่งมั่น",
-    department: "Sales",
-    position: "Sales Executive",
-    benefitType: "ค่ารักษาพยาบาล",
-    amount: 15000,
-    details: "ขอเพิ่มวงเงินผู้ป่วยนอกและขยายรายชื่อโรงพยาบาลคู่สัญญาในภาคตะวันออก",
-    submittedAt: "02 พ.ย. 2569 11:08",
-    updatedAt: "03 พ.ย. 2569 10:16",
-    status: "อนุมัติแล้ว",
-    statusNote: "อนุมัติวงเงินและรายชื่อโรงพยาบาลตามเอกสารแนบ",
-    documents: ["รายละเอียดแผนความคุ้มครอง", "รายชื่อโรงพยาบาลคู่สัญญา"],
-  },
-  {
-    requestNumber: "WF-2569-004",
-    employeeId: "0278",
-    employeeName: "น.ส.ปวีณา ตั้งใจ",
-    department: "HR",
-    position: "HR Officer",
-    benefitType: "พัฒนาตัวเอง/เรียน",
-    amount: 8000,
-    details: "เสนอเพิ่มงบสนับสนุนหลักสูตรอบรมวิชาชีพที่เกี่ยวข้องกับตำแหน่งงาน",
-    submittedAt: "01 พ.ย. 2569 14:36",
-    updatedAt: "02 พ.ย. 2569 09:25",
-    status: "รอแก้ไข",
-    statusNote: "กรุณาแนบรายละเอียดหลักสูตรและเงื่อนไขการเบิกให้ครบถ้วน",
-    documents: ["แบบเสนอปรับปรุงสวัสดิการ"],
-  },
-  {
-    requestNumber: "WF-2569-002",
-    employeeId: "0506",
-    employeeName: "นายธนกร ก้าวหน้า",
-    department: "Finance",
-    position: "Accountant",
-    benefitType: "ค่าอุปกรณ์ทำงาน",
-    amount: 6000,
-    details: "ขอเพิ่มสิทธิ์เบิกอุปกรณ์ทำงานสำหรับพนักงานที่ทำงานแบบ Hybrid",
-    submittedAt: "31 ต.ค. 2569 10:02",
-    updatedAt: "01 พ.ย. 2569 15:10",
-    status: "ปฏิเสธแล้ว",
-    statusNote: "งบประมาณปีปัจจุบันได้รับการจัดสรรเต็มจำนวนแล้ว",
-    documents: ["รายการอุปกรณ์และราคา", "เหตุผลประกอบคำขอ"],
-  },
-];
-
-const benefitTypes = [...new Set(requests.map((request) => request.benefitType))];
+const benefitTypes = [...new Set(initialBenefitRequests.map((request) => request.benefitType))];
 const statuses: RequestStatus[] = ["รออนุมัติ", "รอแก้ไข", "อนุมัติแล้ว", "ปฏิเสธแล้ว"];
 const pageSize = 5;
 
@@ -123,11 +34,23 @@ function statusClass(status: RequestStatus) {
 }
 
 export default function BenefitRequestsPage() {
+  const [requests, setRequests] = useState(initialBenefitRequests);
   const [query, setQuery] = useState("");
   const [benefitType, setBenefitType] = useState("ทั้งหมด");
   const [status, setStatus] = useState<RequestStatus | "ทั้งหมด">("รออนุมัติ");
   const [page, setPage] = useState(1);
   const [selectedRequest, setSelectedRequest] = useState<BenefitRequest | null>(null);
+  const [notice, setNotice] = useState("");
+  const [noticeIsError, setNoticeIsError] = useState(false);
+
+  useEffect(() => {
+    try {
+      setRequests(applyBenefitRequestStatuses(readBenefitRequestStatuses()));
+    } catch {
+      setNoticeIsError(true);
+      setNotice("ไม่สามารถโหลดสถานะคำขอสวัสดิการที่บันทึกไว้ได้");
+    }
+  }, []);
 
   const filteredRequests = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -142,7 +65,7 @@ export default function BenefitRequestsPage() {
       (benefitType === "ทั้งหมด" || request.benefitType === benefitType) &&
       (status === "ทั้งหมด" || request.status === status),
     );
-  }, [benefitType, query, status]);
+  }, [benefitType, query, requests, status]);
 
   const pageCount = Math.max(1, Math.ceil(filteredRequests.length / pageSize));
   const currentPage = Math.min(page, pageCount);
@@ -293,6 +216,13 @@ export default function BenefitRequestsPage() {
               <button type="button" className="button button-secondary" onClick={() => setSelectedRequest(null)}>ปิด</button>
             </div>
           </section>
+        </div>
+      ) : null}
+      {notice ? (
+        <div className={`toast${noticeIsError ? " toast-error" : ""}`} role={noticeIsError ? "alert" : "status"}>
+          <span className="toast-check">{noticeIsError ? "!" : "✓"}</span>
+          {notice}
+          <button type="button" onClick={() => setNotice("")} aria-label="ปิดข้อความ">×</button>
         </div>
       ) : null}
     </div>

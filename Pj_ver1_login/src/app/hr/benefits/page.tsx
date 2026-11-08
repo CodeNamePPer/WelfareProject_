@@ -109,6 +109,9 @@ export default function BenefitsPage() {
           <div className="benefits-heading">
             <h1>ตั้งค่าสวัสดิการ</h1>
             <div className="benefits-heading-actions">
+              <Link href="/hr/benefits/approvals" className="button button-primary benefits-approve-button">
+                อนุมัติคำขอเพิ่มสวัสดิการ
+              </Link>
               <Link href="/hr/benefits/requests" className="button button-secondary benefits-track-button">
                 ติดตามคำขอเพิ่มสวัสดิการ
               </Link>

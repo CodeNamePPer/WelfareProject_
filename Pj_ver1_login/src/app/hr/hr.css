@@ -959,6 +959,24 @@
   font-weight: 700;
 }
 
+.hr-app .toast.toast-error {
+  border-color: #fecaca;
+  color: #b3261e;
+}
+
+.hr-app .toast.toast-error .toast-check {
+  background: #fee2e2;
+}
+
+.hr-app .toast.toast-error {
+  border-color: #fecaca;
+  color: #b3261e;
+}
+
+.hr-app .toast.toast-error .toast-check {
+  background: #fee2e2;
+}
+
 .hr-app .toast button {
   margin-left: 6px;
   border: 0;
@@ -1305,6 +1323,39 @@
 .hr-app .benefits-track-button {
   min-height: 44px;
   text-decoration: none;
+}
+
+.hr-app .benefits-approve-button {
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(1) { width: 13%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(2) { width: 14%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(3) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(4) { width: 24%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(5) { width: 17%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(6) { width: 11%; }
+.hr-app .person-requests-table.benefit-approval-table th:nth-child(7) { width: 10%; }
+
+.hr-app .benefit-approval-action {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.hr-app .benefit-approval-dialog {
+  width: min(100%, 620px);
+}
+
+.hr-app .benefit-approval-dialog .decision-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hr-app .benefits-heading h1,
@@ -2420,6 +2471,12 @@
   margin-bottom: 24px;
 }
 
+.hr-app .employee-management-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .hr-app .employee-management-heading h1 {
   margin: 0;
   font-size: 25px;
@@ -2444,8 +2501,46 @@
   white-space: nowrap;
 }
 
+.hr-app .employee-approve-requests-button {
+  min-height: 42px;
+  padding: 0 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 .hr-app .employee-track-requests-button:hover {
   background: #f8fafc;
+}
+
+.hr-app .person-approval-table {
+  min-width: 900px;
+}
+
+.hr-app .person-requests-table.person-approval-table th:nth-child(1) { width: 17%; }
+.hr-app .person-requests-table.person-approval-table th:nth-child(2) { width: 21%; }
+.hr-app .person-requests-table.person-approval-table th:nth-child(3) { width: 22%; }
+.hr-app .person-requests-table.person-approval-table th:nth-child(4) { width: 13%; }
+.hr-app .person-requests-table.person-approval-table th:nth-child(5) { width: 15%; }
+.hr-app .person-requests-table.person-approval-table th:nth-child(6) { width: 12%; }
+
+.hr-app .person-approval-action {
+  min-height: 34px;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.hr-app .person-approval-dialog {
+  width: min(100%, 620px);
+}
+
+.hr-app .person-approval-dialog .decision-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .hr-app .employee-management-panel {
@@ -3337,6 +3432,12 @@
     margin-bottom: 18px;
   }
 
+  .hr-app .employee-management-heading-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .hr-app .employee-management-heading h1 {
     font-size: 21px;
   }
@@ -3356,6 +3457,10 @@
   }
 
   .hr-app .employee-track-requests-button {
+    width: 100%;
+  }
+
+  .hr-app .employee-approve-requests-button {
     width: 100%;
   }
 
@@ -3545,6 +3650,10 @@
 
   .hr-app .benefits-heading-actions .button {
     width: 100%;
+  }
+
+  .hr-app .benefit-approval-action {
+    justify-self: start;
   }
 
   .hr-app .benefit-request-filters {
