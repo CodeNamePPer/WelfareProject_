@@ -22,6 +22,9 @@ export const ROUTE_ROLES: { prefix: string; roles: Role[] }[] = [
   { prefix: "/hr", roles: ["HR", "SUPER_ADMIN"] },
   { prefix: "/finance", roles: ["FINANCE", "SUPER_ADMIN"] },
   { prefix: "/admin", roles: ["SUPER_ADMIN"] },
+  // ใช้กฎแรกที่ตรง จึงต้องวาง /payroll/history ไว้ก่อน /payroll
+  { prefix: "/payroll/history", roles: ["FINANCE", "SUPER_ADMIN"] },
+  { prefix: "/payroll", roles: ["FINANCE"] },
 ];
 
 export function canAccess(pathname: string, role: Role): boolean {

@@ -1,11 +1,18 @@
 import {
+  ArrowLeft,
   Bell,
+  CalendarDays,
   ChartColumn,
   FilePlus2,
+  FileSpreadsheet,
+  FileText,
   Gift,
   History,
   LayoutDashboard,
+  ListChecks,
+  Network,
   UserCog,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -18,7 +25,9 @@ export interface NavItem {
   href?: string;
 }
 
-export type NavSection = 'admin' | 'hr';
+export type NavSection = 'admin' | 'hr' | 'employee' | 'finance';
+
+const REQUEST_HREF = '/employee/withdraw';
 
 interface SectionConfig {
   /** Route prefix of the section. The first segment after it is the active menu id ('home' at the prefix itself). */
@@ -46,7 +55,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
       { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
       { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
-      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
+      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
     ],
   },
   // Same menu as the HR team's original sidebar (frontend-hr app/sidebar.tsx).
@@ -61,7 +70,39 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
       { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History },
-      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2 },
+      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
+    ],
+  },
+  // Same menu as the applicant team's original sidebar. Layout hides HeadEm and the back links by user.
+  employee: {
+    basePath: '/employee',
+    subtitle: 'พนักงาน',
+    sectionLabel: 'พื้นที่ของฉัน',
+    profileHref: '/employee/profile',
+    items: () => [
+      { id: 'home', label: 'ภาพรวมสวัสดิการของฉัน', icon: LayoutDashboard, href: '/employee' },
+      { id: 'welfare', label: 'สิทธิ์สวัสดิการ', icon: Gift, href: '/employee/welfare' },
+      { id: 'withdraw', label: 'ยื่นคำขอสวัสดิการ', icon: FileText, href: '/employee/withdraw' },
+      { id: 'HeadEm', label: 'ยื่นคำขอสวัสดิการแทนพนักงาน', icon: UserPlus, href: '/employee/HeadEm' },
+      { id: 'status', label: 'ติดตามสถานะ', icon: ListChecks, href: '/employee/status' },
+      { id: 'organization', label: 'โครงสร้างองค์กร', icon: Network, href: '/employee/organization' },
+      { id: 'back-hr', label: 'กลับไปหน้า HR', icon: ArrowLeft, href: '/hr' },
+      { id: 'back-finance', label: 'กลับไปหน้าการเงิน', icon: ArrowLeft, href: '/payroll' },
+      { id: 'back-admin', label: 'กลับไปหน้า Admin', icon: ArrowLeft, href: '/admin' },
+    ],
+  },
+  // Same menu as the payroll team's original sidebar.
+  finance: {
+    basePath: '/payroll',
+    subtitle: 'การเงิน',
+    sectionLabel: 'PAYROLL',
+    profileHref: '/employee/profile',
+    items: () => [
+      { id: 'rounds', label: 'ตั้งค่ารอบจ่าย / เลื่อนวันจ่าย', icon: CalendarDays, href: '/payroll/rounds' },
+      { id: 'approvals', label: 'ดูรายการอนุมัติ / รอจ่าย', icon: FileText, href: '/payroll/approvals' },
+      { id: 'export', label: 'Export รายงาน (Excel)', icon: FileSpreadsheet, href: '/payroll/export' },
+      { id: 'history', label: 'ดูข้อมูลย้อนหลัง', icon: History, href: '/payroll/history' },
+      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
     ],
   },
 };

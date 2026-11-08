@@ -1,0 +1,22 @@
+/* สไตล์เสริมของ Payroll (จาก globals.css เดิม) ครอบด้วย .payroll-app เพื่อไม่ให้กระทบส่วนอื่น */
+
+/* ตัวเลขเงิน: ความกว้างตัวเลขเท่ากันทุกตัว เรียงตรงหลักกัน */
+.payroll-app .num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* แถบ skeleton ตอนโหลด */
+@keyframes payroll-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+.payroll-app .skeleton {
+  background: linear-gradient(90deg, #eef2f7 25%, #f8fafc 50%, #eef2f7 75%);
+  background-size: 800px 100%;
+  animation: payroll-shimmer 1.2s linear infinite;
+  border-radius: 6px;
+}
