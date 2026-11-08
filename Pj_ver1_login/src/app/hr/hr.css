@@ -5396,6 +5396,7 @@
 }
 
 .hr-app .queue-sheet {
+  container: queue / inline-size;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -5490,7 +5491,7 @@
 
 .hr-app .queue-table {
   width: 100%;
-  min-width: 880px;
+  min-width: 720px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -5678,7 +5679,7 @@
   text-underline-offset: 3px;
 }
 
-@media (max-width: 960px) {
+@container queue (max-width: 719px) {
   .hr-app .queue-filters {
     padding: 12px;
   }
@@ -5737,19 +5738,63 @@
     height: 40px;
   }
 
+}
+
+@media (max-width: 640px) {
   .hr-app .queue-toast {
     right: 12px;
     left: 12px;
   }
 }
 
-/* หน้าสถานะคำขออื่น (อนุมัติ/ปฏิเสธ/รอแก้ไข) ใช้หัวเรื่องเดียวกับคิว */
-.hr-app .dashboard-content .queue-heading {
-  margin-bottom: 16px;
+/* หน้าคำขอที่ดำเนินการแล้ว (อนุมัติ/ปฏิเสธ/รอแก้ไข): StatusList */
+.hr-app .queue-note {
+  max-width: 36ch;
 }
 
-.hr-app .dashboard-content .status-tabs-wrap {
-  margin-bottom: 24px;
+.hr-app .queue-date-cell {
+  white-space: nowrap;
+}
+
+.hr-app .queue-footer-paged {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.hr-app .queue-pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.hr-app .queue-pager button {
+  height: 34px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+  padding: 0 12px;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.hr-app .queue-pager button:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.hr-app .queue-pager button:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.hr-app .queue-pager button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
 }
 
 /* รหัสพนักงานห้ามตัดบรรทัด */

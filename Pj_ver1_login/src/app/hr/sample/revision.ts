@@ -14,15 +14,15 @@ export type RevisionRequest = {
   submittedAt: string;
 };
 
-export const employees = [
-  { id: "0124", name: "นายสมชาย ใจดี", department: "IT", position: "Developer" },
-  { id: "0352", name: "น.ส.สมหญิง รักดี", department: "Marketing", position: "Marketing Officer" },
-  { id: "0411", name: "นายมานะ มุ่งมั่น", department: "Sales", position: "Sales Executive" },
-  { id: "0278", name: "น.ส.ปวีณา ตั้งใจ", department: "HR", position: "HR Officer" },
-  { id: "0506", name: "นายธนกร ก้าวหน้า", department: "Finance", position: "Accountant" },
+const employees = [
+  { id: "E00015", name: "นายสมชาย ใจดี", department: "IT", position: "Developer" },
+  { id: "E00013", name: "น.ส.สมหญิง รักดี", department: "Marketing", position: "Marketing Officer" },
+  { id: "E00016", name: "นายมานะ มุ่งมั่น", department: "Sales", position: "Sales Executive" },
+  { id: "E00011", name: "น.ส.ปวีณา ตั้งใจ", department: "HR", position: "HR Officer" },
+  { id: "E00012", name: "นายธนกร ก้าวหน้า", department: "Finance", position: "Accountant" },
 ];
 
-export const benefits = ["ทันตกรรม", "ค่ารักษาพยาบาล", "ฟิตเนสรายปี", "ตรวจสุขภาพประจำปี", "ค่าอุปกรณ์ทำงาน"];
+const benefits = ["ทันตกรรม", "ค่ารักษาพยาบาล", "ฟิตเนสรายปี", "ตรวจสุขภาพประจำปี", "ค่าอุปกรณ์ทำงาน"];
 const correctionNotes = [
   "กรุณาแนบใบเสร็จฉบับเต็ม",
   "กรุณาแก้ไขวันที่ในเอกสาร",
@@ -49,7 +49,7 @@ export const revisionRequests: RevisionRequest[] = [...Array.from({ length: 123 
 }), {
   requestId: "REQ-EDIT-6701",
   itemType: "edit",
-  employeeId: "0624",
+  employeeId: "E00010",
   name: "น.ส.สุภาวดี รุ่งเรือง",
   department: "HR",
   position: "HR Officer",
@@ -60,7 +60,7 @@ export const revisionRequests: RevisionRequest[] = [...Array.from({ length: 123 
 }, {
   requestId: "REQ-EDIT-6702",
   itemType: "edit",
-  employeeId: "0718",
+  employeeId: "E00014",
   name: "นายธีรภัทร พัฒนกิจ",
   department: "IT",
   position: "Developer",
