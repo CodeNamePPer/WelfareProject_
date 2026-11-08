@@ -1,13 +1,23 @@
 import Link from "next/link";
+import { pendingRequests } from "./sample/pending";
+import { approvedRequests } from "./sample/approved";
+import { rejectedRequests } from "./sample/rejected";
+import { revisionRequests } from "./sample/revision";
 
-const summary = [
-  { id: "home", label: "คำขอรอตรวจ", value: "5", unit: "รายการ", icon: "clock", tone: "", href: "/hr/home" },
-  { id: "rejected", label: "ปฏิเสธแล้ว", value: "20", unit: "รายการ", icon: "reject", tone: "", href: "/hr/home/rejected" },
-  { id: "approved", label: "อนุมัติแล้วเดือนนี้", value: "142", unit: "รายการ", icon: "check", tone: "", href: "/hr/home/approved" },
-  { id: "revision", label: "รอแก้ไข", value: "123", unit: "รายการ", icon: "edit", tone: "", href: "/hr/home/revision" },
-  { id: "paid", label: "ยอดเบิกจ่ายเดือนนี้", value: "185,000", unit: "บาท", icon: "wallet", tone: "dark" },
-  { id: "budget", label: "งบประมาณคงเหลือ", value: "1,215,000", unit: "บาท", icon: "chart", tone: "dark" },
-];
+const count = new Intl.NumberFormat("th-TH");
+
+// ตัวเลขนับจากรายการชุดเดียวกับตารางของแต่ละหน้า จึงตรงกับจำนวนแถวเสมอ
+// ยอดเงินยังไม่มีแหล่งข้อมูล (ไม่มีตารางคำขอเบิก) จึงแสดง "—" แทนตัวเลขสมมติ
+function buildSummary(pendingCount: number) {
+  return [
+    { id: "home", label: "คำขอรอตรวจ", value: count.format(pendingCount), unit: "รายการ", icon: "clock", tone: "", href: "/hr/home" },
+    { id: "rejected", label: "ปฏิเสธแล้ว", value: count.format(rejectedRequests.length), unit: "รายการ", icon: "reject", tone: "", href: "/hr/home/rejected" },
+    { id: "approved", label: "อนุมัติแล้ว", value: count.format(approvedRequests.length), unit: "รายการ", icon: "check", tone: "", href: "/hr/home/approved" },
+    { id: "revision", label: "รอแก้ไข", value: count.format(revisionRequests.length), unit: "รายการ", icon: "edit", tone: "", href: "/hr/home/revision" },
+    { id: "paid", label: "ยอดเบิกจ่ายเดือนนี้", value: "—", unit: "ยังไม่มีข้อมูล", icon: "wallet", tone: "dark" },
+    { id: "budget", label: "งบประมาณคงเหลือ", value: "—", unit: "ยังไม่มีข้อมูล", icon: "chart", tone: "dark" },
+  ];
+}
 
 function SummaryIcon({ name }: { name: string }) {
   const paths: Record<string, React.ReactNode> = {
@@ -21,10 +31,19 @@ function SummaryIcon({ name }: { name: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
 
-export function SummaryCards({ active }: { active?: "home" | "rejected" | "approved" | "revision" }) {
+export function SummaryCards({
+  active,
+  pendingCount = pendingRequests.length,
+}: {
+  active?: "home" | "rejected" | "approved" | "revision";
+  /** จำนวนที่ยังรอตรวจจริงบนหน้าจอ (ลดลงเมื่อ HR ดำเนินการแล้ว) */
+  pendingCount?: number;
+}) {
   return (
+    <>
+    <p className="sample-data-note" role="note">ข้อมูลคำขอเป็นข้อมูลตัวอย่าง ยังไม่ได้เชื่อมกับฐานข้อมูล</p>
     <section className="summary-grid" aria-label="สรุปภาพรวม">
-      {summary.map((item) => {
+      {buildSummary(pendingCount).map((item) => {
         const selected = active === item.id;
         const card = (
           <article className={`summary-card${item.tone ? ` ${item.tone}` : ""}${selected ? " selected" : ""}`}>
@@ -47,5 +66,6 @@ export function SummaryCards({ active }: { active?: "home" | "rejected" | "appro
         );
       })}
     </section>
+    </>
   );
 }

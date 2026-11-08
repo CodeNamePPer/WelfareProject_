@@ -1828,6 +1828,13 @@
   stroke-linejoin: round;
 }
 
+.hr-app .sample-data-note {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .hr-app .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2749,6 +2756,49 @@
 .hr-app .tier-badge.staff {
   background: #f8fafc;
   color: #5b6b82;
+}
+
+/* บรรทัดรองใต้ข้อมูลหลักในตารางพนักงาน (อีเมล, ฝ่ายแม่, ระดับ, รหัสหัวหน้า, วันที่เปลี่ยนสถานะ) */
+.hr-app .employee-management-sub {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-app .employee-management-missing {
+  color: var(--muted);
+}
+
+.hr-app .employment-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.hr-app .employment-status.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.hr-app .employment-status.resigned {
+  background: #f1f5f9;
+  color: #33415c;
+}
+
+.hr-app .employment-status.deceased {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #33415c;
 }
 
 .hr-app .employee-quota {

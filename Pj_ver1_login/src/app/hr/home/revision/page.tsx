@@ -2,75 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SummaryCards } from "../../SummaryCards";
-
-type RevisionRequest = {
-  requestId: string;
-  itemType: "benefit" | "edit";
-  employeeId: string;
-  name: string;
-  department: string;
-  position: string;
-  benefit: string;
-  amount: number;
-  correction: string;
-  submittedAt: string;
-};
-
-const employees = [
-  { id: "0124", name: "นายสมชาย ใจดี", department: "IT", position: "Developer" },
-  { id: "0352", name: "น.ส.สมหญิง รักดี", department: "Marketing", position: "Marketing Officer" },
-  { id: "0411", name: "นายมานะ มุ่งมั่น", department: "Sales", position: "Sales Executive" },
-  { id: "0278", name: "น.ส.ปวีณา ตั้งใจ", department: "HR", position: "HR Officer" },
-  { id: "0506", name: "นายธนกร ก้าวหน้า", department: "Finance", position: "Accountant" },
-];
-
-const benefits = ["ทันตกรรม", "ค่ารักษาพยาบาล", "ฟิตเนสรายปี", "ตรวจสุขภาพประจำปี", "ค่าอุปกรณ์ทำงาน"];
-const correctionNotes = [
-  "กรุณาแนบใบเสร็จฉบับเต็ม",
-  "กรุณาแก้ไขวันที่ในเอกสาร",
-  "ขอเอกสารรับรองเพิ่มเติม",
-  "กรุณาระบุรายละเอียดค่าใช้จ่าย",
-  "เอกสารแนบอ่านข้อมูลไม่ชัดเจน",
-];
-
-const revisionRequests: RevisionRequest[] = [...Array.from({ length: 123 }, (_, index) => {
-  const employeeIndex = index % employees.length;
-  const employee = employees[employeeIndex];
-  return {
-    requestId: `REQ-${String(6701 + index).padStart(4, "0")}`,
-    itemType: "benefit" as const,
-    employeeId: employee.id,
-    name: employee.name,
-    department: employee.department,
-    position: employee.position,
-    benefit: benefits[employeeIndex],
-    amount: [900, 2000, 5000, 3500, 1800][employeeIndex] + Math.floor(index / employees.length) * 100,
-    correction: correctionNotes[index % correctionNotes.length],
-    submittedAt: `${12 - Math.floor(index / 20)} ต.ค. 2569`,
-  };
-}), {
-  requestId: "REQ-EDIT-6701",
-  itemType: "edit",
-  employeeId: "0624",
-  name: "น.ส.สุภาวดี รุ่งเรือง",
-  department: "HR",
-  position: "HR Officer",
-  benefit: "แก้ไขข้อมูลส่วนบุคคล",
-  amount: 0,
-  correction: "กรุณาแนบเอกสารยืนยันข้อมูลที่แก้ไข",
-  submittedAt: "12 ต.ค. 2569",
-}, {
-  requestId: "REQ-EDIT-6702",
-  itemType: "edit",
-  employeeId: "0718",
-  name: "นายธีรภัทร พัฒนกิจ",
-  department: "IT",
-  position: "Developer",
-  benefit: "แก้ไขข้อมูลบัญชีธนาคาร",
-  amount: 0,
-  correction: "กรุณาแนบสำเนาหน้าสมุดบัญชี",
-  submittedAt: "11 ต.ค. 2569",
-}];
+import { revisionRequests, benefits, employees, type RevisionRequest } from "../../sample/revision";
 
 const pageSize = 5;
 
