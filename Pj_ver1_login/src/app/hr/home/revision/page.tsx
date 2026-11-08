@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getHrEmployees } from "@/lib/hr/employees";
 import { revisionRequests } from "../../sample/revision";
 import { thaiShortDateToIso, sampleActor } from "../../sample/history";
+import { readRequestFilters } from "../../urlFilters";
 import { StatusList, type StatusRow } from "../StatusList";
 
 export const metadata: Metadata = { title: "คำขอที่รอพนักงานแก้ไข" };
@@ -20,7 +21,7 @@ const rows: StatusRow[] = revisionRequests.map((request, index) => ({
   note: request.correction,
 }));
 
-export default async function RevisionRequestsPage() {
-  const employees = await getHrEmployees();
-  return <StatusList kind="revision" rows={rows} employees={employees} />;
+export default async function RevisionRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [employees, params] = await Promise.all([getHrEmployees(), searchParams]);
+  return <StatusList kind="revision" rows={rows} employees={employees} initialFilters={readRequestFilters(params)} />;
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatThaiDate } from "@/lib/format";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { StatusTabs } from "../StatusTabs";
+import { ALL, filtersToQuery, replaceUrlQuery, type RequestFilters } from "../urlFilters";
 
 /** แถวคำขอที่ดำเนินการแล้ว (อนุมัติ / ปฏิเสธ / ส่งกลับ) ในรูปแบบเดียวกันทั้ง 3 หน้า */
 export type StatusRow = {
@@ -31,7 +32,6 @@ const COPY: Record<Kind, { title: string; dateLabel: string; actorLabel: string;
   revision: { title: "คำขอที่รอพนักงานแก้ไข", dateLabel: "วันที่ส่งกลับ", actorLabel: "ส่งกลับโดย", noteLabel: "สิ่งที่ต้องแก้ไข", empty: "ไม่มีคำขอที่รอแก้ไข" },
 };
 
-const ALL = "ทั้งหมด";
 const PAGE_SIZE = 20;
 const baht = new Intl.NumberFormat("th-TH");
 
@@ -39,13 +39,30 @@ function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
 }
 
-export function StatusList({ kind, rows, employees }: { kind: Kind; rows: StatusRow[]; employees: HrEmployee[] | null }) {
+export function StatusList({
+  kind,
+  rows,
+  employees,
+  initialFilters,
+}: {
+  kind: Kind;
+  rows: StatusRow[];
+  employees: HrEmployee[] | null;
+  initialFilters: RequestFilters;
+}) {
   const copy = COPY[kind];
-  const [query, setQuery] = useState("");
-  const [department, setDepartment] = useState(ALL);
-  const [itemType, setItemType] = useState(ALL);
+  const [query, setQuery] = useState(initialFilters.q);
+  const [department, setDepartment] = useState(initialFilters.dept);
+  const [itemType, setItemType] = useState(initialFilters.type);
   const [page, setPage] = useState(1);
   const [newestFirst, setNewestFirst] = useState(true);
+
+  const filterQuery = filtersToQuery({ q: query, dept: department, type: itemType });
+
+  // เก็บตัวกรองไว้ใน URL ให้คงอยู่เมื่อสลับแท็บ
+  useEffect(() => {
+    replaceUrlQuery(filterQuery);
+  }, [filterQuery]);
 
   const joined = useMemo(() => {
     const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
@@ -70,7 +87,7 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
         `${row.requestId} ${row.employeeCode} ${row.name} ${row.benefit} ${row.note ?? ""}`.toLocaleLowerCase().includes(normalizedQuery);
       return (
         matchesQuery &&
-        (department === ALL || row.employee?.department === department) &&
+        (department === ALL || row.employee?.department === department || row.employee?.parentDepartment === department) &&
         (itemType === ALL || row.itemType === itemType)
       );
     });
@@ -95,7 +112,7 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
         <h1>{copy.title}</h1>
       </header>
 
-      <StatusTabs active={kind} />
+      <StatusTabs active={kind} query={filterQuery} />
 
       {employees === null ? (
         <p className="queue-alert" role="alert">โหลดข้อมูลพนักงานไม่สำเร็จ จึงแสดงชื่อจากคำขอแทน กรุณารีเฟรชหน้าอีกครั้ง</p>
@@ -154,7 +171,9 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
               {pageRows.map((row) => (
                 <tr key={row.requestId}>
                   <td data-label="พนักงาน">
-                    <Link className="queue-name queue-name-link" href={`/hr/employees?q=${encodeURIComponent(row.employeeCode)}`}>{row.name}</Link>
+                    {row.employee ? (
+                      <Link className="queue-name queue-name-link" href={`/hr/employees/${encodeURIComponent(row.employeeCode)}`}>{row.name}</Link>
+                    ) : <span className="queue-name">{row.name}</span>}
                     <span className="queue-meta">
                       {row.employeeCode}
                       {row.employee?.department ? ` · ${row.employee.department}` : ""}
@@ -171,7 +190,7 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
                     {row.itemType === "benefit" ? <span className="queue-amount">{baht.format(row.amount)} บาท</span> : <span className="queue-meta" aria-label="ไม่มียอดเงิน">—</span>}
                   </td>
                   {copy.noteLabel ? <td data-label={copy.noteLabel} className="queue-note">{row.note}</td> : null}
-                  <td data-label={copy.actorLabel}>{row.actorName}</td>
+                  <td data-label={copy.actorLabel} className="queue-person">{row.actorName}</td>
                   <td data-label={copy.dateLabel} className="queue-date-cell">{formatThaiDate(row.date)}</td>
                 </tr>
               ))}

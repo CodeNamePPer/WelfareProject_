@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getHrEmployees } from "@/lib/hr/employees";
 import { rejectedRequests } from "../../sample/rejected";
 import { thaiShortDateToIso, sampleActor } from "../../sample/history";
+import { readRequestFilters } from "../../urlFilters";
 import { StatusList, type StatusRow } from "../StatusList";
 
 export const metadata: Metadata = { title: "คำขอที่ปฏิเสธแล้ว" };
@@ -20,7 +21,7 @@ const rows: StatusRow[] = rejectedRequests.map((request, index) => ({
   note: request.reason,
 }));
 
-export default async function RejectedRequestsPage() {
-  const employees = await getHrEmployees();
-  return <StatusList kind="rejected" rows={rows} employees={employees} />;
+export default async function RejectedRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const [employees, params] = await Promise.all([getHrEmployees(), searchParams]);
+  return <StatusList kind="rejected" rows={rows} employees={employees} initialFilters={readRequestFilters(params)} />;
 }

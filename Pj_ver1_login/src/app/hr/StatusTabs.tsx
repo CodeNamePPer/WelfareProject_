@@ -11,15 +11,18 @@ const count = new Intl.NumberFormat("th-TH");
 /**
  * แถบสถานะคำขอบรรทัดเดียว ใช้แทนการ์ดสรุป 6 ใบ
  * ตัวเลขนับจากรายการชุดเดียวกับตารางของแต่ละหน้า จึงตรงกับจำนวนแถวเสมอ
- * ยอดเงิน/งบประมาณไม่อยู่ที่นี่ (ยังไม่มีแหล่งข้อมูล และไม่ใช่งานที่ต้องทำในคิว)
+ * ส่ง query ของตัวกรองต่อไปด้วย ตัวกรองจึงคงอยู่เมื่อสลับแท็บ
  */
 export function StatusTabs({
   active,
   pendingCount = pendingRequests.length,
+  query = "",
 }: {
   active: Status;
   /** จำนวนที่ยังรอตรวจบนหน้าจอ (ลดลงเมื่อ HR ดำเนินการแล้ว) */
   pendingCount?: number;
+  /** "?q=...&dept=..." ของตัวกรองปัจจุบัน */
+  query?: string;
 }) {
   const tabs: { id: Status; label: string; value: number; href: string }[] = [
     { id: "home", label: "รอตรวจ", value: pendingCount, href: "/hr/home" },
@@ -34,12 +37,16 @@ export function StatusTabs({
         {tabs.map((tab) => (
           <Link
             key={tab.id}
-            href={tab.href}
+            href={`${tab.href}${query}`}
             className={`status-tab${tab.id === active ? " active" : ""}`}
             aria-current={tab.id === active ? "page" : undefined}
           >
             {tab.label}
-            <span className="status-tab-count">{count.format(tab.value)}</span>
+            <span className="status-tab-count">
+              <span className="sr-only"> </span>
+              {count.format(tab.value)}
+              <span className="sr-only"> รายการ</span>
+            </span>
           </Link>
         ))}
       </nav>

@@ -227,7 +227,7 @@ export function EmployeesClient({ employees, initialQuery = "" }: { employees: H
               {pageRows.map((row) => (
                 <tr key={row.code}>
                   <td data-label="พนักงาน">
-                    <span className="queue-name">{row.name}</span>
+                    <Link className="queue-name queue-name-link" href={`/hr/employees/${encodeURIComponent(row.code)}`}>{row.name}</Link>
                     <span className="queue-meta">{row.code} · {row.email}</span>
                     {row.issues.length > 0 ? <span className="queue-blocker">ข้อมูลไม่ครบ: {row.issues.join(", ")}</span> : null}
                   </td>
