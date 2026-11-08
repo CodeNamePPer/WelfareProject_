@@ -2665,13 +2665,30 @@
 }
 
 .hr-app .employee-status-button {
-  border-color: #bfdbfe;
-  color: #1d4ed8;
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #166534;
 }
 
-.hr-app .employee-status-button:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
+.hr-app .employee-status-button.active:hover {
+  border-color: #16a34a;
+  background: #bbf7d0;
+}
+
+.hr-app .employee-status-button.resigned {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.hr-app .employee-status-button.deceased {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.hr-app .employee-status-button:disabled {
+  cursor: default;
 }
 
 .hr-app .employee-history-empty {
@@ -3401,6 +3418,10 @@
 
   .hr-app .employee-action-button span {
     display: none;
+  }
+
+  .hr-app .employee-status-button span {
+    display: inline;
   }
 
   .hr-app .employee-management-footer {
