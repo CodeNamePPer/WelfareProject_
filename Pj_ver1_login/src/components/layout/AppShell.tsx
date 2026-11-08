@@ -13,12 +13,14 @@ import { cx } from '../../lib/cx';
 interface AppShellProps {
   /** Which menu the sidebar shows (see navigation.ts). */
   section?: NavSection;
+  /** Menu ids this user should not see (Style Guide: hide, don't disable). */
+  hiddenNavIds?: string[];
   notificationCount: number;
   user: SidebarUser;
   children: ReactNode;
 }
 
-export function AppShell({ section = 'admin', notificationCount, user, children }: AppShellProps) {
+export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, user, children }: AppShellProps) {
   const pathname = usePathname();
   const { notifyPending } = useToast();
   // 768-1023px: collapsed by default (Style Guide). Below 768px the sidebar is a drawer.
@@ -33,6 +35,7 @@ export function AppShell({ section = 'admin', notificationCount, user, children 
     <div className="min-h-screen">
       <Sidebar
         section={section}
+        hiddenNavIds={hiddenNavIds}
         activeId={activeNavId(section, pathname)}
         notificationCount={notificationCount}
         user={user}

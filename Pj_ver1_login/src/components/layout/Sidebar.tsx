@@ -14,6 +14,7 @@ export interface SidebarUser {
 
 interface SidebarProps {
   section: NavSection;
+  hiddenNavIds?: string[];
   activeId: string;
   notificationCount: number;
   user: SidebarUser;
@@ -26,6 +27,7 @@ interface SidebarProps {
 
 export function Sidebar({
   section,
+  hiddenNavIds,
   activeId,
   notificationCount,
   user,
@@ -36,7 +38,7 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const config = NAV[section];
-  const items = config.items(notificationCount);
+  const items = config.items(notificationCount).filter((item) => !hiddenNavIds?.includes(item.id));
 
   const hideWhenCollapsed = collapsed ? 'md:hidden' : '';
   const profileActive = activeId === 'profile';
