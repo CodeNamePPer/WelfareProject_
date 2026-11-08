@@ -1,0 +1,49 @@
+import Link from "next/link";
+import { pendingRequests } from "./sample/pending";
+import { approvedRequests } from "./sample/approved";
+import { rejectedRequests } from "./sample/rejected";
+import { revisionRequests } from "./sample/revision";
+
+type Status = "home" | "revision" | "rejected" | "approved";
+
+const count = new Intl.NumberFormat("th-TH");
+
+/**
+ * แถบสถานะคำขอบรรทัดเดียว ใช้แทนการ์ดสรุป 6 ใบ
+ * ตัวเลขนับจากรายการชุดเดียวกับตารางของแต่ละหน้า จึงตรงกับจำนวนแถวเสมอ
+ * ยอดเงิน/งบประมาณไม่อยู่ที่นี่ (ยังไม่มีแหล่งข้อมูล และไม่ใช่งานที่ต้องทำในคิว)
+ */
+export function StatusTabs({
+  active,
+  pendingCount = pendingRequests.length,
+}: {
+  active: Status;
+  /** จำนวนที่ยังรอตรวจบนหน้าจอ (ลดลงเมื่อ HR ดำเนินการแล้ว) */
+  pendingCount?: number;
+}) {
+  const tabs: { id: Status; label: string; value: number; href: string }[] = [
+    { id: "home", label: "รอตรวจ", value: pendingCount, href: "/hr/home" },
+    { id: "revision", label: "รอพนักงานแก้ไข", value: revisionRequests.length, href: "/hr/home/revision" },
+    { id: "rejected", label: "ปฏิเสธแล้ว", value: rejectedRequests.length, href: "/hr/home/rejected" },
+    { id: "approved", label: "อนุมัติแล้ว", value: approvedRequests.length, href: "/hr/home/approved" },
+  ];
+
+  return (
+    <div className="status-tabs-wrap">
+      <nav className="status-tabs" aria-label="สถานะคำขอ">
+        {tabs.map((tab) => (
+          <Link
+            key={tab.id}
+            href={tab.href}
+            className={`status-tab${tab.id === active ? " active" : ""}`}
+            aria-current={tab.id === active ? "page" : undefined}
+          >
+            {tab.label}
+            <span className="status-tab-count">{count.format(tab.value)}</span>
+          </Link>
+        ))}
+      </nav>
+      <p className="sample-data-note" role="note">ข้อมูลคำขอเป็นข้อมูลตัวอย่าง ยังไม่ได้เชื่อมกับฐานข้อมูล ส่วนข้อมูลพนักงานมาจากระบบจริง</p>
+    </div>
+  );
+}

@@ -1,17 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { SummaryCards } from "../../SummaryCards";
+import { StatusTabs } from "../../StatusTabs";
 import { revisionRequests, benefits, employees, type RevisionRequest } from "../../sample/revision";
 
 const pageSize = 5;
 
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
-}
-
-function CalendarIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 11h18M8 15h.01M12 15h.01M16 15h.01M8 18h.01M12 18h.01" /></svg>;
 }
 
 function formatCurrency(value: number) {
@@ -65,14 +61,11 @@ export default function RevisionRequestsPage() {
     <div className="app-shell">
       <div className="app-main">
         <div className="page-content dashboard-content">
-          <div className="dashboard-heading">
-            <div>
-              <h1>ภาพรวมวันนี้</h1>
-              <p className="dashboard-date"><CalendarIcon /> 12 ตุลาคม 2569</p>
-            </div>
-          </div>
+          <header className="queue-heading">
+            <h1>คำขอที่รอพนักงานแก้ไข</h1>
+          </header>
 
-          <SummaryCards active="revision" />
+          <StatusTabs active="revision" />
 
           <section className="approval-section" aria-labelledby="revision-title">
             <div className="approval-heading">

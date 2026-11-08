@@ -154,7 +154,7 @@
 .hr-app .decision-dialog h2 {
   margin: 15px 0 5px;
   font-size: 19px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .decision-description,
@@ -193,7 +193,7 @@
 }
 
 .hr-app .decision-reason textarea::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .decision-reason textarea:focus {
@@ -282,7 +282,7 @@
   overflow: hidden;
   color: var(--text);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -301,7 +301,7 @@
   margin: 8px 0 5px;
   padding: 0 12px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.045em;
 }
@@ -357,7 +357,7 @@
   background: var(--primary-600);
   padding: 2px 8px;
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }
@@ -460,7 +460,7 @@
   border-radius: 8px;
   background: white;
   padding: 0 10px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .topbar-search svg {
@@ -482,7 +482,7 @@
 }
 
 .hr-app .topbar-search input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .topbar-search kbd {
@@ -492,7 +492,7 @@
   background: #f8fafc;
   padding: 2px 5px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .hr-app .topbar-actions,
@@ -576,7 +576,7 @@
 
 .hr-app .user-details small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .hr-app .mobile-menu-button {
@@ -602,7 +602,7 @@
 }
 
 .hr-app .breadcrumb-separator {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .page-heading {
@@ -623,8 +623,8 @@
 .hr-app .page-heading h1 {
   margin: 0;
   font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.35;
 }
 
@@ -696,7 +696,7 @@
 .hr-app .card-heading h2 {
   margin: 0;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
 }
 
@@ -728,7 +728,7 @@
 .hr-app .form-sections h3 {
   margin: 0 0 17px;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .identity-fields {
@@ -970,8 +970,8 @@
 
 .hr-app .page-footnote {
   margin: 14px 2px 0;
-  color: #94a3b8;
-  font-size: 11px;
+  color: #64748b;
+  font-size: 12px;
   text-align: right;
 }
 
@@ -1170,7 +1170,7 @@
   }
 
   .hr-app .employee-status {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .hr-app .form-sections {
@@ -1311,8 +1311,8 @@
 .hr-app .benefit-form-heading h1 {
   margin: 0;
   font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -1445,7 +1445,7 @@
   color: #33415c;
   font-size: 14px;
   line-height: 1.6;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .benefits-table tbody tr:last-child td {
@@ -1458,7 +1458,7 @@
 
 .hr-app .benefits-table .benefits-name {
   color: #18253f;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .benefit-status-switch {
@@ -1567,7 +1567,7 @@
   margin: 0;
   color: #18253f;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .benefit-form-subtitle {
@@ -1612,7 +1612,7 @@
 
 .hr-app .benefit-field input::placeholder,
 .hr-app .benefit-field textarea::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .benefit-field-wide {
@@ -1804,8 +1804,8 @@
 .hr-app .dashboard-heading h1 {
   margin: 0;
   font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -1938,8 +1938,8 @@
   overflow: hidden;
   font-size: clamp(26px, 2.45vw, 36px);
   font-variant-numeric: tabular-nums;
-  font-weight: 650;
-  letter-spacing: -0.035em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.15;
   text-overflow: ellipsis;
 }
@@ -1967,7 +1967,7 @@
 .hr-app .approval-title-group h2 {
   margin: 0;
   font-size: 21px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
 }
 
@@ -2032,7 +2032,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 13px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .search-input svg {
@@ -2055,7 +2055,7 @@
 }
 
 .hr-app .search-input input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .search-input:focus-within,
@@ -2195,7 +2195,7 @@
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 0 7px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -2315,14 +2315,14 @@
   .hr-app .request-action-table td {
     padding-right: 6px;
     padding-left: 6px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
   }
 
   .hr-app .request-action-table .benefit-tag {
     padding: 4px 5px;
-    font-size: 10px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -2405,8 +2405,8 @@
 .hr-app .employee-management-heading h1 {
   margin: 0;
   font-size: 25px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -2479,7 +2479,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 13px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .employee-management-input svg {
@@ -2502,7 +2502,7 @@
 }
 
 .hr-app .employee-management-input input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .employee-management-input:focus-within,
@@ -2607,7 +2607,7 @@
   padding: 12px 16px;
   color: #18253f;
   font-size: 13px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .employee-management-table tbody tr:hover {
@@ -2898,8 +2898,8 @@
 .hr-app .person-requests-heading h1 {
   margin: 0;
   font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -2952,7 +2952,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .person-request-search-input svg,
@@ -2977,7 +2977,7 @@
 }
 
 .hr-app .person-request-search-input input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .hr-app .person-request-search-input:focus-within,
@@ -3052,7 +3052,7 @@
   color: #18253f;
   font-size: 12px;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .person-requests-table tbody tr:hover {
@@ -3067,7 +3067,7 @@
 .hr-app .person-request-secondary {
   margin-top: 3px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .hr-app .person-request-number,
@@ -3088,7 +3088,7 @@
   padding: 0 8px;
   color: #33415c;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -3112,7 +3112,7 @@
   background: #eff6ff;
   padding: 0 9px;
   color: #1d4ed8;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -3209,7 +3209,7 @@
   color: #18253f;
   font-size: 12px;
   line-height: 1.55;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .benefit-track-table tbody tr:hover {
@@ -3222,7 +3222,7 @@
 }
 
 .hr-app .benefit-request-amount {
-  font-weight: 650;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -3277,14 +3277,14 @@
 .hr-app .person-request-detail-grid dt {
   margin-bottom: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .hr-app .person-request-detail-grid dd {
   margin: 0;
   color: #18253f;
   font-size: 13px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .person-request-detail-grid .person-request-detail-wide {
@@ -3379,18 +3379,18 @@
   .hr-app .employee-management-table td {
     padding-right: 6px;
     padding-left: 6px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .hr-app .employee-management-table .tier-badge {
     padding: 4px 5px;
-    font-size: 10px;
+    font-size: 12px;
     white-space: normal;
   }
 
   .hr-app .employee-quota {
     gap: 5px;
-    font-size: 9px;
+    font-size: 12px;
     white-space: normal;
   }
 
@@ -3633,8 +3633,8 @@
   margin: 15px 0 3px;
   color: #18253f;
   font-size: 25px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .hr-app .employee-history-subtitle {
@@ -3660,7 +3660,7 @@
 .hr-app .employee-history-summary h2 {
   margin: 0 0 22px;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .employee-history-profile {
@@ -3749,7 +3749,7 @@
 .hr-app .employee-history-tabs button.active {
   border-bottom-color: #18253f;
   color: #18253f;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .employee-history-controls {
@@ -4142,8 +4142,8 @@
   }
 
   .hr-app .employee-history-change-details ul {
-    font-size: 11px;
-    overflow-wrap: anywhere;
+    font-size: 12px;
+    overflow-wrap: break-word;
   }
 
   .hr-app .employee-history-table .employee-history-no-records {
@@ -4198,8 +4198,8 @@
 .hr-app .employee-add-heading h1 {
   margin: 0;
   font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -4222,7 +4222,7 @@
   border-bottom: 1px solid var(--border);
   padding: 20px 24px;
   font-size: 19px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .employee-profile-grid {
@@ -4251,7 +4251,7 @@
   margin: 0 0 16px;
   color: #18253f;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .employee-identity-fields {
@@ -4326,8 +4326,8 @@
 
 .hr-app .profile-field small {
   margin-top: -3px;
-  color: #94a3b8;
-  font-size: 11px;
+  color: #64748b;
+  font-size: 12px;
 }
 
 .hr-app .employee-profile-wide {
@@ -4607,7 +4607,7 @@
   display: block;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -4868,8 +4868,8 @@
 .hr-app .reports-content > h1 {
   margin: 0 0 24px;
   font-size: 27px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  letter-spacing: 0;
   line-height: 1.4;
 }
 
@@ -4968,7 +4968,7 @@
   margin: 0;
   color: #18253f;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .hr-app .report-chart-legend {
@@ -5096,7 +5096,7 @@
   padding: 13px 18px;
   color: #18253f;
   font-size: 14px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .hr-app .report-table tbody tr:last-child td {
@@ -5293,4 +5293,470 @@
   body:has(.hr-app) #app-sidebar ~ div {
     padding-left: 0;
   }
+}
+
+/* -----------------------------------------------------------------------------
+ * /hr/home: คิวคำขอรออนุมัติ (คิวมาก่อน แผ่นเดียว ไม่มีการ์ดซ้อน)
+ * ขนาดตัวอักษรไทยขั้นต่ำ 12px สำหรับข้อมูลรอง 13–14px สำหรับข้อมูลหลักและปุ่ม
+ * -------------------------------------------------------------------------- */
+.hr-app .queue-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hr-app .queue-heading h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.hr-app .queue-subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .queue-overdue-text {
+  color: #b45309;
+  font-weight: 600;
+}
+
+/* แถบสถานะคำขอ (แทนการ์ดสรุป 6 ใบ) ใช้ร่วม 4 หน้า */
+.hr-app .status-tabs-wrap {
+  margin-bottom: 4px;
+}
+
+.hr-app .status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hr-app .status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  padding: 10px 2px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.hr-app .status-tab:hover {
+  color: var(--text);
+}
+
+.hr-app .status-tab.active {
+  border-bottom-color: var(--primary-600);
+  color: var(--primary-700);
+  font-weight: 600;
+}
+
+.hr-app .status-tab:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .status-tab-count {
+  border-radius: 999px;
+  background: #eef2f7;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-app .status-tab.active .status-tab-count {
+  background: var(--primary-50);
+  color: var(--primary-700);
+}
+
+.hr-app .status-tabs-wrap .sample-data-note {
+  margin: 8px 0 0;
+}
+
+.hr-app .queue-alert {
+  margin: 0;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  padding: 10px 14px;
+  color: #991b1b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .queue-sheet {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.hr-app .queue-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+
+.hr-app .queue-search {
+  position: relative;
+  display: flex;
+  min-width: 240px;
+  flex: 1 1 280px;
+  align-items: center;
+}
+
+.hr-app .queue-search svg {
+  position: absolute;
+  left: 11px;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.hr-app .queue-search input,
+.hr-app .queue-select select {
+  width: 100%;
+  height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.hr-app .queue-search input {
+  padding: 0 12px 0 36px;
+}
+
+.hr-app .queue-search input::placeholder {
+  color: #64748b;
+}
+
+.hr-app .queue-select {
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hr-app .queue-select select {
+  padding: 0 10px;
+}
+
+.hr-app .queue-search input:focus-visible,
+.hr-app .queue-select select:focus-visible {
+  border-color: var(--primary-500);
+  outline: 2px solid var(--primary-100);
+}
+
+.hr-app .queue-link-button {
+  height: 38px;
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  color: var(--primary-700);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hr-app .queue-link-button:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hr-app .queue-table-scroll {
+  overflow-x: auto;
+}
+
+.hr-app .queue-table {
+  width: 100%;
+  min-width: 880px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.hr-app .queue-table th {
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hr-app .queue-table td {
+  border-bottom: 1px solid #edf1f6;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+.hr-app .queue-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hr-app .queue-table tbody tr:hover td {
+  background: #fafbfd;
+}
+
+.hr-app .queue-table tbody tr.queue-row-blocked td {
+  background: #fffbeb;
+}
+
+.hr-app .queue-name,
+.hr-app .queue-item,
+.hr-app .queue-amount,
+.hr-app .queue-date {
+  display: block;
+  font-weight: 600;
+}
+
+.hr-app .queue-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hr-app .queue-meta-danger {
+  color: #b91c1c;
+}
+
+.hr-app .queue-table .employment-status {
+  margin-top: 4px;
+}
+
+.hr-app .queue-blocker {
+  display: block;
+  max-width: 34ch;
+  margin-top: 6px;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.hr-app .queue-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-app .queue-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.hr-app .queue-approve,
+.hr-app .queue-secondary {
+  height: 36px;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hr-app .queue-approve {
+  border: 1px solid var(--primary-600);
+  background: var(--primary-600);
+  color: white;
+}
+
+.hr-app .queue-approve:hover:not(:disabled) {
+  background: var(--primary-700);
+}
+
+.hr-app .queue-approve:disabled {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.hr-app .queue-secondary {
+  margin-left: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hr-app .queue-secondary:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.hr-app .queue-danger {
+  color: #b91c1c;
+}
+
+.hr-app .queue-approve:focus-visible,
+.hr-app .queue-secondary:focus-visible,
+.hr-app .queue-link-button:focus-visible,
+.hr-app .queue-undo:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .queue-empty {
+  padding: 40px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hr-app .queue-footer {
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hr-app .queue-dialog h2 {
+  margin: 0 0 14px;
+}
+
+.hr-app .queue-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .queue-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hr-app .queue-facts dt {
+  color: var(--muted);
+}
+
+.hr-app .queue-facts dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.hr-app .queue-toast {
+  border-color: var(--border);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.hr-app .toast .queue-undo {
+  margin-left: 4px;
+  color: var(--primary-700);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  .hr-app .queue-filters {
+    padding: 12px;
+  }
+
+  .hr-app .queue-select {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  /* จอแคบ: แต่ละคำขอเป็นบล็อกเรียงลงมาแทนตารางเลื่อนแนวนอน ข้อมูลครบทุกช่อง */
+  .hr-app .queue-table {
+    min-width: 0;
+  }
+
+  .hr-app .queue-table thead {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+
+  .hr-app .queue-table,
+  .hr-app .queue-table tbody,
+  .hr-app .queue-table tr,
+  .hr-app .queue-table td {
+    display: block;
+  }
+
+  .hr-app .queue-table tr {
+    border-bottom: 1px solid var(--border);
+    padding: 12px;
+  }
+
+  .hr-app .queue-table td {
+    border: 0;
+    padding: 2px 0;
+  }
+
+  .hr-app .queue-table td.queue-num,
+  .hr-app .queue-actions {
+    text-align: left;
+  }
+
+  .hr-app .queue-actions {
+    width: auto;
+    padding-top: 10px;
+  }
+
+  .hr-app .queue-table td.queue-actions {
+    padding-top: 10px;
+  }
+
+  .hr-app .queue-approve,
+  .hr-app .queue-secondary {
+    height: 40px;
+  }
+
+  .hr-app .queue-toast {
+    right: 12px;
+    left: 12px;
+  }
+}
+
+/* หน้าสถานะคำขออื่น (อนุมัติ/ปฏิเสธ/รอแก้ไข) ใช้หัวเรื่องเดียวกับคิว */
+.hr-app .dashboard-content .queue-heading {
+  margin-bottom: 16px;
+}
+
+.hr-app .dashboard-content .status-tabs-wrap {
+  margin-bottom: 24px;
+}
+
+/* รหัสพนักงานห้ามตัดบรรทัด */
+.hr-app .employee-management-table th:nth-child(1) {
+  width: 92px;
+}
+
+.hr-app .employee-management-id {
+  white-space: nowrap;
 }
