@@ -97,45 +97,87 @@ export const initialBenefitRequests: BenefitRequest[] = [
 const requestStatuses: RequestStatus[] = ["รออนุมัติ", "อนุมัติแล้ว", "ปฏิเสธแล้ว", "รอแก้ไข"];
 const statusStorageKey = "benefit-request-statuses";
 
+export type RequestStatusOverride = {
+  status: RequestStatus;
+  note?: string;
+  updatedAt?: string;
+};
+
 function isRequestStatus(value: unknown): value is RequestStatus {
   return typeof value === "string" && requestStatuses.some((status) => status === value);
 }
 
-function isStatusOverrides(value: unknown): value is Record<string, RequestStatus> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.entries(value).every(([requestNumber, status]) =>
-      initialBenefitRequests.some((request) => request.requestNumber === requestNumber) &&
-      isRequestStatus(status),
-    )
-  );
+function isKnownRequest(requestNumber: string) {
+  return initialBenefitRequests.some((request) => request.requestNumber === requestNumber);
 }
 
-export function readBenefitRequestStatuses(): Record<string, RequestStatus> {
+// รองรับทั้งรูปแบบเดิม (เก็บแค่สถานะเป็น string) และรูปแบบใหม่ที่มีหมายเหตุ/เวลาที่อัปเดต
+function toStatusOverride(value: unknown): RequestStatusOverride | null {
+  if (isRequestStatus(value)) return { status: value };
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+
+  const { status, note, updatedAt } = value as Record<string, unknown>;
+  if (!isRequestStatus(status)) return null;
+  if (note !== undefined && typeof note !== "string") return null;
+  if (updatedAt !== undefined && typeof updatedAt !== "string") return null;
+  return { status, note, updatedAt };
+}
+
+function formatThaiDateTime(date: Date) {
+  const datePart = new Intl.DateTimeFormat("th-TH", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  const timePart = new Intl.DateTimeFormat("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  return `${datePart} ${timePart}`;
+}
+
+export function readBenefitRequestStatuses(): Record<string, RequestStatusOverride> {
   const saved = sessionStorage.getItem(statusStorageKey);
   if (!saved) return {};
 
   const parsed: unknown = JSON.parse(saved);
-  if (!isStatusOverrides(parsed)) {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error("ข้อมูลสถานะคำขอสวัสดิการไม่ถูกต้อง");
   }
-  return parsed;
+
+  const overrides: Record<string, RequestStatusOverride> = {};
+  for (const [requestNumber, value] of Object.entries(parsed)) {
+    const override = toStatusOverride(value);
+    if (!isKnownRequest(requestNumber) || !override) {
+      throw new Error("ข้อมูลสถานะคำขอสวัสดิการไม่ถูกต้อง");
+    }
+    overrides[requestNumber] = override;
+  }
+  return overrides;
 }
 
-export function saveBenefitRequestStatus(requestNumber: string, status: RequestStatus): Record<string, RequestStatus> {
+export function saveBenefitRequestStatus(
+  requestNumber: string,
+  status: RequestStatus,
+  note?: string,
+): Record<string, RequestStatusOverride> {
   const statuses = readBenefitRequestStatuses();
-  const updatedStatuses = { ...statuses, [requestNumber]: status };
+  const trimmedNote = note?.trim();
+  const updatedStatuses: Record<string, RequestStatusOverride> = {
+    ...statuses,
+    [requestNumber]: {
+      status,
+      ...(trimmedNote ? { note: trimmedNote } : {}),
+      updatedAt: formatThaiDateTime(new Date()),
+    },
+  };
   sessionStorage.setItem(statusStorageKey, JSON.stringify(updatedStatuses));
   return updatedStatuses;
 }
 
-export function applyBenefitRequestStatuses(statuses: Record<string, RequestStatus>): BenefitRequest[] {
+export function applyBenefitRequestStatuses(statuses: Record<string, RequestStatusOverride>): BenefitRequest[] {
   return initialBenefitRequests.map((request) => {
-    const status = statuses[request.requestNumber];
-    return status
-      ? { ...request, status, statusNote: status === "อนุมัติแล้ว" ? "อนุมัติคำขอแล้ว" : request.statusNote }
-      : request;
+    const override = statuses[request.requestNumber];
+    if (!override) return request;
+
+    return {
+      ...request,
+      status: override.status,
+      statusNote: override.note ?? (override.status === "อนุมัติแล้ว" ? "อนุมัติคำขอแล้ว" : request.statusNote),
+      updatedAt: override.updatedAt ?? request.updatedAt,
+    };
   });
 }
