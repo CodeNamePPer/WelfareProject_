@@ -3,26 +3,25 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  applyPersonRequestStatuses,
-  initialPersonRequests,
-  readPersonRequestStatuses,
-  savePersonRequestStatus,
-  type PersonRequest,
+  applyEmployeeRequestStatuses,
+  readEmployeeRequestStatuses,
+  saveEmployeeRequestStatus,
+  type EmployeeRequest,
 } from "../requests/data";
 
 export default function EmployeeApprovalsPage() {
-  const [requests, setRequests] = useState<PersonRequest[]>([]);
-  const [selectedRequest, setSelectedRequest] = useState<PersonRequest | null>(null);
+  const [requests, setRequests] = useState<EmployeeRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
   const [notice, setNotice] = useState("");
   const [noticeIsError, setNoticeIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     try {
-      setRequests(applyPersonRequestStatuses(readPersonRequestStatuses()));
+      setRequests(applyEmployeeRequestStatuses(readEmployeeRequestStatuses()));
     } catch {
       setNoticeIsError(true);
-      setNotice("ไม่สามารถโหลดสถานะคำขอเพิ่มบุคคลที่บันทึกไว้ได้");
+      setNotice("ไม่สามารถโหลดสถานะคำขอเพิ่มพนักงานที่บันทึกไว้ได้");
     } finally {
       setIsLoading(false);
     }
@@ -37,8 +36,8 @@ export default function EmployeeApprovalsPage() {
     if (!selectedRequest || selectedRequest.status !== "รอตรวจสอบ") return;
 
     try {
-      const statuses = savePersonRequestStatus(selectedRequest.requestNumber, "อนุมัติแล้ว");
-      setRequests(applyPersonRequestStatuses(statuses));
+      const statuses = saveEmployeeRequestStatus(selectedRequest.requestNumber, "อนุมัติแล้ว");
+      setRequests(applyEmployeeRequestStatuses(statuses));
       setNoticeIsError(false);
       setNotice(`อนุมัติคำขอ ${selectedRequest.requestNumber} เรียบร้อยแล้ว`);
       setSelectedRequest(null);
@@ -55,10 +54,10 @@ export default function EmployeeApprovalsPage() {
           <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
             <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
             <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">อนุมัติคำขอเพิ่มบุคคล</span>
+            <span aria-current="page">อนุมัติคำขอเพิ่มพนักงาน</span>
           </nav>
           <div className="person-requests-heading">
-            <h1>อนุมัติคำขอเพิ่มบุคคล</h1>
+            <h1>อนุมัติคำขอเพิ่มพนักงาน</h1>
             <span className="result-count">
               {isLoading ? "กำลังโหลดคำขอ..." : `${pendingRequests.length} รายการรออนุมัติ`}
             </span>
@@ -67,15 +66,15 @@ export default function EmployeeApprovalsPage() {
             </Link>
           </div>
 
-          <section className="person-requests-panel" aria-label="คำขอเพิ่มบุคคลที่รออนุมัติ">
+          <section className="person-requests-panel" aria-label="คำขอเพิ่มพนักงานที่รออนุมัติ">
             <div className="person-requests-table-wrap">
-              <table className="person-requests-table person-approval-table">
+              <table className="person-requests-table employee-approval-table">
                 <thead>
                   <tr>
                     <th scope="col">เลขที่คำขอ</th>
-                    <th scope="col">รหัส / ชื่อพนักงาน</th>
-                    <th scope="col">บุคคลที่ขอเพิ่ม</th>
-                    <th scope="col">ความสัมพันธ์</th>
+                    <th scope="col">ชื่อพนักงานใหม่</th>
+                    <th scope="col">แผนก</th>
+                    <th scope="col">ตำแหน่ง</th>
                     <th scope="col">วันที่ยื่นคำขอ</th>
                     <th scope="col">ดำเนินการ</th>
                   </tr>
@@ -84,14 +83,9 @@ export default function EmployeeApprovalsPage() {
                   {!isLoading && pendingRequests.map((request) => (
                     <tr key={request.requestNumber}>
                       <td data-label="เลขที่คำขอ" className="person-request-number">{request.requestNumber}</td>
-                      <td data-label="รหัส / ชื่อพนักงาน">
-                        <div className="person-request-cell-value">
-                          <strong>{request.employeeId}</strong>
-                          <span className="person-request-secondary">{request.employeeName}</span>
-                        </div>
-                      </td>
-                      <td data-label="บุคคลที่ขอเพิ่ม">{request.personName}</td>
-                      <td data-label="ความสัมพันธ์">{request.relationship}</td>
+                      <td data-label="ชื่อพนักงานใหม่">{request.employeeName}</td>
+                      <td data-label="แผนก">{request.department}</td>
+                      <td data-label="ตำแหน่ง">{request.position}</td>
                       <td data-label="วันที่ยื่นคำขอ"><time>{request.submittedAt}</time></td>
                       <td data-label="ดำเนินการ">
                         <button
@@ -129,14 +123,14 @@ export default function EmployeeApprovalsPage() {
             <div className="decision-icon approve" aria-hidden="true">
               <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
             </div>
-            <h2 id="person-approval-title">ยืนยันการอนุมัติคำขอเพิ่มบุคคล</h2>
+            <h2 id="person-approval-title">ยืนยันการอนุมัติคำขอเพิ่มพนักงาน</h2>
             <p className="decision-description">
-              คำขอ {selectedRequest.requestNumber} · {selectedRequest.employeeName} · {selectedRequest.personName}
+              คำขอ {selectedRequest.requestNumber} · {selectedRequest.employeeName}
             </p>
             <dl className="person-request-detail-grid">
-              <div><dt>ความสัมพันธ์</dt><dd>{selectedRequest.relationship}</dd></div>
-              <div><dt>วันเกิด</dt><dd>{selectedRequest.dateOfBirth}</dd></div>
-              <div><dt>เบอร์ติดต่อ</dt><dd>{selectedRequest.phone}</dd></div>
+              <div><dt>ชื่อพนักงานใหม่</dt><dd>{selectedRequest.employeeName}</dd></div>
+              <div><dt>แผนก</dt><dd>{selectedRequest.department}</dd></div>
+              <div><dt>ตำแหน่ง</dt><dd>{selectedRequest.position}</dd></div>
               <div><dt>วันที่ยื่นคำขอ</dt><dd>{selectedRequest.submittedAt}</dd></div>
               <div className="person-request-detail-wide"><dt>เอกสารแนบ</dt><dd>{selectedRequest.documents.join(" · ")}</dd></div>
             </dl>
