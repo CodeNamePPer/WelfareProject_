@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
+import { formatThaiDate } from "@/lib/format";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { StatusTabs } from "../StatusTabs";
 
@@ -13,18 +15,20 @@ export type StatusRow = {
   fallbackName: string;
   benefit: string;
   amount: number;
-  /** วันที่ดำเนินการ (ข้อความพร้อมแสดง) */
+  /** วันที่ดำเนินการ "YYYY-MM-DD" */
   date: string;
+  /** รหัสพนักงานของเจ้าหน้าที่ที่ดำเนินการ */
+  actorCode: string;
   /** เหตุผลที่ปฏิเสธ / สิ่งที่ต้องแก้ไข */
   note?: string;
 };
 
 type Kind = "approved" | "rejected" | "revision";
 
-const COPY: Record<Kind, { title: string; dateLabel: string; noteLabel?: string; empty: string }> = {
-  approved: { title: "คำขอที่อนุมัติแล้ว", dateLabel: "วันที่อนุมัติ", empty: "ยังไม่มีคำขอที่อนุมัติ" },
-  rejected: { title: "คำขอที่ปฏิเสธแล้ว", dateLabel: "วันที่ปฏิเสธ", noteLabel: "เหตุผลที่ปฏิเสธ", empty: "ยังไม่มีคำขอที่ปฏิเสธ" },
-  revision: { title: "คำขอที่รอพนักงานแก้ไข", dateLabel: "วันที่ส่งกลับ", noteLabel: "สิ่งที่ต้องแก้ไข", empty: "ไม่มีคำขอที่รอแก้ไข" },
+const COPY: Record<Kind, { title: string; dateLabel: string; actorLabel: string; noteLabel?: string; empty: string }> = {
+  approved: { title: "คำขอที่อนุมัติแล้ว", dateLabel: "วันที่อนุมัติ", actorLabel: "อนุมัติโดย", empty: "ยังไม่มีคำขอที่อนุมัติ" },
+  rejected: { title: "คำขอที่ปฏิเสธแล้ว", dateLabel: "วันที่ปฏิเสธ", actorLabel: "ปฏิเสธโดย", noteLabel: "เหตุผลที่ปฏิเสธ", empty: "ยังไม่มีคำขอที่ปฏิเสธ" },
+  revision: { title: "คำขอที่รอพนักงานแก้ไข", dateLabel: "วันที่ส่งกลับ", actorLabel: "ส่งกลับโดย", noteLabel: "สิ่งที่ต้องแก้ไข", empty: "ไม่มีคำขอที่รอแก้ไข" },
 };
 
 const ALL = "ทั้งหมด";
@@ -41,12 +45,14 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
   const [department, setDepartment] = useState(ALL);
   const [itemType, setItemType] = useState(ALL);
   const [page, setPage] = useState(1);
+  const [newestFirst, setNewestFirst] = useState(true);
 
   const joined = useMemo(() => {
     const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
     return rows.map((row) => {
       const employee = byCode.get(row.employeeCode) ?? null;
-      return { ...row, employee, name: employee?.name ?? row.fallbackName };
+      const actor = byCode.get(row.actorCode) ?? null;
+      return { ...row, employee, name: employee?.name ?? row.fallbackName, actorName: actor?.name ?? row.actorCode };
     });
   }, [employees, rows]);
 
@@ -57,7 +63,8 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    return joined.filter((row) => {
+    const sorted = [...joined].sort((a, b) => (newestFirst ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date)));
+    return sorted.filter((row) => {
       const matchesQuery =
         !normalizedQuery ||
         `${row.requestId} ${row.employeeCode} ${row.name} ${row.benefit} ${row.note ?? ""}`.toLocaleLowerCase().includes(normalizedQuery);
@@ -67,13 +74,13 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
         (itemType === ALL || row.itemType === itemType)
       );
     });
-  }, [department, itemType, joined, query]);
+  }, [department, itemType, joined, newestFirst, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
   const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const filtersActive = query !== "" || department !== ALL || itemType !== ALL;
-  const columnCount = copy.noteLabel ? 5 : 4;
+  const columnCount = copy.noteLabel ? 6 : 5;
 
   function resetFilters() {
     setQuery("");
@@ -133,14 +140,21 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
                 <th scope="col">คำขอ</th>
                 <th scope="col" className="queue-num">ยอดเบิก</th>
                 {copy.noteLabel ? <th scope="col">{copy.noteLabel}</th> : null}
-                <th scope="col">{copy.dateLabel}</th>
+                <th scope="col">{copy.actorLabel}</th>
+                <th scope="col" aria-sort={newestFirst ? "descending" : "ascending"}>
+                  <button type="button" className="queue-sort" onClick={() => { setNewestFirst((value) => !value); setPage(1); }}>
+                    {copy.dateLabel}
+                    <span aria-hidden="true">{newestFirst ? " ↓" : " ↑"}</span>
+                    <span className="sr-only">{newestFirst ? " เรียงจากล่าสุด กดเพื่อเรียงจากเก่าสุด" : " เรียงจากเก่าสุด กดเพื่อเรียงจากล่าสุด"}</span>
+                  </button>
+                </th>
               </tr>
             </thead>
             <tbody>
               {pageRows.map((row) => (
                 <tr key={row.requestId}>
-                  <td>
-                    <span className="queue-name">{row.name}</span>
+                  <td data-label="พนักงาน">
+                    <Link className="queue-name queue-name-link" href={`/hr/employees?q=${encodeURIComponent(row.employeeCode)}`}>{row.name}</Link>
                     <span className="queue-meta">
                       {row.employeeCode}
                       {row.employee?.department ? ` · ${row.employee.department}` : ""}
@@ -149,15 +163,16 @@ export function StatusList({ kind, rows, employees }: { kind: Kind; rows: Status
                       <span className={`employment-status ${row.employee.status.toLowerCase()}`}>{row.employee.statusLabel}</span>
                     ) : null}
                   </td>
-                  <td>
+                  <td data-label="คำขอ">
                     <span className="queue-item">{row.itemType === "edit" ? "แก้ไขข้อมูล" : row.benefit}</span>
                     <span className="queue-meta">{row.itemType === "edit" ? `${row.requestId} · ${row.benefit}` : `${row.requestId} · เบิกสวัสดิการ`}</span>
                   </td>
-                  <td className="queue-num">
-                    {row.itemType === "benefit" ? <span className="queue-amount">{baht.format(row.amount)} บาท</span> : <span className="queue-meta">ไม่มียอดเงิน</span>}
+                  <td data-label="ยอดเบิก" className="queue-num">
+                    {row.itemType === "benefit" ? <span className="queue-amount">{baht.format(row.amount)} บาท</span> : <span className="queue-meta" aria-label="ไม่มียอดเงิน">—</span>}
                   </td>
-                  {copy.noteLabel ? <td className="queue-note">{row.note}</td> : null}
-                  <td className="queue-date-cell">{row.date}</td>
+                  {copy.noteLabel ? <td data-label={copy.noteLabel} className="queue-note">{row.note}</td> : null}
+                  <td data-label={copy.actorLabel}>{row.actorName}</td>
+                  <td data-label={copy.dateLabel} className="queue-date-cell">{formatThaiDate(row.date)}</td>
                 </tr>
               ))}
               {pageRows.length === 0 ? (

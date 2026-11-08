@@ -7,7 +7,7 @@ import type { HrEmployee, HrEmploymentStatus } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
 
 const ALL = "ทั้งหมด";
-const pageSize = 20;
+const PAGE_SIZE = 20;
 
 const STATUS_OPTIONS: { value: HrEmploymentStatus; label: string }[] = [
   { value: "ACTIVE", label: "ทำงานอยู่" },
@@ -15,12 +15,10 @@ const STATUS_OPTIONS: { value: HrEmploymentStatus; label: string }[] = [
   { value: "DECEASED", label: "เสียชีวิต" },
 ];
 
+type Quality = typeof ALL | "complete" | "incomplete";
+
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
-}
-
-function PlusIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>;
 }
 
 function EditIcon() {
@@ -31,8 +29,27 @@ function HistoryIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5M12 7v5l3 2" /></svg>;
 }
 
-function uniqueSorted(values: (string | null)[]): string[] {
-  return Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort((a, b) => a.localeCompare(b, "th"));
+/** ข้อมูลที่ยังขาดหรือเป็นค่าชั่วคราว ให้ HR เห็นเป็นงานที่ต้องแก้ */
+function dataIssues(employee: HrEmployee): string[] {
+  const issues: string[] = [];
+  if (!employee.department) issues.push("ไม่ระบุแผนก");
+  if (!employee.position) issues.push("ไม่ระบุตำแหน่ง");
+  if (/\s-$/.test(employee.name)) issues.push("ไม่มีนามสกุล");
+  if (employee.email.endsWith(".invalid")) issues.push("ไม่มีอีเมลจริง");
+  return issues;
+}
+
+/** ตัวเลือกแผนกเรียงตามลำดับชั้น: ฝ่าย แล้วตามด้วยแผนกในฝ่ายนั้น */
+function departmentTree(employees: HrEmployee[]) {
+  const children = new Map<string, Set<string>>();
+  for (const employee of employees) {
+    if (!employee.department) continue;
+    const top = employee.parentDepartment ?? employee.department;
+    if (!children.has(top)) children.set(top, new Set());
+    if (employee.parentDepartment) children.get(top)?.add(employee.department);
+  }
+  const byThai = (a: string, b: string) => a.localeCompare(b, "th");
+  return Array.from(children.keys()).sort(byThai).map((top) => ({ top, children: Array.from(children.get(top) ?? []).sort(byThai) }));
 }
 
 /**
@@ -53,12 +70,12 @@ function toViewingEmployee(employee: HrEmployee) {
   };
 }
 
-export function EmployeesClient({ employees }: { employees: HrEmployee[] | null }) {
+export function EmployeesClient({ employees, initialQuery = "" }: { employees: HrEmployee[] | null; initialQuery?: string }) {
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [department, setDepartment] = useState(ALL);
-  const [position, setPosition] = useState(ALL);
   const [status, setStatus] = useState(ALL);
+  const [quality, setQuality] = useState<Quality>(ALL);
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState("");
 
@@ -82,34 +99,35 @@ export function EmployeesClient({ employees }: { employees: HrEmployee[] | null 
     return () => window.clearTimeout(timer);
   }, []);
 
-  const rows = useMemo(() => employees ?? [], [employees]);
-  const departments = useMemo(() => uniqueSorted(rows.map((employee) => employee.department)), [rows]);
-  const positions = useMemo(() => uniqueSorted(rows.map((employee) => employee.position)), [rows]);
+  const rows = useMemo(() => (employees ?? []).map((employee) => ({ ...employee, issues: dataIssues(employee) })), [employees]);
+  const tree = useMemo(() => departmentTree(rows), [rows]);
+  const incompleteCount = rows.filter((row) => row.issues.length > 0).length;
 
-  const filteredEmployees = useMemo(() => {
+  const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    return rows.filter((employee) => {
+    return rows.filter((row) => {
       const matchesQuery =
         !normalizedQuery ||
-        `${employee.code} ${employee.name} ${employee.email}`.toLocaleLowerCase().includes(normalizedQuery);
+        `${row.code} ${row.name} ${row.email}`.toLocaleLowerCase().includes(normalizedQuery);
       return (
         matchesQuery &&
-        (department === ALL || employee.department === department) &&
-        (position === ALL || employee.position === position) &&
-        (status === ALL || employee.status === status)
+        (department === ALL || row.department === department || row.parentDepartment === department) &&
+        (status === ALL || row.status === status) &&
+        (quality === ALL || (quality === "incomplete") === row.issues.length > 0)
       );
     });
-  }, [department, position, query, rows, status]);
+  }, [department, quality, query, rows, status]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredEmployees.length / pageSize));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
-  const pageEmployees = filteredEmployees.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const filtersActive = query !== "" || department !== ALL || status !== ALL || quality !== ALL;
 
   function resetFilters() {
     setQuery("");
     setDepartment(ALL);
-    setPosition(ALL);
     setStatus(ALL);
+    setQuality(ALL);
     setPage(1);
   }
 
@@ -123,152 +141,154 @@ export function EmployeesClient({ employees }: { employees: HrEmployee[] | null 
   }
 
   return (
-    <div className="app-shell">
-      <div className="app-main employee-management-main">
-        <div className="page-content employee-management-content">
-          <div className="employee-management-heading">
-            <h1>จัดการพนักงานและสิทธิ์สวัสดิการ</h1>
-            <Link href="/hr/employees/requests" className="employee-track-requests-button">ติดตามคำขอเพิ่มบุคคล</Link>
-          </div>
-          <section className="employee-management-panel" aria-label="รายการพนักงาน">
-            <div className="employee-management-filters">
-              <label className="employee-search-field">
-                <span>ค้นหาพนักงาน:</span>
-                <div className="employee-management-input">
-                  <SearchIcon />
-                  <input
-                    value={query}
-                    onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-                    placeholder="พิมพ์ชื่อ, รหัส, หรืออีเมล..."
-                    aria-label="ค้นหาชื่อ รหัส หรืออีเมลพนักงาน"
-                  />
-                </div>
-              </label>
-              <label className="employee-management-select">
-                <span>แผนก:</span>
-                <select value={department} onChange={(event) => { setDepartment(event.target.value); setPage(1); }} aria-label="กรองพนักงานตามแผนก">
-                  <option>{ALL}</option>
-                  {departments.map((item) => <option key={item}>{item}</option>)}
-                </select>
-              </label>
-              <label className="employee-management-select">
-                <span>ตำแหน่ง:</span>
-                <select value={position} onChange={(event) => { setPosition(event.target.value); setPage(1); }} aria-label="กรองพนักงานตามตำแหน่ง">
-                  <option>{ALL}</option>
-                  {positions.map((item) => <option key={item}>{item}</option>)}
-                </select>
-              </label>
-              <label className="employee-management-select">
-                <span>สถานะ:</span>
-                <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} aria-label="กรองพนักงานตามสถานะการทำงาน">
-                  <option>{ALL}</option>
-                  {STATUS_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </select>
-              </label>
-              <Link href="/hr/employees/add" className="employee-add-button">
-                <PlusIcon /> เพิ่มพนักงานรายบุคคล
-              </Link>
-            </div>
-
-            <div className="employee-management-table-wrap">
-              <table className="employee-management-table">
-                <thead>
-                  <tr>
-                    <th scope="col">รหัส</th>
-                    <th scope="col">ชื่อ-นามสกุล</th>
-                    <th scope="col">แผนก</th>
-                    <th scope="col">ตำแหน่ง</th>
-                    <th scope="col">หัวหน้า</th>
-                    <th scope="col">สถานะ</th>
-                    <th scope="col"><span className="sr-only">การดำเนินการ</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageEmployees.map((employee) => (
-                    <tr key={employee.code}>
-                      <td className="employee-management-id">{employee.code}</td>
-                      <td>
-                        <span className="employee-management-name">{employee.name}</span>
-                        <small className="employee-management-sub">{employee.email}</small>
-                      </td>
-                      <td>
-                        {employee.department ?? <span className="employee-management-missing">ยังไม่ระบุ</span>}
-                        {employee.parentDepartment ? <small className="employee-management-sub">{employee.parentDepartment}</small> : null}
-                      </td>
-                      <td>
-                        {employee.position ?? <span className="employee-management-missing">ยังไม่ระบุ</span>}
-                        {employee.jobLevel ? <small className="employee-management-sub">{employee.jobLevel}</small> : null}
-                      </td>
-                      <td>
-                        {employee.manager ? (
-                          <>
-                            {employee.manager.name}
-                            <small className="employee-management-sub">{employee.manager.code}</small>
-                          </>
-                        ) : <span className="employee-management-missing">—</span>}
-                      </td>
-                      <td>
-                        <span className={`employment-status ${employee.status.toLowerCase()}`}>{employee.statusLabel}</span>
-                        {employee.statusDate ? (
-                          <small className="employee-management-sub">ตั้งแต่ {formatThaiDate(employee.statusDate)}</small>
-                        ) : null}
-                      </td>
-                      <td className="employee-management-actions">
-                        <button
-                          type="button"
-                          className="employee-action-button employee-edit-button"
-                          onClick={() => open(employee, "edit")}
-                          aria-label={`แก้ประวัติ ${employee.name}`}
-                          title="แก้ประวัติ"
-                        >
-                          <EditIcon />
-                          <span>แก้ประวัติ</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="employee-action-button employee-history-button"
-                          onClick={() => open(employee, "history")}
-                          aria-label={`ดูประวัติ ${employee.name}`}
-                          title="ดูประวัติ"
-                        >
-                          <HistoryIcon />
-                          <span>ดูประวัติ</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {employees === null ? (
-                    <tr><td className="employee-management-empty" colSpan={7}>โหลดรายชื่อพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</td></tr>
-                  ) : pageEmployees.length === 0 ? (
-                    <tr><td className="employee-management-empty" colSpan={7}>{rows.length === 0 ? "ยังไม่มีข้อมูลพนักงานในระบบ" : "ไม่พบข้อมูลพนักงานที่ตรงกับตัวกรอง"}</td></tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            <footer className="employee-management-footer">
-              <span>
-                {filteredEmployees.length === 0
-                  ? "ไม่พบรายการ"
-                  : `แสดงผล ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, filteredEmployees.length)} จาก ${filteredEmployees.length} รายการ`}
-              </span>
-              <div className="employee-management-footer-actions">
-                <button type="button" className="reset-filters" onClick={resetFilters}>ล้างตัวกรอง</button>
-                <nav className="pagination" aria-label="เปลี่ยนหน้ารายชื่อพนักงาน">
-                  <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="หน้าก่อนหน้า">‹</button>
-                  <span className="employee-page-indicator">{currentPage} / {pageCount}</span>
-                  <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)} aria-label="หน้าถัดไป">›</button>
-                </nav>
-              </div>
-            </footer>
-          </section>
+    <div className="page-content queue-page">
+      <header className="queue-heading queue-heading-actions">
+        <div>
+          <h1>รายชื่อพนักงาน</h1>
+          <ul className="queue-summary">
+            <li>ทั้งหมด {rows.length} คน</li>
+            <li>ทำงานอยู่ {rows.filter((row) => row.status === "ACTIVE").length} คน</li>
+            {incompleteCount > 0 ? (
+              <li>
+                <button type="button" className="queue-link-button queue-inline-link" onClick={() => { setQuality("incomplete"); setPage(1); }}>
+                  ข้อมูลไม่ครบ {incompleteCount} คน
+                </button>
+              </li>
+            ) : null}
+          </ul>
         </div>
-      </div>
+        <div className="queue-heading-buttons">
+          <Link href="/hr/employees/requests" className="queue-secondary-link">ติดตามคำขอเพิ่มบุคคล</Link>
+          <Link href="/hr/employees/add" className="queue-primary queue-primary-link">เพิ่มพนักงาน</Link>
+        </div>
+      </header>
+
+      {employees === null ? (
+        <p className="queue-alert" role="alert">
+          โหลดรายชื่อพนักงานไม่สำเร็จ{" "}
+          <button type="button" className="queue-link-button" onClick={() => window.location.reload()}>ลองโหลดใหม่</button>
+        </p>
+      ) : null}
+
+      <section className="queue-sheet" aria-label="รายชื่อพนักงาน">
+        <div className="queue-filters">
+          <label className="queue-search">
+            <span className="sr-only">ค้นหาพนักงาน</span>
+            <SearchIcon />
+            <input
+              value={query}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
+              placeholder="ค้นหาชื่อ รหัส หรืออีเมล"
+            />
+          </label>
+          <label className="queue-select">
+            <span>ฝ่าย / แผนก</span>
+            <select value={department} onChange={(event) => { setDepartment(event.target.value); setPage(1); }}>
+              <option>{ALL}</option>
+              {tree.map(({ top, children }) => [
+                <option key={top} value={top}>{top}</option>,
+                ...children.map((child) => <option key={child} value={child}>{`   └ ${child}`}</option>),
+              ])}
+            </select>
+          </label>
+          <label className="queue-select">
+            <span>สถานะ</span>
+            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+              <option>{ALL}</option>
+              {STATUS_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <label className="queue-select">
+            <span>ความครบของข้อมูล</span>
+            <select value={quality} onChange={(event) => { setQuality(event.target.value as Quality); setPage(1); }}>
+              <option value={ALL}>{ALL}</option>
+              <option value="incomplete">ข้อมูลไม่ครบ ({incompleteCount})</option>
+              <option value="complete">ข้อมูลครบ ({rows.length - incompleteCount})</option>
+            </select>
+          </label>
+          {filtersActive ? (
+            <button type="button" className="queue-link-button" onClick={resetFilters}>ล้างตัวกรอง</button>
+          ) : null}
+        </div>
+
+        <div className="queue-table-scroll">
+          <table className="queue-table">
+            <thead>
+              <tr>
+                <th scope="col">พนักงาน</th>
+                <th scope="col">ฝ่าย / แผนก</th>
+                <th scope="col">ตำแหน่ง</th>
+                <th scope="col">หัวหน้า</th>
+                <th scope="col">สถานะ</th>
+                <th scope="col"><span className="sr-only">ดำเนินการ</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageRows.map((row) => (
+                <tr key={row.code}>
+                  <td data-label="พนักงาน">
+                    <span className="queue-name">{row.name}</span>
+                    <span className="queue-meta">{row.code} · {row.email}</span>
+                    {row.issues.length > 0 ? <span className="queue-blocker">ข้อมูลไม่ครบ: {row.issues.join(", ")}</span> : null}
+                  </td>
+                  <td data-label="ฝ่าย / แผนก">
+                    {row.department ?? <span className="queue-meta">—</span>}
+                    {row.parentDepartment ? <span className="queue-meta">{row.parentDepartment}</span> : null}
+                  </td>
+                  <td data-label="ตำแหน่ง">
+                    {row.position ?? <span className="queue-meta">—</span>}
+                    {row.jobLevel ? <span className="queue-meta">{row.jobLevel}</span> : null}
+                  </td>
+                  <td data-label="หัวหน้า">
+                    {row.manager ? (
+                      <>
+                        {row.manager.name}
+                        <span className="queue-meta">{row.manager.code}</span>
+                      </>
+                    ) : <span className="queue-meta">—</span>}
+                  </td>
+                  <td data-label="สถานะ">
+                    <span className={`employment-status ${row.status.toLowerCase()}`}>{row.statusLabel}</span>
+                    {row.statusDate ? <span className="queue-meta">ตั้งแต่ {formatThaiDate(row.statusDate)}</span> : null}
+                  </td>
+                  <td className="queue-actions">
+                    <button type="button" className="queue-secondary queue-icon-button" onClick={() => open(row, "edit")} aria-label={`แก้ไขข้อมูล ${row.name}`}>
+                      <EditIcon /> แก้ไข
+                    </button>
+                    <button type="button" className="queue-secondary queue-icon-button" onClick={() => open(row, "history")} aria-label={`ดูประวัติ ${row.name}`}>
+                      <HistoryIcon /> ประวัติ
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {employees !== null && pageRows.length === 0 ? (
+                <tr>
+                  <td className="queue-empty" colSpan={6}>{rows.length === 0 ? "ยังไม่มีข้อมูลพนักงานในระบบ" : "ไม่พบพนักงานที่ตรงกับตัวกรอง"}</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <footer className="queue-footer queue-footer-paged">
+          <span>
+            {filtered.length === 0
+              ? "ไม่พบรายการ"
+              : `แสดง ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} จาก ${filtered.length} คน`}
+          </span>
+          {pageCount > 1 ? (
+            <nav className="queue-pager" aria-label="เปลี่ยนหน้ารายชื่อพนักงาน">
+              <button type="button" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>ก่อนหน้า</button>
+              <span aria-live="polite">หน้า {currentPage} จาก {pageCount}</span>
+              <button type="button" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>ถัดไป</button>
+            </nav>
+          ) : null}
+        </footer>
+      </section>
 
       {notice ? (
-        <div className="toast" role="status">
-          <span className="toast-check">✓</span>
-          {notice}
+        <div className="toast queue-toast" role="status">
+          <span>{notice}</span>
           <button type="button" onClick={() => setNotice("")} aria-label="ปิดข้อความ">×</button>
         </div>
       ) : null}

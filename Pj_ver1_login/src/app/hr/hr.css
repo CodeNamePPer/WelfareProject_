@@ -223,12 +223,12 @@
 }
 
 .hr-app .decision-approve-button {
-  background: #16a34a;
+  background: var(--primary-600);
   color: white;
 }
 
 .hr-app .decision-approve-button:hover {
-  background: #15803d;
+  background: var(--primary-700);
 }
 
 .hr-app .decision-reject-button {
@@ -5550,7 +5550,7 @@
 
 .hr-app .queue-blocker {
   display: block;
-  max-width: 34ch;
+  max-width: 26rem;
   margin-top: 6px;
   color: #92400e;
   font-size: 13px;
@@ -5568,7 +5568,7 @@
   text-align: right;
 }
 
-.hr-app .queue-approve,
+.hr-app .queue-primary,
 .hr-app .queue-secondary {
   height: 36px;
   border-radius: 6px;
@@ -5578,17 +5578,17 @@
   cursor: pointer;
 }
 
-.hr-app .queue-approve {
+.hr-app .queue-primary {
   border: 1px solid var(--primary-600);
   background: var(--primary-600);
   color: white;
 }
 
-.hr-app .queue-approve:hover:not(:disabled) {
+.hr-app .queue-primary:hover:not(:disabled) {
   background: var(--primary-700);
 }
 
-.hr-app .queue-approve:disabled {
+.hr-app .queue-primary:disabled {
   border-color: #cbd5e1;
   background: #f1f5f9;
   color: #64748b;
@@ -5612,7 +5612,7 @@
   color: #b91c1c;
 }
 
-.hr-app .queue-approve:focus-visible,
+.hr-app .queue-primary:focus-visible,
 .hr-app .queue-secondary:focus-visible,
 .hr-app .queue-link-button:focus-visible,
 .hr-app .queue-undo:focus-visible {
@@ -5733,7 +5733,7 @@
     padding-top: 10px;
   }
 
-  .hr-app .queue-approve,
+  .hr-app .queue-primary,
   .hr-app .queue-secondary {
     height: 40px;
   }
@@ -5804,4 +5804,281 @@
 
 .hr-app .employee-management-id {
   white-space: nowrap;
+}
+
+/* -----------------------------------------------------------------------------
+ * รอบ 2: หลักฐานในหน้าต่างยืนยัน, กลุ่มคำขอ, ลิงก์พนักงาน, หน้ารายชื่อพนักงาน
+ * -------------------------------------------------------------------------- */
+.hr-app .queue-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 0;
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  list-style: none;
+}
+
+.hr-app .queue-summary li + li::before {
+  content: "·";
+  margin: 0 10px;
+  color: #94a3b8;
+}
+
+.hr-app .queue-heading h1:focus {
+  outline: none;
+}
+
+.hr-app .queue-heading h1:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--primary-500);
+  outline-offset: 4px;
+}
+
+.hr-app .queue-heading-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.hr-app .queue-heading-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hr-app .queue-primary-link,
+.hr-app .queue-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hr-app .queue-secondary-link {
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hr-app .queue-secondary-link:hover {
+  background: #f8fafc;
+}
+
+.hr-app .queue-primary-link:focus-visible,
+.hr-app .queue-secondary-link:focus-visible,
+.hr-app .queue-name-link:focus-visible,
+.hr-app .queue-sort:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .queue-inline-link {
+  height: auto;
+  padding: 0;
+  font-size: inherit;
+}
+
+.hr-app .queue-name-link {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.hr-app .queue-name-link:hover {
+  color: var(--primary-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hr-app .queue-blocker a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+/* หัวกลุ่ม "ต้องตรวจสอบก่อน" / "พร้อมอนุมัติ" */
+.hr-app .queue-table .queue-group-row th {
+  border-bottom: 1px solid var(--border);
+  background: white;
+  padding: 14px 16px 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.hr-app .queue-group + .queue-group .queue-group-row th {
+  border-top: 1px solid var(--border);
+}
+
+.hr-app .queue-group-count {
+  margin-left: 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.hr-app .queue-group-blocked .queue-group-count {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.hr-app .queue-table tbody.queue-group tr:last-child td {
+  border-bottom: 0;
+}
+
+.hr-app .queue-primary-danger {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+.hr-app .queue-primary-danger:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.hr-app .queue-icon-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hr-app .queue-icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hr-app .queue-sort {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hr-app .queue-sort:hover {
+  color: var(--text);
+}
+
+/* หน้าต่างยืนยัน: หลักฐานประกอบการตัดสินใจ */
+.hr-app .queue-dialog {
+  width: min(100%, 560px);
+}
+
+.hr-app .queue-changes {
+  width: 100%;
+  margin: 0 0 16px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .queue-changes caption {
+  margin-bottom: 6px;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.hr-app .queue-changes th,
+.hr-app .queue-changes td {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px 8px 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.hr-app .queue-changes thead th {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hr-app .queue-changes tbody th {
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.hr-app .queue-changes td strong {
+  color: var(--primary-700);
+}
+
+.hr-app .queue-attachments {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.hr-app .queue-attachments h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hr-app .queue-attachments ul {
+  margin: 0 0 4px;
+  padding-left: 18px;
+}
+
+.hr-app .queue-attachments p {
+  margin: 0;
+}
+
+.hr-app .queue-meta-inline {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.hr-app .queue-confirm-button {
+  background: var(--primary-600);
+  color: white;
+}
+
+.hr-app .queue-confirm-button:hover {
+  background: var(--primary-700);
+}
+
+/* หน้ารายงาน: placeholder เดิมจางเกินไป (2.5:1) */
+.hr-app .report-search-field input::placeholder {
+  color: #64748b;
+}
+
+/* จอแคบ: ใส่ชื่อคอลัมน์หน้าค่าที่สำคัญ เพราะหัวตารางถูกซ่อน */
+@container queue (max-width: 719px) {
+  .hr-app .queue-table td[data-label]:not([data-label="พนักงาน"])::before {
+    content: attr(data-label);
+    display: block;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .hr-app .queue-table .queue-group-row {
+    padding: 0;
+  }
+
+  .hr-app .queue-table .queue-group-row th {
+    display: block;
+  }
 }

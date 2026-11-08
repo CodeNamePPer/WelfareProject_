@@ -1,17 +1,22 @@
+import type { Metadata } from "next";
 import { getHrEmployees } from "@/lib/hr/employees";
 import { rejectedRequests } from "../../sample/rejected";
+import { thaiShortDateToIso, sampleActor } from "../../sample/history";
 import { StatusList, type StatusRow } from "../StatusList";
+
+export const metadata: Metadata = { title: "คำขอที่ปฏิเสธแล้ว" };
 
 export const dynamic = "force-dynamic";
 
-const rows: StatusRow[] = rejectedRequests.map((request) => ({
+const rows: StatusRow[] = rejectedRequests.map((request, index) => ({
   requestId: request.requestId,
   itemType: request.itemType,
   employeeCode: request.employeeId,
   fallbackName: request.name,
   benefit: request.benefit,
   amount: request.amount,
-  date: request.rejectedAt,
+  date: thaiShortDateToIso(request.rejectedAt),
+  actorCode: sampleActor(index),
   note: request.reason,
 }));
 

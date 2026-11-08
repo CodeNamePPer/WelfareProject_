@@ -9,7 +9,7 @@ import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import "./hr.css";
 
 export const metadata: Metadata = {
-  title: "ข้อมูลพนักงาน | ระบบพนักงานและสวัสดิการ",
+  title: { default: "HR | ระบบพนักงานและสวัสดิการ", template: "%s | ระบบพนักงานและสวัสดิการ" },
   description: "จัดการข้อมูลพนักงานและสิทธิประโยชน์สวัสดิการ",
 };
 
