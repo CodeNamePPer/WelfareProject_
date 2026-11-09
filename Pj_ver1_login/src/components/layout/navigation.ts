@@ -31,7 +31,7 @@ export type NavSection = 'admin' | 'hr' | 'employee' | 'finance';
 
 const REQUEST_ITEM: NavItem = {
   id: 'requests',
-  label: 'ส่งคำขอสวัสดิการ',
+  label: 'ยื่นคำขอสวัสดิการ',
   icon: FilePlus2,
   href: '/employee/withdraw',
   switchesToRequester: true,
@@ -58,11 +58,11 @@ export const NAV: Record<NavSection, SectionConfig> = {
     sectionLabel: 'ADMIN',
     profileHref: '/admin/profile',
     items: (notificationCount) => [
-      { id: 'home', label: 'หน้าแรก Home', icon: LayoutDashboard, href: '/admin' },
+      { id: 'home', label: 'หน้าแรก', icon: LayoutDashboard, href: '/admin' },
       { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount, href: '/admin/notifications' },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
       { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
-      { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
+      { id: 'logs', label: 'ประวัติของระบบ', icon: History, href: '/admin/logs' },
       REQUEST_ITEM,
     ],
   },
@@ -72,12 +72,12 @@ export const NAV: Record<NavSection, SectionConfig> = {
     subtitle: 'HR',
     sectionLabel: 'HR',
     items: (notificationCount) => [
-      { id: 'home', label: 'หน้าแรก Home', icon: LayoutDashboard, href: '/hr/home' },
+      { id: 'home', label: 'หน้าแรก', icon: LayoutDashboard, href: '/hr/home' },
       { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
-      { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History },
+      { id: 'logs', label: 'ประวัติการแก้ไข', icon: History },
       REQUEST_ITEM,
     ],
   },

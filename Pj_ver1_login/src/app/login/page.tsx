@@ -20,7 +20,7 @@ export default async function LoginPage({
       <div className="w-full max-w-sm">
         <p className="mb-2 text-sm font-semibold text-ink-mute">ระบบพนักงานและสวัสดิการ</p>
         <h1 className="text-2xl font-semibold">เข้าสู่ระบบ</h1>
-        <p className="mt-2 text-ink-mute">ใช้อีเมลในการเข้าสู่ระบบ</p>
+
         {reason === "password" ? (
           <p role="status" className="mt-4 rounded-md border border-mist bg-white px-3.5 py-2.5 text-sm text-ink">
             รหัสผ่านของบัญชีนี้เพิ่งถูกเปลี่ยนหรือรีเซ็ต กรุณาเข้าสู่ระบบใหม่

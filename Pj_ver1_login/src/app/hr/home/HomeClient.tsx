@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { HrEmployee } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
 import { StatusTabs } from "../StatusTabs";
+import { Tag } from "@/components/ui/Tag";
+import { Button } from "@/components/ui/Button";
 import type { HrStatusCounts, PendingRequest } from "@/lib/claims/types";
 import { ALL, filtersToQuery, replaceUrlQuery, type QueueView, type RequestFilters } from "../urlFilters";
 import { DepartmentOptions, departmentTree, matchesDepartment } from "../departmentTree";
@@ -331,7 +333,7 @@ export function HomeClient({
               </select>
             </label>
             {filtersActive ? (
-              <button type="button" className="queue-link-button" onClick={resetFilters}>ล้างตัวกรอง</button>
+              <Button variant="ghost" size="sm" onClick={resetFilters}>ล้างตัวกรอง</Button>
             ) : null}
           </div>
 
@@ -339,14 +341,14 @@ export function HomeClient({
             {selectedRows.length > 0 ? (
               <>
                 <span>เลือก {selectedRows.length} รายการ · รวม {baht.format(selectedTotal)} บาท</span>
-                <button
-                  type="button"
-                  className="queue-primary"
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={(event) => { triggerRef.current = event.currentTarget; setBulkOpen(true); }}
                 >
                   อนุมัติที่เลือก
-                </button>
-                <button type="button" className="queue-link-button" onClick={() => setSelectedIds([])}>ยกเลิกการเลือก</button>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])}>ยกเลิกการเลือก</Button>
               </>
             ) : (
               <span className="queue-meta">กดที่คำขอเพื่อดูรายละเอียด เอกสารแนบ และอนุมัติ · เลือกหลายคำขอเบิกเพื่ออนุมัติพร้อมกัน</span>
@@ -421,7 +423,7 @@ export function HomeClient({
                             {row.employee?.department ? ` · ${row.employee.department}` : ""}
                           </span>
                           {row.employee && row.employee.status !== "ACTIVE" ? (
-                            <span className={`employment-status ${row.employee.status.toLowerCase()}`}>{row.employee.statusLabel}</span>
+                            <Tag tone="neutral" className="mt-1">{row.employee.statusLabel}</Tag>
                           ) : null}
                         </td>
                         <td data-label="ยอดเบิก" className={`queue-num${row.itemType === "benefit" ? "" : " queue-cell-empty"}`}>
@@ -487,8 +489,8 @@ export function HomeClient({
             {bulkError ? <p className="queue-alert" role="alert">{bulkError}</p> : null}
             <form onSubmit={confirmBulk}>
               <div className="decision-actions">
-                <button type="button" className="button button-secondary" onClick={closeBulk} data-initial-focus>ยกเลิก</button>
-                <button type="submit" disabled={bulkBusy} className="button queue-confirm-button">{bulkBusy ? "กำลังบันทึก..." : `ยืนยันอนุมัติ ${selectedRows.length} รายการ`}</button>
+                <Button variant="secondary" onClick={closeBulk} data-initial-focus>ยกเลิก</Button>
+                <Button type="submit" variant="primary" loading={bulkBusy}>{`ยืนยันอนุมัติ ${selectedRows.length} รายการ`}</Button>
               </div>
             </form>
           </section>
