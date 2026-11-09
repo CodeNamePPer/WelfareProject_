@@ -36,12 +36,13 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.hr-app button,
 .hr-app input {
   font: inherit;
 }
 
-.hr-app button {
+/* :where() ทำให้ specificity เป็น 0 เพื่อไม่ทับ utility ของ <Button> เช่น text-white, text-13 */
+:where(.hr-app button) {
+  font: inherit;
   color: inherit;
 }
 

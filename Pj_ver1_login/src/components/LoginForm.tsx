@@ -115,7 +115,7 @@ export function LoginForm({ next }: { next: string }) {
   }
 
   const inputClass =
-    "mt-1.5 w-full rounded-md border border-mist bg-slip px-3.5 py-2.5 outline-none transition placeholder:text-ink-mute/70 focus:border-ink focus:ring-2 focus:ring-ink/20";
+    "mt-1.5 w-full rounded-md border border-mist bg-slip px-3.5 py-2.5 outline-none transition placeholder:text-ink-soft focus:border-ink focus:ring-2 focus:ring-ink/20";
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
