@@ -37,6 +37,12 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   const router = useRouter();
   // เก็บใน state เพื่ออัปเดตแถวทันทีหลัง server บันทึกสำเร็จ
   const [rawRequests, setRequests] = useState(initialRequests);
+  // รับข้อมูลใหม่จาก server หลัง router.refresh() เช่น วันที่จ่ายจริงและผู้จ่าย
+  const [prevInitial, setPrevInitial] = useState(initialRequests);
+  if (initialRequests !== prevInitial) {
+    setPrevInitial(initialRequests);
+    setRequests(initialRequests);
+  }
   // วันจ่ายตามการตั้งค่า / การเลื่อนรายคำขอ (ข้อมูลกลาง)
   const requests = useEffectiveRequests(rawRequests);
   const [tab, setTab] = useState<Tab>("approved");
