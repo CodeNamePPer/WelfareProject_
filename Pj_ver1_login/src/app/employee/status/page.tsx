@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { listClaims } from "@/lib/claims/service";
 import { toBangkokDate } from "@/lib/claims/mappers";
-import type { ClaimRecord } from "@/lib/claims/types";
+import { CLAIM_STATUS_LABEL, type ClaimRecord } from "@/lib/claims/types";
 import StatusClient, { type ApprovalStep, type RequestStatus, type WelfareRequest } from "./StatusClient";
 
 const STATUS_MAP: Record<ClaimRecord["status"], RequestStatus> = {
@@ -72,6 +72,7 @@ function toRequest(claim: ClaimRecord): WelfareRequest {
     submittedTime: claim.submittedAt ? thaiDateTime(claim.submittedAt) : "ยังไม่ได้ส่ง",
     amount: claim.amountRequested,
     status: STATUS_MAP[claim.status],
+    statusText: CLAIM_STATUS_LABEL[claim.status],
     year: String(Number(toBangkokDate(at).slice(0, 4)) + 543),
     description: Object.entries(claim.details).map(([label, value]) => `${label}: ${value}`).join(" · ") || claim.note || "-",
     employeeLabel: `${claim.employeeName} · ${claim.employeeCode}`,

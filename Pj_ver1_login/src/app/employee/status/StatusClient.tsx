@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { useDetailParam } from "@/lib/useDetailParam";
 
 export type RequestStatus = "pending" | "approved" | "draft" | "rejected" | "revision" | "processing" | "cancelled";
 type StatusFilter = "all" | "pending" | "approved" | "processing" | "rejected";
@@ -16,6 +18,7 @@ export type WelfareRequest = {
   submittedTime: string;
   amount: number;
   status: RequestStatus;
+  statusText: string;
   year: string;
   description: string;
   employeeLabel: string;
@@ -26,16 +29,6 @@ export type WelfareRequest = {
   lastStep: string;
   canEdit: boolean;
   canCancel: boolean;
-};
-
-const statusLabels: Record<RequestStatus, string> = {
-  pending: "รออนุมัติ",
-  approved: "อนุมัติแล้ว",
-  draft: "ฉบับร่าง",
-  rejected: "ไม่อนุมัติ",
-  revision: "รอแก้ไข",
-  processing: "ดำเนินการ",
-  cancelled: "ยกเลิกแล้ว",
 };
 
 const statusStyles: Record<RequestStatus, string> = {
@@ -94,9 +87,10 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
     });
   }, [activeTab, requests, search, selectedYear]);
 
-  const selectedRequest =
-    filteredRequests.find((request) => request.id === selectedId) ??
-    filteredRequests[0];
+  // ?id=เลขคำขอ คือเปิดหน้ารายละเอียด ส่วน selectedId ใช้กับปุ่มยกเลิกในแถวตาราง
+  const detail = useDetailParam("id");
+  const detailRequest = requests.find((request) => request.id === detail.id);
+  const selectedRequest = detailRequest ?? requests.find((request) => request.id === selectedId);
 
   useEffect(() => {
     if (!showCancelConfirmation) return;
@@ -135,7 +129,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
         setCancelError(data.error ?? "ยกเลิกคำขอไม่สำเร็จ");
         return;
       }
-      setRequests((current) => current.map((request) => (request.id === selectedRequest.id ? { ...request, status: "cancelled", lastStep: "ยกเลิกแล้ว", canEdit: false, canCancel: false } : request)));
+      setRequests((current) => current.map((request) => (request.id === selectedRequest.id ? { ...request, status: "cancelled", statusText: "ยกเลิกแล้ว", lastStep: "ยกเลิกแล้ว", canEdit: false, canCancel: false } : request)));
       setShowCancelConfirmation(false);
       router.refresh();
     } catch {
@@ -147,6 +141,8 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-3 px-1 pb-8 text-13 text-ink">
+      {!detailRequest && (
+      <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-22 font-semibold">ติดตามคำขอสวัสดิการ</h1>
@@ -232,12 +228,10 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
                 <tr
                   key={request.id}
                   onClick={() => {
-                    setSelectedId(request.id);
                     setShowCancelConfirmation(false);
+                    detail.open(request.id);
                   }}
-                  className={`cursor-pointer border-b border-line transition hover:bg-surface ${
-                    selectedRequest?.id === request.id ? "bg-surface" : ""
-                  }`}
+                  className="cursor-pointer border-b border-line transition hover:bg-surface"
                 >
                   <td className="px-3 py-3 font-semibold">{request.id}</td>
                   <td className="px-3 py-3">
@@ -253,7 +247,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
                     <span
                       className={`whitespace-nowrap rounded px-2 py-1 text-11 ${statusStyles[request.status]}`}
                     >
-                      {statusLabels[request.status]}
+                      {request.statusText}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-muted">
@@ -307,7 +301,12 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
         </div>
       </section>
 
-      {selectedRequest && (
+      </>
+      )}
+
+      {detailRequest && selectedRequest && (
+        <>
+        <Breadcrumb items={[{ label: "ติดตามคำขอสวัสดิการ", href: "/employee/status" }, { label: selectedRequest.id }]} />
         <section className="rounded border border-line bg-white p-3">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
             <div>
@@ -321,7 +320,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
             <span
               className={`rounded px-2 py-1 text-11 ${statusStyles[selectedRequest.status]}`}
             >
-              {statusLabels[selectedRequest.status]}
+              {selectedRequest.statusText}
             </span>
           </div>
 
@@ -397,6 +396,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
             </div>
           </div>
         </section>
+        </>
       )}
 
       {showCancelConfirmation && selectedRequest?.canCancel && (

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { HrEmployee } from "@/lib/hr/employees";
@@ -114,13 +115,12 @@ export function RequestDetailClient({
 
   return (
     <div className="page-content queue-page request-page">
-      <nav className="profile-breadcrumb" aria-label="ตำแหน่งหน้า">
-        <Link href={status === "pending" ? "/hr/home" : `/hr/home/${status}`}>
-          {status === "pending" ? "คำขอรออนุมัติ" : `คำขอที่${STATUS_LABEL[status]}`}
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page">{request.id}</span>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: status === "pending" ? "คำขอรออนุมัติ" : `คำขอที่${STATUS_LABEL[status]}`, href: status === "pending" ? "/hr/home" : `/hr/home/${status}` },
+          { label: request.id },
+        ]}
+      />
 
       <header className="queue-heading request-heading">
         <p className="request-id">เลขที่คำขอ {request.id}</p>
@@ -128,7 +128,7 @@ export function RequestDetailClient({
         <ul className="queue-summary">
           <li>
             <span className={`request-status request-status-${shownStatus}`}>
-              {STATUS_LABEL[status]}
+              {detail.statusText}
             </span>
           </li>
           <li>{request.itemType === "edit" ? "คำขอแก้ไขข้อมูล" : "คำขอเบิกสวัสดิการ"}</li>
@@ -241,7 +241,7 @@ export function RequestDetailClient({
             <section className="queue-sheet request-section" aria-labelledby="decision-record-title">
               <h2 id="decision-record-title">ผลการพิจารณา</h2>
               <dl className="profile-facts">
-                <div><dt>สถานะ</dt><dd>{STATUS_LABEL[status]}</dd></div>
+                <div><dt>สถานะ</dt><dd>{detail.statusText}</dd></div>
                 <div><dt>ดำเนินการโดย</dt><dd>{actorName}</dd></div>
                 <div><dt>วันที่</dt><dd>{formatThaiDate(decision.date)}</dd></div>
                 {decision.note ? <div><dt>{status === "rejected" ? "เหตุผลที่ปฏิเสธ" : "สิ่งที่ต้องแก้ไข"}</dt><dd>{decision.note}</dd></div> : null}

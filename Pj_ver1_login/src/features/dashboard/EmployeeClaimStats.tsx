@@ -282,7 +282,7 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
                             อนุมัติ {formatBahtWhole(claim.approvedAmount!)}
                           </span>
                         ) : null}
-                        <StatusBadge status={claim.status} />
+                        <StatusBadge status={claim.status} label={claim.statusText} />
                       </div>
                     </li>
                   );

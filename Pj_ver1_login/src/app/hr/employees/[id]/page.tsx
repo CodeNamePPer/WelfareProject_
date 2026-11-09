@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { notFound } from "next/navigation";
 import { getHrEmployees, type HrEmployee } from "@/lib/hr/employees";
 import { getEntitlements } from "@/lib/hr/entitlements";
 import { formatThaiDate } from "@/lib/format";
 import { listClaims } from "@/lib/claims/service";
 import { hrStatusOf, toBangkokDate } from "@/lib/claims/mappers";
-import { STATUS_LABEL } from "@/lib/claims/types";
+import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ async function requestHistory(code: string): Promise<HistoryItem[]> {
     .flatMap((claim): HistoryItem[] => {
       const status = hrStatusOf(claim.status);
       if (!status) return [];
-      return [{ id: claim.claimNo, benefit: claim.benefitName, amount: claim.amountApproved ?? claim.amountRequested, date: toBangkokDate(claim.submittedAt ?? claim.createdAt), status: STATUS_LABEL[status], tone: status }];
+      return [{ id: claim.claimNo, benefit: claim.benefitName, amount: claim.amountApproved ?? claim.amountRequested, date: toBangkokDate(claim.submittedAt ?? claim.createdAt), status: CLAIM_STATUS_LABEL[claim.status], tone: status }];
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 }
@@ -84,11 +85,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
 
   return (
     <div className="page-content queue-page profile-page">
-      <nav className="profile-breadcrumb" aria-label="ตำแหน่งหน้า">
-        <Link href="/hr/employees">รายชื่อพนักงาน</Link>
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page">{employee.code}</span>
-      </nav>
+      <Breadcrumb items={[{ label: "รายชื่อพนักงาน", href: "/hr/employees" }, { label: employee.code }]} />
 
       <header className="queue-heading">
         <h1>{employee.name}</h1>

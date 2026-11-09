@@ -589,22 +589,6 @@
   padding: 26px 32px 32px;
 }
 
-.hr-app .breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.hr-app .breadcrumbs [aria-current="page"] {
-  color: #33415c;
-}
-
-.hr-app .breadcrumb-separator {
-  color: #64748b;
-}
-
 .hr-app .page-heading {
   display: flex;
   align-items: flex-end;
@@ -3800,16 +3784,6 @@
   padding-top: 22px;
 }
 
-.hr-app .employee-history-content > .breadcrumbs a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.hr-app .employee-history-content > .breadcrumbs a:hover {
-  color: var(--primary-700);
-  text-decoration: underline;
-}
-
 .hr-app .employee-history-title {
   margin: 15px 0 3px;
   color: #18253f;
@@ -4360,16 +4334,6 @@
 
 .hr-app .employee-add-content {
   padding-top: 22px;
-}
-
-.hr-app .employee-add-content > .breadcrumbs a {
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.hr-app .employee-add-content > .breadcrumbs a:hover {
-  color: var(--primary-700);
-  text-decoration: underline;
 }
 
 .hr-app .employee-add-heading {
@@ -6328,16 +6292,6 @@
 }
 
 /* หน้าโปรไฟล์พนักงาน */
-.hr-app .profile-breadcrumb {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.hr-app .profile-breadcrumb a {
-  color: var(--primary-700);
-  text-underline-offset: 3px;
-}
-
 .hr-app .profile-sheet h2,
 .hr-app .profile-sheet-head h2 {
   margin: 0;

@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Button } from "@/features/payroll/components/ui/Button";
-import { Icon } from "@/features/payroll/components/ui/Icon";
 import { StatusBadge } from "@/features/payroll/components/ui/StatusBadge";
 import { WELFARE_LABEL } from "@/features/payroll/lib/constants";
 import type { PaymentRequest } from "@/features/payroll/lib/types";
@@ -26,23 +24,19 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * แผงรายละเอียดคำขอด้านขวา (เปิดเมื่อกดชื่อพนักงานในตาราง)
- *   จอ ≥ 1280px : วางติดข้างตาราง (sticky เลื่อนตามจอ)
- *   จอเล็กกว่า   : เลื่อนออกมาจากขอบขวา มีพื้นหลังทึบ กดพื้นหลังหรือ Esc เพื่อปิด
+ * หน้ารายละเอียดคำขอ (เปิดเมื่อกดแถวในตาราง)
  *
- * ปุ่มท้ายแผงขึ้นกับสถานะ: "รอการเงินตรวจ" = ปฏิเสธ / ส่งกลับ / อนุมัติ, "รอจ่าย" = ส่งกลับ / บันทึกจ่ายแล้ว
+ * ปุ่มท้ายหน้าขึ้นกับสถานะ: "รอการเงินตรวจ" = ปฏิเสธ / ส่งกลับ / อนุมัติ, "รอจ่าย" = ส่งกลับ / บันทึกจ่ายแล้ว
  * callback ทั้งหมดส่งมาจาก ApprovalsView ซึ่งเปิด Modal ยืนยันก่อนทำจริง
  */
 export function RequestDetailPanel({
   request: r,
-  onClose,
   onReturn,
   onReject,
   onApprove,
   onPaid,
 }: {
   request: PaymentRequest;
-  onClose: () => void;
   onReturn: () => void;
   onReject: () => void;
   onApprove: () => void;
@@ -55,26 +49,8 @@ export function RequestDetailPanel({
     headingRef.current?.focus({ preventScroll: true });
   }, [r.id]);
 
-  // กด Esc ปิดแผง
-  useEffect(() => {
-    // ถ้ามี Modal ยืนยันเปิดอยู่ ให้ Esc ปิด Modal ก่อน ไม่ปิดแผง
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector("dialog[open]") && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  const detailHref = `/payroll/${r.status === "paid" ? "history" : "approvals"}/details?q=${r.id}`;
-
   return (
-    <>
-      {/* พื้นหลังทึบ (เฉพาะตอนเป็นแผงลอยบนจอเล็ก) */}
-      <div className="fixed inset-0 z-30 bg-ink/30 xl:hidden" onClick={onClose} aria-hidden="true" />
-
-      <aside
-        aria-labelledby="request-panel-title"
-        className="fixed inset-y-0 right-0 z-40 flex w-[min(400px,100vw)] flex-col border-l border-line bg-white
-          xl:sticky xl:top-6 xl:z-auto xl:max-h-[calc(100vh-176px)] xl:w-auto xl:rounded-xl xl:border xl:shadow-card"
-      >
+    <section aria-labelledby="request-panel-title" className="rounded-xl border border-line bg-white shadow-card">
         {/* หัวแผง: รูป / ชื่อ / เลขคำขอ · รหัสพนักงาน / สถานะ */}
         <header className="flex items-start gap-3 border-b border-line p-5">
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary-50 text-13 font-semibold text-primary-700 ring-1 ring-primary-100">
@@ -91,13 +67,9 @@ export function RequestDetailPanel({
               <StatusBadge status={r.status} />
             </div>
           </div>
-          <button type="button" onClick={onClose} className="-mt-1 -mr-1 rounded-lg p-1.5 text-muted hover:bg-surface hover:text-ink" aria-label="ปิดรายละเอียด">
-            <Icon name="x" className="size-5" />
-          </button>
         </header>
 
-        {/* เนื้อหา: เลื่อนได้ในแผง */}
-        <div className="flex-1 overflow-y-auto px-5">
+        <div className="grid gap-x-10 px-5 lg:grid-cols-2">
           <section className="border-b border-line py-4">
             <h3 className="mb-1 text-12 font-semibold text-ink">ข้อมูลผู้ขอ</h3>
             <dl className="text-12">
@@ -118,14 +90,14 @@ export function RequestDetailPanel({
           ))}
 
           {r.returnReason && (
-            <p className="mb-4 rounded-lg bg-status-rejected/10 px-3 py-2 text-12 text-status-rejected">เหตุผลที่ส่งกลับ: {r.returnReason}</p>
+            <p className="my-4 rounded-lg bg-status-rejected/10 lg:col-span-2 px-3 py-2 text-12 text-status-rejected">เหตุผลที่ส่งกลับ: {r.returnReason}</p>
           )}
         </div>
 
-        {/* ท้ายแผง: คำสั่ง (เฉพาะรอจ่าย) + ลิงก์ไปหน้ารายละเอียดเต็ม */}
-        <footer className="flex flex-col gap-2 border-t border-line p-4">
+        {(r.status === "approved" || r.status === "pending") && (
+        <footer className="flex justify-end border-t border-line p-4">
           {r.status === "approved" && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="danger" onClick={onReject}>
                 ปฏิเสธ
               </Button>
@@ -138,7 +110,7 @@ export function RequestDetailPanel({
             </div>
           )}
           {r.status === "pending" && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="danger" icon="undo" onClick={onReturn}>
                 ส่งกลับ
               </Button>
@@ -147,11 +119,8 @@ export function RequestDetailPanel({
               </Button>
             </div>
           )}
-          <Link href={detailHref} className="block py-1 text-center text-12 text-primary-600 hover:underline">
-            เปิดหน้ารายละเอียดเต็ม
-          </Link>
         </footer>
-      </aside>
-    </>
+        )}
+    </section>
   );
 }

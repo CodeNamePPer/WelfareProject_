@@ -52,6 +52,17 @@ export function ApprovalDetailsHeader() {
   );
 }
 
+/** หน้ารายละเอียดของคำขอ เปิดจากแถวในตารางรายการอนุมัติ / รอจ่าย */
+export function ApprovalRequestHeader({ id }: { id: string }) {
+  return (
+    <PageHeader
+      crumbs={[{ label: "Payroll" }, { label: "รายการ", href: "/payroll/approvals" }, { label: id }]}
+      title="รายละเอียดคำขอ"
+      description="ตรวจสอบข้อมูลคำขอและดำเนินการก่อนจ่ายเงิน"
+    />
+  );
+}
+
 export function ExportHeader() {
   return (
     <PageHeader

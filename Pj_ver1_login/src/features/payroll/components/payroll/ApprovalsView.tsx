@@ -18,6 +18,8 @@ import { ALL, filterRequests, ROUND_OPTIONS, statusOptions, WELFARE_FILTER_OPTIO
 import { formatBaht, formatThaiDate } from "@/features/payroll/lib/format";
 import { usePagination } from "@/features/payroll/lib/use-pagination";
 import { useEffectiveRequests, useHydrated } from "@/features/payroll/lib/payroll-store";
+import { useDetailParam } from "@/lib/useDetailParam";
+import { ApprovalRequestHeader, ApprovalsHeader } from "./PageHeaders";
 import { ApprovalsSkeleton } from "./PageSkeletons";
 import type { PaymentRequest } from "@/features/payroll/lib/types";
 import { RequestDetailPanel } from "./RequestDetailPanel";
@@ -28,8 +30,8 @@ type Tab = "all" | "approved" | "pending" | "paid";
  * ตารางรายการอนุมัติ / รอจ่าย
  *   - แท็บ ทั้งหมด / รอตรวจ / รอจ่าย / จ่ายแล้ว
  *   - กรองทันทีเมื่อพิมพ์/เลือก (ไม่มีปุ่มค้นหา ตาม wireframe)
- *   - คลิกแถว (หรือชื่อพนักงาน) -> เปิดแผงรายละเอียดด้านขวา (RequestDetailPanel)
- *   - ในแผง: คำขอที่ "รอการเงินตรวจ" มีปุ่ม ปฏิเสธ / ส่งกลับ / อนุมัติ และคำขอที่ "รอจ่าย" มีปุ่ม ส่งกลับ / บันทึกจ่ายแล้ว
+ *   - คลิกแถว (หรือชื่อพนักงาน) -> เปิดหน้ารายละเอียด (?id=เลขคำขอ) พร้อม Breadcrumb
+ *   - ในหน้ารายละเอียด: คำขอที่ "รอการเงินตรวจ" มีปุ่ม ปฏิเสธ / ส่งกลับ / อนุมัติ และคำขอที่ "รอจ่าย" มีปุ่ม ส่งกลับ / บันทึกจ่ายแล้ว
  */
 export function ApprovalsView({ initialRequests }: { initialRequests: PaymentRequest[] }) {
   const hydrated = useHydrated(); // false = ยังไม่ได้โหลดการตั้งค่าจากฐานข้อมูล
@@ -48,9 +50,9 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   const [tab, setTab] = useState<Tab>("approved");
   const [filter, setFilter] = useState({ q: "", round: ALL, welfare: ALL, status: ALL });
 
-  // คำขอที่เปิดดูในแผงด้านขวา
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const active = activeId ? (requests.find((r) => r.id === activeId) ?? null) : null;
+  // คำขอที่เปิดหน้ารายละเอียดอยู่ (?id=เลขคำขอ)
+  const detail = useDetailParam("id");
+  const active = detail.id ? (requests.find((r) => r.id === detail.id) ?? null) : null;
   // Modal ยืนยัน: "ส่งกลับ" (ต้องกรอกเหตุผล) และ "บันทึกจ่ายแล้ว"
   const [returnOpen, setReturnOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -63,9 +65,6 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   const [approveNote, setApproveNote] = useState("");
   const [modalError, setModalError] = useState("");
   const [saving, setSaving] = useState(false);
-
-  // จอกว้าง (≥1280px) ตอนเปิดแผง: ซ่อนคอลัมน์ที่แผงแสดงอยู่แล้ว ให้ตารางไม่ล้น
-  const hideWhenOpen = active ? "xl:hidden" : "";
 
   // กรอง 2 ชั้น: แท็บ -> ตัวกรองอื่นๆ
   const byTab = tab === "all" ? requests : requests.filter((r) => r.status === tab);
@@ -81,11 +80,6 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   function changeTab(t: Tab) {
     setTab(t);
     setPage(1);
-  }
-
-  /** เปิด/ปิดแผงรายละเอียดของคำขอนี้ */
-  function toggleDetail(id: string) {
-    setActiveId((cur) => (cur === id ? null : id));
   }
 
   function openReturn(mode: "return" | "reject" = "return") {
@@ -180,8 +174,15 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   if (!hydrated) return <ApprovalsSkeleton />;
 
   return (
-    // ตาราง + แผงรายละเอียด: จอกว้างวางคู่กัน (ตาราง | แผง 360px)
-    <div className={active ? "xl:grid xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-6" : ""}>
+    <div>
+      {active ? (
+        <>
+          <ApprovalRequestHeader id={active.id} />
+          <RequestDetailPanel request={active} onReturn={() => openReturn("return")} onReject={() => openReturn("reject")} onApprove={openApprove} onPaid={openPay} />
+        </>
+      ) : (
+      <>
+      <ApprovalsHeader />
       <ListPanel
         footer={<Pagination {...pagination} />}
         lead={
@@ -198,9 +199,8 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
           />
         }
         toolbar={
-          // เปิดแผงอยู่ = พื้นที่แคบลง: ช่องค้นหาเต็มแถว แล้วตัวเลือก 3 ช่องแถวถัดไป
-          <div className={`grid gap-3 md:grid-cols-2 ${active ? "xl:grid-cols-3" : "xl:grid-cols-[2fr_1fr_1fr_1fr]"}`}>
-            <Field label="ค้นหา" className={active ? "md:col-span-2 xl:col-span-3" : ""}>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+            <Field label="ค้นหา">
               {(id) => <SearchInput id={id} placeholder="ค้นหาชื่อพนักงาน / เลขที่คำขอ" value={filter.q} onChange={(e) => updateFilter("q", e.target.value)} />}
             </Field>
             <Field label="รอบ">
@@ -217,10 +217,10 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
       >
         <TableContainer bare>
           <THead>
-            <Th className={hideWhenOpen}>ลำดับ</Th>
+            <Th>ลำดับ</Th>
             <Th>เลขที่คำขอ</Th>
             <Th>ชื่อพนักงาน</Th>
-            <Th className={hideWhenOpen}>แผนก / ฝ่าย</Th>
+            <Th>แผนก / ฝ่าย</Th>
             <Th align="right">จำนวนเงิน</Th>
             <Th>วันที่จ่าย</Th>
             <Th>สถานะ</Th>
@@ -232,23 +232,20 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
               </TdFull>
             ) : (
               pageItems.map((r, i) => (
-                <Tr key={r.id} active={r.id === activeId} onActivate={() => toggleDetail(r.id)}>
-                  <Td className={`num text-muted ${hideWhenOpen}`}>{(pagination.page - 1) * PAGE_SIZE + i + 1}</Td>
+                <Tr key={r.id} onActivate={() => detail.open(r.id)}>
+                  <Td className="num text-muted">{(pagination.page - 1) * PAGE_SIZE + i + 1}</Td>
                   <Td className="num">{r.id}</Td>
                   <Td>
                     {/* ปุ่มชื่อ: ให้เปิดรายละเอียดด้วยคีย์บอร์ดได้ (Tab แล้ว Enter) */}
                     <button
                       type="button"
-                      onClick={() => toggleDetail(r.id)}
-                      aria-expanded={r.id === activeId}
-                      className={`-mx-1 rounded px-1 text-left font-medium underline-offset-4 hover:text-primary-600 hover:underline ${
-                        r.id === activeId ? "text-primary-600" : "text-ink"
-                      }`}
+                      onClick={() => detail.open(r.id)}
+                      className="-mx-1 rounded px-1 text-left font-medium text-ink underline-offset-4 hover:text-primary-600 hover:underline"
                     >
                       {r.employeeName}
                     </button>
                   </Td>
-                  <Td className={hideWhenOpen}>{r.department}</Td>
+                  <Td>{r.department}</Td>
                   <Td align="right" className="num font-medium">
                     {formatBaht(r.paidAmount)}
                   </Td>
@@ -262,8 +259,8 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
           </tbody>
         </TableContainer>
       </ListPanel>
-
-      {active && <RequestDetailPanel request={active} onClose={() => setActiveId(null)} onReturn={() => openReturn("return")} onReject={() => openReturn("reject")} onApprove={openApprove} onPaid={openPay} />}
+      </>
+      )}
 
       {/* Modal ส่งกลับ: บังคับกรอกเหตุผล */}
       <Modal

@@ -4,24 +4,13 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
 import type { ClaimRecord } from "@/lib/claims/types";
+import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 
 const number = new Intl.NumberFormat("th-TH");
 const thaiDate = (iso: string) => new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" });
 
 const PENDING: ClaimRecord["status"][] = ["pending_hr", "needs_revision", "pending_finance", "finance_returned"];
 const APPROVED: ClaimRecord["status"][] = ["awaiting_payment", "paid"];
-
-const STATUS_TEXT: Record<ClaimRecord["status"], string> = {
-  draft: "ฉบับร่าง",
-  pending_hr: "กำลังตรวจสอบ",
-  needs_revision: "รอคุณแก้ไข",
-  pending_finance: "การเงินกำลังตรวจสอบ",
-  finance_returned: "กำลังตรวจสอบ",
-  awaiting_payment: "อนุมัติแล้ว รอจ่าย",
-  paid: "จ่ายแล้ว",
-  rejected: "ไม่อนุมัติ",
-  cancelled: "ยกเลิกแล้ว",
-};
 
 export default async function Home() {
   const session = await getSession();
@@ -126,7 +115,7 @@ export default async function Home() {
                     <td className='px-3 py-2 font-semibold'>{number.format(claim.amountRequested)}</td>
                     <td className='px-3 py-2'>
                       <span className={`inline-block rounded-full border px-2.5 py-1 text-12 ${APPROVED.includes(claim.status) ? 'border-primary-100 bg-primary-50 text-primary-700' : 'border-amber-200 bg-amber-50 text-amber-800'}`}>
-                        {STATUS_TEXT[claim.status]}
+                        {CLAIM_STATUS_LABEL[claim.status]}
                       </span>
                     </td>
                   </tr>

@@ -1,6 +1,7 @@
 // แปลงคำขอจากฐานข้อมูลเป็นรูปแบบที่หน้าจอแต่ละฝ่ายใช้อยู่
 import type { Claim, ClaimEvent } from "../../types";
 import type { PaymentRequest, PaymentStatus, RoundNo, WelfareType } from "../../features/payroll/lib/types";
+import { CLAIM_STATUS_LABEL } from "./types";
 import type { ClaimDbStatus, ClaimEventKind, ClaimRecord, HrStatusCounts, PendingRequest, RequestDetail, RequestStatus } from "./types";
 
 const TZ = "Asia/Bangkok";
@@ -63,6 +64,7 @@ export function toRequestDetail(claim: ClaimRecord): RequestDetail | null {
   const event = status === "pending" ? null : lastEvent(claim, DECISION_KIND[status]);
   return {
     status,
+    statusText: CLAIM_STATUS_LABEL[claim.status],
     request: toPendingRequest(claim),
     decision: event ? { actorCode: event.actorCode ?? "", date: toBangkokDate(event.at), note: event.note ?? undefined } : null,
   };
@@ -156,6 +158,7 @@ export function toAdminClaim(claim: ClaimRecord): Claim {
     amount: claim.amountRequested,
     approvedAmount: status === "approved" ? (claim.amountApproved ?? claim.amountRequested) : null,
     status,
+    statusText: CLAIM_STATUS_LABEL[claim.status],
     date: toBangkokDate(claim.submittedAt ?? claim.createdAt),
     expenseDate: claim.expenseDate ?? "",
     annualLimit: claim.limit || null,

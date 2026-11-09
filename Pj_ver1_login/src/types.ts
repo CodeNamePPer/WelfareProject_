@@ -31,6 +31,8 @@ export interface Claim {
   /** ยอดที่อนุมัติจริง – null เมื่อยังไม่อนุมัติหรือถูกปฏิเสธ */
   approvedAmount: number | null;
   status: ClaimStatus;
+  /** คำเรียกสถานะจริงของคำขอ ชุดเดียวกับทุกฝ่าย */
+  statusText: string;
   /** วันที่ยื่น – ISO date, YYYY-MM-DD */
   date: string;
   /** วันที่เกิดค่าใช้จ่าย (ตามใบเสร็จ) – ISO date */

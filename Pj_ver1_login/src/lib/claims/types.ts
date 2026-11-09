@@ -130,6 +130,19 @@ export type PendingRequest = {
   financeReturnNote?: string | null;
 };
 
+/** คำเรียกสถานะของคำขอ ใช้ชุดเดียวกันทุกฝ่าย เพื่อให้คำขอเดียวกันแสดงคำเดียวกัน */
+export const CLAIM_STATUS_LABEL: Record<ClaimDbStatus, string> = {
+  draft: "ฉบับร่าง",
+  pending_hr: "รอ HR ตรวจสอบ",
+  needs_revision: "รอแก้ไข",
+  pending_finance: "รอการเงินตรวจสอบ",
+  finance_returned: "การเงินส่งกลับ",
+  awaiting_payment: "อนุมัติแล้ว รอจ่าย",
+  paid: "จ่ายแล้ว",
+  rejected: "ไม่อนุมัติ",
+  cancelled: "ยกเลิกแล้ว",
+};
+
 export type RequestStatus = "pending" | "approved" | "rejected" | "revision";
 
 export const STATUS_LABEL: Record<RequestStatus, string> = {
@@ -141,6 +154,6 @@ export const STATUS_LABEL: Record<RequestStatus, string> = {
 
 /** คำขอที่ดำเนินการแล้ว: ใคร ทำอะไร เมื่อไร เพราะอะไร */
 export type DecisionRecord = { actorCode: string; date: string; note?: string };
-export type RequestDetail = { status: RequestStatus; request: PendingRequest; decision: DecisionRecord | null };
+export type RequestDetail = { status: RequestStatus; statusText: string; request: PendingRequest; decision: DecisionRecord | null };
 
 export type HrStatusCounts = { pending: number; revision: number; rejected: number; approved: number };

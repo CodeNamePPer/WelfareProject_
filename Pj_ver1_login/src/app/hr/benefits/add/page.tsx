@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -166,13 +167,7 @@ export default function AddBenefitPage() {
     <div className="app-shell">
       <div className="app-main benefits-main">
         <div className="page-content benefits-content">
-          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
-            <Link href="/hr/home">หน้าหลัก</Link>
-            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <Link href="/hr/benefits">ตั้งค่าสวัสดิการ</Link>
-            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">{editingId ? "แก้ไขข้อมูลสวัสดิการ" : "เพิ่มสวัสดิการใหม่"}</span>
-          </nav>
+          <Breadcrumb className="breadcrumbs" items={[{ label: "หน้าหลัก", href: "/hr/home" }, { label: "ตั้งค่าสวัสดิการ", href: "/hr/benefits" }, { label: editingId ? "แก้ไขข้อมูลสวัสดิการ" : "เพิ่มสวัสดิการใหม่" }]} />
           <div className="benefit-form-heading">
             <h1>{editingId ? "แก้ไขข้อมูลสวัสดิการ" : "เพิ่มสวัสดิการใหม่"}</h1>
             <p>ช่องที่มีเครื่องหมาย <span>*</span> จำเป็นต้องระบุ</p>
