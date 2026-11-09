@@ -11,11 +11,10 @@ import { Pagination, paginate } from '../../components/ui/Pagination';
 import { SearchInput } from '../../components/ui/SearchInput';
 import { Tag } from '../../components/ui/Tag';
 import { useToast } from '../../components/ui/Toast';
-import { revealDetail, table } from '../../components/ui/table';
+import { table } from '../../components/ui/table';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { WelfareItem } from '../../types';
-import { WelfareDetail } from './WelfareDetail';
 
 type Filter = 'all' | 'active' | 'recent';
 
@@ -31,26 +30,27 @@ function nextCode(items: WelfareItem[]): string {
   return `WEL-${String(max + 1).padStart(3, '0')}`;
 }
 
+/** pushUrl: false when the caller moves the URL itself (the ?new=1 shortcut replaces its entry). */
+export type OpenItem = (code: string, options?: { edit?: boolean; pushUrl?: boolean }) => void;
+
 interface WelfareCatalogProps {
   items: WelfareItem[];
   onItemsChange: Dispatch<SetStateAction<WelfareItem[]>>;
-  selectedCode: string;
-  onSelect: (code: string) => void;
+  onOpen: OpenItem;
+  /** คืนข้อความเมื่อบันทึกไม่สำเร็จ */
+  onSave: (code: string, values: Partial<WelfareItem>) => Promise<string | null>;
   /** Create a draft and open its form on arrival (?new=1 from the shortcut menu). */
   startCreating?: boolean;
 }
 
-export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, startCreating = false }: WelfareCatalogProps) {
+export function WelfareCatalog({ items, onItemsChange, onOpen, onSave, startCreating = false }: WelfareCatalogProps) {
   const router = useRouter();
   const { notify } = useToast();
-  // เพิ่มทุกครั้งที่บันทึกสำเร็จ เพื่อให้ฟอร์มรายละเอียดเริ่มจากค่าล่าสุดในฐานข้อมูล
-  const [saveCount, setSaveCount] = useState(0);
   // Guards against a second draft from Strict Mode's double effect run; cleared once ?new=1 is gone.
   const createdFromLinkRef = useRef(false);
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [editingCode, setEditingCode] = useState<string | null>(null);
   const [menuCode, setMenuCode] = useState<string | null>(null);
   const [disablingCode, setDisablingCode] = useState<string | null>(null);
 
@@ -79,68 +79,31 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
   }, [items, filter, query, recentFrom]);
 
   const rows = paginate(filtered, page, PAGE_SIZE);
-  const selected = items.find((item) => item.code === selectedCode);
 
-  const pick = (code: string) => {
-    onSelect(code);
-    revealDetail('welfare-detail');
-  };
+  // รายการใหม่ยังไม่อยู่ในฐานข้อมูล เปิดเข้าฟอร์มแก้ไขเสมอ
+  const open = (item: WelfareItem) => onOpen(item.code, { edit: Boolean(item.unsaved) });
 
   const rowMenu = (item: WelfareItem) => (
     <RowMenu
       active={item.status === 'active'}
       onClose={() => setMenuCode(null)}
-      onEdit={() => {
-        pick(item.code);
-        setEditingCode(item.code);
-      }}
+      onEdit={() => onOpen(item.code, { edit: true })}
       onToggle={() => {
         if (item.status === 'active') return setDisablingCode(item.code);
         // รายการใหม่ต้องบันทึกลงฐานข้อมูลก่อนจึงจะเปิดใช้งานได้
-        if (item.unsaved) {
-          pick(item.code);
-          setEditingCode(item.code);
-          return;
-        }
+        if (item.unsaved) return onOpen(item.code, { edit: true });
         void changeStatus(item.code, 'active');
       }}
     />
   );
   const disabling = items.find((item) => item.code === disablingCode);
 
-  /** บันทึกลงฐานข้อมูล แล้วแทนที่แถวด้วยค่าที่ server คืนมา – คืนข้อความเมื่อไม่สำเร็จ */
-  const save = async (code: string, values: Partial<WelfareItem>): Promise<string | null> => {
-    try {
-      const response = await fetch('/api/admin/welfare', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, values }),
-      });
-      const data = await response.json();
-      if (!response.ok) return data.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-      onItemsChange((current) => current.map((item) => (item.code === code ? (data.item as WelfareItem) : item)));
-      setSaveCount((count) => count + 1);
-      return null;
-    } catch {
-      return 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
-    }
-  };
-
   const changeStatus = async (code: string, status: WelfareItem['status']) => {
-    const error = await save(code, { status });
+    const error = await onSave(code, { status });
     if (error) notify(error);
   };
 
-  /** ยกเลิกรายการใหม่ที่ยังไม่ได้บันทึก = เอาออกจากตาราง */
-  const cancelEdit = (item: WelfareItem) => {
-    setEditingCode(null);
-    if (!item.unsaved) return;
-    const remaining = items.filter((other) => other.code !== item.code);
-    onItemsChange(remaining);
-    onSelect(remaining[0]?.code ?? '');
-  };
-
-  const addItem = () => {
+  const createDraft = () => {
     const code = nextCode(items);
     const draft: WelfareItem = {
       code,
@@ -162,8 +125,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
     setFilter('all');
     setQuery('');
     setPage(1);
-    onSelect(code);
-    setEditingCode(code);
+    return code;
   };
 
   useEffect(() => {
@@ -173,15 +135,16 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
     }
     if (createdFromLinkRef.current) return;
     createdFromLinkRef.current = true;
-    addItem();
-    // Drop ?new=1 so a refresh doesn't add another draft and the shortcut works again from this page.
-    router.replace('/admin/benefits', { scroll: false });
+    const code = createDraft();
+    onOpen(code, { edit: true, pushUrl: false });
+    // Replace ?new=1 so a refresh or the back button doesn't add another draft and the shortcut works again from this page.
+    router.replace(`/admin/benefits?item=${encodeURIComponent(code)}`, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run only when the link asks for it
   }, [startCreating]);
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_350px]">
-      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
+    <div>
+      <section aria-labelledby="welfare-list-title" className="flex min-w-0 flex-col gap-[16px] p-[16px] sm:p-[20px]">
         <div className="flex flex-col gap-[12px] lg:flex-row lg:items-center lg:justify-between">
           <h2 id="welfare-list-title" className="text-17 font-semibold text-ink">
             รายการสวัสดิการที่มีอยู่
@@ -197,7 +160,7 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
               }}
               className="sm:w-[280px]"
             />
-            <Button variant="primary" onClick={addItem}>
+            <Button variant="primary" onClick={() => onOpen(createDraft(), { edit: true })}>
               <Plus className="size-4" aria-hidden="true" />
               เพิ่มสวัสดิการ
             </Button>
@@ -242,20 +205,18 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
                 </tr>
               ) : (
                 rows.map((item) => {
-                  const isSelected = item.code === selectedCode;
                   return (
                     <tr
                       key={item.code}
-                      onClick={() => pick(item.code)}
-                      aria-selected={isSelected}
-                      className={cx(table.row, 'cursor-pointer', isSelected ? table.rowSelected : table.rowHover)}
+                      onClick={() => open(item)}
+                      className={cx(table.row, 'cursor-pointer', table.rowHover)}
                     >
                       <td className={cx(table.td, 'font-semibold whitespace-nowrap')}>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            pick(item.code);
+                            open(item);
                           }}
                           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         >
@@ -295,20 +256,18 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
         ) : (
           <ul className={table.cards}>
             {rows.map((item) => {
-              const isSelected = item.code === selectedCode;
               return (
                 <li
                   key={item.code}
                   className={cx(
                     'flex items-start gap-[4px] border-b border-line text-13 text-ink',
                     table.cardButton,
-                    isSelected ? table.cardSelected : table.cardHover,
+                    table.cardHover,
                   )}
                 >
                   <button
                     type="button"
-                    onClick={() => pick(item.code)}
-                    aria-pressed={isSelected}
+                    onClick={() => open(item)}
                     className="min-w-0 flex-1 rounded-[4px] px-[4px] py-[12px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                   >
                     <span className="block font-semibold">{item.name}</span>
@@ -344,25 +303,6 @@ export function WelfareCatalog({ items, onItemsChange, selectedCode, onSelect, s
           <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
         </div>
       </section>
-
-      {selected ? (
-        <WelfareDetail
-          key={`${selected.code}-${saveCount}`}
-          item={selected}
-          editing={editingCode === selected.code}
-          onEdit={() => setEditingCode(selected.code)}
-          onCancel={() => cancelEdit(selected)}
-          onSave={async (patch) => {
-            const error = await save(selected.code, patch);
-            if (!error) setEditingCode(null);
-            return error;
-          }}
-        />
-      ) : (
-        <p className="p-[20px] text-14 text-muted">
-          เลือกสวัสดิการจากตารางเพื่อดูรายละเอียด
-        </p>
-      )}
 
       <ConfirmDialog
         open={Boolean(disabling)}

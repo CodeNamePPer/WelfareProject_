@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { ChevronRight, LogOut, Menu, X } from 'lucide-react';
-import { useState, type AnchorHTMLAttributes, type ReactNode } from 'react';
+import { useRef, useState, type AnchorHTMLAttributes, type ReactNode } from 'react';
 import { cx } from '../../lib/cx';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
 import { NAV, type NavSection } from './navigation';
 
@@ -45,6 +46,8 @@ export function Sidebar({
   const userInitial = Array.from(user.name.trim())[0] ?? '?';
 
   const [loggingOut, setLoggingOut] = useState(false);
+  const [requesterHref, setRequesterHref] = useState<string | null>(null);
+  const requesterLinkRef = useRef<HTMLAnchorElement>(null);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -100,16 +103,21 @@ export function Sidebar({
         </p>
 
         <nav aria-label="เมนูหลัก" className="flex flex-col gap-1">
-          {items.map(({ id, label, icon: Icon, badge, href }) => {
+          {items.map(({ id, label, icon: Icon, badge, href, switchesToRequester }) => {
             const active = id === activeId;
             return (
               <NavLink
                 key={id}
-                href={href}
+                // ยังไม่ใส่ลิงก์จริง เพื่อไม่ให้แถบโหลดเริ่มวิ่งก่อนผู้ใช้ยืนยัน
+                href={switchesToRequester ? undefined : href}
                 aria-current={active ? 'page' : undefined}
+                aria-haspopup={switchesToRequester ? 'dialog' : undefined}
                 title={collapsed ? label : undefined}
                 onClick={(event) => {
-                  if (!href) {
+                  if (switchesToRequester && href) {
+                    event.preventDefault();
+                    setRequesterHref(href);
+                  } else if (!href) {
                     event.preventDefault();
                     onNavigate(label);
                   }
@@ -204,6 +212,20 @@ export function Sidebar({
           </button>
         </div>
       </aside>
+
+      {/* กดผ่านลิงก์จริงหลังยืนยัน เพื่อให้แถบโหลด (NavigationProgress) ทำงานเหมือนเมนูอื่น */}
+      {requesterHref ? <Link ref={requesterLinkRef} href={requesterHref} className="hidden" tabIndex={-1} aria-hidden="true" /> : null}
+      <ConfirmDialog
+        open={requesterHref !== null}
+        title="เปลี่ยนไปหน้าผู้ส่งคำขอ"
+        description="ระบบจะพาคุณไปยังหน้าผู้ส่งคำขอ เพื่อยื่นคำขอสวัสดิการของตัวคุณเอง และกลับมาหน้าเดิมได้จากเมนูด้านซ้าย"
+        confirmLabel="ไปหน้าผู้ส่งคำขอ"
+        onConfirm={() => {
+          requesterLinkRef.current?.click();
+          setRequesterHref(null);
+        }}
+        onCancel={() => setRequesterHref(null)}
+      />
     </>
   );
 }

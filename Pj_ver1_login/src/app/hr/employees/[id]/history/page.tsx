@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useEffect, useMemo, useState } from "react";
+import { SkeletonScreen } from "@/components/Skeleton";
+import { EmployeeHistoryBodySkeleton } from "../../../HrSkeletons";
 
 type Employee = {
   id: string;
@@ -410,7 +412,7 @@ export default function EmployeeHistoryPage() {
                 </button>
               </div>
             </>
-          ) : <p className="employee-history-loading">กำลังโหลดประวัติพนักงาน...</p>}
+          ) : <SkeletonScreen><EmployeeHistoryBodySkeleton /></SkeletonScreen>}
         </div>
       </div>
     </div>

@@ -19,5 +19,13 @@ export function useDetailParam(param: string) {
     window.scrollTo(0, 0);
   };
 
-  return { id: searchParams.get(param), open };
+  /** Back to the list without a history entry, for a detail page that no longer exists (a cancelled draft). */
+  const close = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete(param);
+    const query = next.toString();
+    window.history.replaceState(null, '', query ? `${pathname}?${query}` : pathname);
+  };
+
+  return { id: searchParams.get(param), open, close };
 }

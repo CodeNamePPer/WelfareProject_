@@ -23,11 +23,19 @@ export interface NavItem {
   icon: LucideIcon;
   badge?: number;
   href?: string;
+  /** Leaves the staff workspace for the requester one, so the sidebar tells the user first. */
+  switchesToRequester?: boolean;
 }
 
 export type NavSection = 'admin' | 'hr' | 'employee' | 'finance';
 
-const REQUEST_HREF = '/employee/withdraw';
+const REQUEST_ITEM: NavItem = {
+  id: 'requests',
+  label: 'ส่งคำขอสวัสดิการ',
+  icon: FilePlus2,
+  href: '/employee/withdraw',
+  switchesToRequester: true,
+};
 
 interface SectionConfig {
   /** Route prefix of the section. The first segment after it is the active menu id ('home' at the prefix itself). */
@@ -55,7 +63,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/admin/benefits' },
       { id: 'users', label: 'ตั้งค่าผู้ใช้งานระบบ', icon: UserCog, href: '/admin/users' },
       { id: 'logs', label: 'ประวัติของระบบ Logs', icon: History, href: '/admin/logs' },
-      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
+      REQUEST_ITEM,
     ],
   },
   // Same menu as the HR team's original sidebar (frontend-hr app/sidebar.tsx).
@@ -70,7 +78,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
       { id: 'logs', label: 'ประวัติการแก้ไข Log', icon: History },
-      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
+      REQUEST_ITEM,
     ],
   },
   // Same menu as the applicant team's original sidebar. Layout hides HeadEm and the back links by user.
@@ -102,7 +110,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'approvals', label: 'ดูรายการอนุมัติ / รอจ่าย', icon: FileText, href: '/payroll/approvals' },
       { id: 'export', label: 'Export รายงาน (Excel)', icon: FileSpreadsheet, href: '/payroll/export' },
       { id: 'history', label: 'ดูข้อมูลย้อนหลัง', icon: History, href: '/payroll/history' },
-      { id: 'requests', label: 'ส่งคำขอสวัสดิการ', icon: FilePlus2, href: REQUEST_HREF },
+      REQUEST_ITEM,
     ],
   },
 };

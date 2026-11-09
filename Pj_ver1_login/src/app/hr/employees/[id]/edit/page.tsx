@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { SkeletonScreen } from "@/components/Skeleton";
+import { EmployeeFormSkeleton } from "../../../HrSkeletons";
 
 type Employee = {
   id: string;
@@ -349,7 +351,11 @@ export default function EditEmployeePage() {
                 </footer>
               </section>
             </form>
-          ) : <p className="employee-history-loading">กำลังโหลดข้อมูลพนักงาน...</p>}
+          ) : (
+            <SkeletonScreen>
+              <EmployeeFormSkeleton title="ข้อมูลส่วนตัวและข้อมูลการทำงาน" identityTitle="ข้อมูลระบุตัวตน" sideTitle="ข้อมูลครอบครัวและการติดต่อ" identityFields={9} sideFields={4} />
+            </SkeletonScreen>
+          )}
         </div>
       </div>
     </div>

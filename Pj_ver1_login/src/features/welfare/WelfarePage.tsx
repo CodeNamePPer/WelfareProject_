@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { cx } from '../../lib/cx';
 import { useDetailParam } from '../../lib/useDetailParam';
-import { formatBahtWhole } from '../../lib/format';
 import type { Claim, Employee, ImportRecord, WelfareItem } from '../../types';
 import { ClaimDetailPage, ClaimsTab } from './ClaimsTab';
 import { ImportPanel } from './ImportPanel';
-import { WelfareCatalog } from './WelfareCatalog';
+import { WelfareCatalog, type OpenItem } from './WelfareCatalog';
+import { WelfareDetail } from './WelfareDetail';
 
 export type TabId = 'catalog' | 'claims' | 'import';
 
@@ -40,22 +40,71 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
     if (startCreating && tab === 'claims') setTab('catalog');
   }
   const [items, setItems] = useState(initialItems);
-  const [selectedCode, setSelectedCode] = useState(initialItems[0]?.code ?? '');
+  const [editingCode, setEditingCode] = useState<string | null>(null);
+  // เพิ่มทุกครั้งที่บันทึกสำเร็จ เพื่อให้ฟอร์มรายละเอียดเริ่มจากค่าล่าสุดในฐานข้อมูล
+  const [saveCount, setSaveCount] = useState(0);
   const [importedCount, setImportedCount] = useState(0);
 
-  const selected = items.find((item) => item.code === selectedCode);
-  // ?claim=เลขที่คำขอ เปิดหน้ารายละเอียด ส่วนรายการยังอยู่เบื้องหลังเพื่อคงตัวกรองไว้
+  // ?claim=เลขที่คำขอ และ ?item=รหัสสวัสดิการ เปิดหน้ารายละเอียด ส่วนรายการยังอยู่เบื้องหลังเพื่อคงตัวกรองไว้
   const claimDetail = useDetailParam('claim');
   const openedClaim = claims.find((claim) => claim.code === claimDetail.id);
+  const itemDetail = useDetailParam('item');
+  const openedItem = items.find((item) => item.code === itemDetail.id);
+
+  const openItem: OpenItem = (code, { edit = false, pushUrl = true } = {}) => {
+    setEditingCode(edit ? code : null);
+    if (pushUrl) itemDetail.open(code, { tab });
+  };
+
+  /** บันทึกลงฐานข้อมูล แล้วแทนที่แถวด้วยค่าที่ server คืนมา – คืนข้อความเมื่อไม่สำเร็จ */
+  const saveItem = async (code: string, values: Partial<WelfareItem>): Promise<string | null> => {
+    try {
+      const response = await fetch('/api/admin/welfare', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, values }),
+      });
+      const data = await response.json();
+      if (!response.ok) return data.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+      setItems((current) => current.map((item) => (item.code === code ? (data.item as WelfareItem) : item)));
+      setSaveCount((count) => count + 1);
+      return null;
+    } catch {
+      return 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+    }
+  };
+
+  /** ยกเลิกรายการใหม่ที่ยังไม่ได้บันทึก = เอาออกจากตารางแล้วกลับไปหน้ารายการ */
+  const cancelEdit = (item: WelfareItem) => {
+    setEditingCode(null);
+    if (!item.unsaved) return;
+    setItems((current) => current.filter((other) => other.code !== item.code));
+    itemDetail.close();
+  };
+
+  const isDetailOpen = Boolean(openedClaim || openedItem);
 
   return (
     <>
     {openedClaim ? <ClaimDetailPage claim={openedClaim} claims={claims} employees={employees} /> : null}
-    <div className={cx('flex flex-col gap-[20px]', openedClaim && 'hidden')}>
+    {openedItem && !openedClaim ? (
+      <WelfareDetail
+        key={`${openedItem.code}-${saveCount}`}
+        item={openedItem}
+        editing={editingCode === openedItem.code}
+        onEdit={() => setEditingCode(openedItem.code)}
+        onCancel={() => cancelEdit(openedItem)}
+        onSave={async (patch) => {
+          const error = await saveItem(openedItem.code, patch);
+          if (!error) setEditingCode(null);
+          return error;
+        }}
+      />
+    ) : null}
+    <div className={cx('flex flex-col gap-[20px]', isDetailOpen && 'hidden')}>
       <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตัวอย่างการนำเข้าประวัติยังเป็นข้อมูลตัวอย่าง" />
 
-      {/* แผ่นเดียว: แถบหมวด, ตัวเลขสรุป, เนื้อหาแต่ละหมวด คั่นด้วยเส้น ไม่แยกเป็นการ์ด
-          ไม่ใส่ overflow-hidden เพราะ panel รายละเอียดด้านขวาต้อง sticky ได้ */}
+      {/* แผ่นเดียว: แถบหมวด, ตัวเลขสรุป, เนื้อหาแต่ละหมวด คั่นด้วยเส้น ไม่แยกเป็นการ์ด */}
       <div className="rounded-[10px] border border-line bg-white">
       <div className="flex items-center gap-[12px] border-b border-line pl-[8px] pr-[16px] sm:pl-[12px] sm:pr-[20px]">
       <div role="tablist" aria-label="หมวดจัดการสวัสดิการ" className="scrollbar-none flex min-w-0 flex-1 gap-[4px] overflow-x-auto">
@@ -93,9 +142,9 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
       <div className="grid grid-cols-1 divide-y divide-line border-b border-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <StatCard label="สวัสดิการที่มีอยู่" value={String(items.length)} note="รายการ" />
         <StatCard
-          label="วงเงินสวัสดิการที่เลือก"
-          value={selected ? formatBahtWhole(selected.amount) : '—'}
-          note={selected ? `ต่อคนต่อ${selected.budgetType === 'รายปี' ? 'ปี' : selected.budgetType}, ${selected.name}` : 'ยังไม่ได้เลือกสวัสดิการ'}
+          label="เปิดให้เบิกอยู่"
+          value={String(items.filter((item) => item.status === 'active').length)}
+          note={`จากทั้งหมด ${items.length} รายการ`}
         />
         <StatCard
           label="เบิกย้อนหลังที่นำเข้า"
@@ -110,7 +159,7 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
           <ImportPanel preview={importPreview} onImported={(count) => setImportedCount((total) => total + count)} />
         ) : null}
         {tab === 'catalog' || tab === 'import' ? (
-          <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} startCreating={startCreating} />
+          <WelfareCatalog items={items} onItemsChange={setItems} onOpen={openItem} onSave={saveItem} startCreating={startCreating} />
         ) : null}
         {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} onOpen={(code) => claimDetail.open(code, { tab: 'claims' })} /> : null}
       </div>
