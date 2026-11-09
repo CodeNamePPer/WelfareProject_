@@ -4,17 +4,20 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { CircleCheck, Copy, FileDown, KeyRound, Pencil, TriangleAlert } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { Button } from "@/components/ui/Button";
 import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
 import { FilterChips } from "@/components/ui/FilterChips";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination, paginate } from "@/components/ui/Pagination";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Tag } from "@/components/ui/Tag";
-import { revealDetail, table } from "@/components/ui/table";
+import { table } from "@/components/ui/table";
 import { downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
+import { useDetailParam } from "@/lib/useDetailParam";
 import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 import { employmentStatusLabel } from "@/lib/employmentStatus";
@@ -59,26 +62,22 @@ const joinParts = (...parts: (string | null)[]) => parts.filter(Boolean).join(" 
 const addressLabel = (p: EmployeeProfile) =>
   [p.addressLine, p.subdistrict, p.district, p.province, p.postalCode].filter(Boolean).join(" ") || null;
 
-// Layout follows Figma "Admin / ผู้ใช้งาน" (node 163:643): user list + account detail card.
+// กดแถวแล้วเข้าหน้ารายละเอียด (?user=รหัสพนักงาน) ส่วนรายการยังอยู่เบื้องหลังเพื่อคงตัวกรองไว้
 export default function AdminUsersClient({
   initialUsers,
   orgOptions,
-  initialSelectedId,
   currentUserId,
   emailDelivery,
 }: {
   initialUsers: User[];
   orgOptions: OrgOptions;
-  initialSelectedId?: string;
   /** ผู้ที่ล็อกอินอยู่ (รีเซ็ตรหัสของตัวเองจากหน้านี้ไม่ได้) */
   currentUserId: string;
   /** ระบบส่งอีเมลได้หรือไม่ ใช้บอกล่วงหน้าว่ารหัสชั่วคราวจะไปทางอีเมลหรือแสดงบนจอ */
   emailDelivery: EmailDelivery;
 }) {
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialUsers.find((u) => u.employeeId === initialSelectedId)?.employeeId ?? initialUsers[0]?.employeeId ?? null,
-  );
+  const detail = useDetailParam("user");
   const [filter, setFilter] = useState<Filter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -101,13 +100,8 @@ export default function AdminUsersClient({
   }, [listedUsers, filter, searchQuery]);
 
   const rows = paginate(filteredUsers, page, PAGE_SIZE);
-  const selected = users.find((u) => u.employeeId === selectedId);
+  const selected = users.find((u) => u.employeeId === detail.id);
   const emptyText = users.length === 0 ? "ยังไม่มีข้อมูลผู้ใช้งาน" : "ไม่พบผู้ใช้ที่ตรงกับเงื่อนไข";
-
-  const pick = (employeeId: string) => {
-    setSelectedId(employeeId);
-    revealDetail("user-panel");
-  };
 
   const exportCsv = () =>
     downloadCsv(
@@ -135,9 +129,26 @@ export default function AdminUsersClient({
     );
 
   return (
-    // แผ่นเดียว: รายชื่อ | รายละเอียด คั่นด้วยเส้นตั้งเส้นเดียว (ไม่ใช่การ์ดสองใบ) – ไม่ใส่ overflow-hidden เพราะจะทำให้ panel ขวาเลิก sticky
-    <div className="grid grid-cols-1 rounded-[10px] border border-line bg-white xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
+    <>
+      {selected ? (
+        <div className="flex flex-col gap-[12px]">
+          <Breadcrumb items={[{ label: "ตั้งค่าผู้ใช้งานระบบ", href: "/admin/users" }, { label: selected.employeeId }]} />
+          <UserPanel
+            key={selected.employeeId}
+            user={selected}
+            isSelf={selected.employeeId === currentUserId}
+            emailDelivery={emailDelivery}
+            orgOptions={orgOptions}
+            managerChoices={users
+              .filter((u) => u.status === "ACTIVE" && u.employeeId !== selected.employeeId)
+              .map((u) => ({ value: u.employeeId, label: `${u.name} (${u.employeeId})` }))}
+            onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.employeeId === updated.employeeId ? updated : u)))}
+          />
+        </div>
+      ) : null}
+      <div className={cx("flex flex-col gap-[24px]", selected && "hidden")}>
+      <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
+      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
         <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
           <h2 id="user-list-title" className="text-17 font-semibold text-ink">
             รายชื่อผู้ใช้งานระบบ
@@ -210,20 +221,18 @@ export default function AdminUsersClient({
                 </tr>
               ) : (
                 rows.map((u) => {
-                  const isSelected = u.employeeId === selectedId;
                   return (
                     <tr
                       key={u.employeeId}
-                      onClick={() => pick(u.employeeId)}
-                      aria-selected={isSelected}
-                      className={cx(table.row, "cursor-pointer", isSelected ? table.rowSelected : table.rowHover)}
+                      onClick={() => detail.open(u.employeeId)}
+                      className={cx(table.row, "cursor-pointer", table.rowHover)}
                     >
                       <td className={cx(table.td, "font-semibold whitespace-nowrap")}>
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            pick(u.employeeId);
+                            detail.open(u.employeeId);
                           }}
                           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         >
@@ -263,14 +272,12 @@ export default function AdminUsersClient({
         ) : (
           <ul className={table.cards}>
             {rows.map((u) => {
-              const isSelected = u.employeeId === selectedId;
               return (
                 <li key={u.employeeId}>
                   <button
                     type="button"
-                    onClick={() => pick(u.employeeId)}
-                    aria-pressed={isSelected}
-                    className={cx(table.card, table.cardButton, isSelected ? table.cardSelected : table.cardHover)}
+                    onClick={() => detail.open(u.employeeId)}
+                    className={cx(table.card, table.cardButton, table.cardHover)}
                   >
                     <span className="flex items-start justify-between gap-[8px]">
                       <span className="min-w-0">
@@ -306,25 +313,8 @@ export default function AdminUsersClient({
           <Pagination page={page} pageSize={PAGE_SIZE} total={filteredUsers.length} onChange={setPage} />
         </div>
       </section>
-
-      {selected ? (
-        <UserPanel
-          key={selected.employeeId}
-          user={selected}
-          isSelf={selected.employeeId === currentUserId}
-          emailDelivery={emailDelivery}
-          orgOptions={orgOptions}
-          managerChoices={users
-            .filter((u) => u.status === "ACTIVE" && u.employeeId !== selected.employeeId)
-            .map((u) => ({ value: u.employeeId, label: `${u.name} (${u.employeeId})` }))}
-          onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.employeeId === updated.employeeId ? updated : u)))}
-        />
-      ) : (
-        <p className="p-[20px] text-14 text-muted xl:self-start">
-          เลือกผู้ใช้จากตารางเพื่อดูและแก้ไขข้อมูล
-        </p>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -333,7 +323,7 @@ const inputClass =
 
 type InfoRow = [label: string, value: ReactNode];
 
-// แถวที่ยังไม่มีค่าไม่แสดงเป็น "—" ทีละบรรทัด แต่รวมชื่อไว้บรรทัดเดียวท้ายหมวด ให้แผงสั้นลงและรู้ว่าขาดอะไร
+// แถวที่ยังไม่มีค่าไม่แสดงเป็น "—" ทีละบรรทัด แต่รวมชื่อไว้บรรทัดเดียวท้ายหมวด ให้หมวดสั้นลงและรู้ว่าขาดอะไร
 function InfoRows({ rows }: { rows: InfoRow[] }) {
   const filled = rows.filter(([, value]) => value);
   const missing = rows.filter(([, value]) => !value).map(([label]) => label);
@@ -494,7 +484,7 @@ function toChoices(options: OrgOption[], currentId: string | null, currentName: 
   return [EMPTY_CHOICE, ...choices];
 }
 
-/** ข้อมูลผู้ใช้ในการ์ดเดียว แต่ละส่วนแก้ไขแยกกัน (แก้ได้ทีละส่วน) */
+/** หน้ารายละเอียดผู้ใช้ แต่ละส่วนแก้ไขแยกกัน (แก้ได้ทีละส่วน) */
 function UserPanel({
   user,
   isSelf,
@@ -660,12 +650,56 @@ function UserPanel({
     },
   ];
 
+  const renderSection = (s: (typeof sections)[number]) => {
+    const isEditing = editing === s.id;
+    return (
+      <section
+        key={s.id}
+        aria-label={s.title}
+        className={cx(
+          "flex flex-col gap-[10px] border-t border-line pt-[14px]",
+          editing && !isEditing && "opacity-60",
+        )}
+      >
+        <div className="flex min-h-8 items-center justify-between gap-3">
+          <h2 className="text-13 font-semibold text-ink">{s.title}</h2>
+          {isEditing ? (
+            <span className="text-12 text-primary-700">กำลังแก้ไข</span>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setNotice(null);
+                setEditing(s.id);
+              }}
+              disabled={editing !== null}
+              aria-label={`แก้ไข${s.title}`}
+              className="disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+              แก้ไข
+            </Button>
+          )}
+        </div>
+        {isEditing ? (
+          <SectionForm
+            fields={s.fields}
+            initial={s.initial}
+            onCancel={() => setEditing(null)}
+            onSubmit={(values, reason) => save(s.id, values, reason)}
+          />
+        ) : (
+          <InfoRows rows={s.rows} />
+        )}
+      </section>
+    );
+  };
+
   return (
-    // xl: panel ติดขอบบน ความสูงสูงสุดเว้นล่าง 104px (ปุ่มทางลัด 56px + ขอบ 24px + ช่องว่าง 24px) ไม่ให้ FAB ทับปุ่มท้าย panel
-    <aside
-      id="user-panel"
+    <article
       aria-labelledby="user-panel-title"
-      className="flex min-w-0 scroll-mt-[72px] flex-col gap-[14px] p-[16px] sm:p-[20px] md:scroll-mt-[24px] xl:sticky xl:top-[24px] xl:max-h-[calc(100vh-128px)] xl:self-start xl:overflow-y-auto"
+      className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]"
     >
       <header className="flex items-start gap-[12px]">
         <div
@@ -676,9 +710,9 @@ function UserPanel({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h2 id="user-panel-title" className="min-w-0 break-words text-17 font-semibold text-ink">
+            <h1 id="user-panel-title" className="min-w-0 break-words text-22 font-semibold text-ink">
               {user.name}
-            </h2>
+            </h1>
             <Tag tone={user.status === "ACTIVE" ? "success" : "neutral"} className="shrink-0">
               {statusLabel(user.status)}
             </Tag>
@@ -703,61 +737,21 @@ function UserPanel({
         <option value="นางสาว" />
       </datalist>
 
-      {sections.map((s) => {
-        const isEditing = editing === s.id;
-        return (
-          <section
-            key={s.id}
-            aria-label={s.title}
-            className={cx(
-              "flex flex-col gap-[10px] border-t border-line pt-[14px]",
-              editing && !isEditing && "opacity-60",
-            )}
-          >
-            <div className="flex min-h-8 items-center justify-between gap-3">
-              <h3 className="text-13 font-semibold text-ink">{s.title}</h3>
-              {isEditing ? (
-                <span className="text-12 text-primary-700">กำลังแก้ไข</span>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setNotice(null);
-                    setEditing(s.id);
-                  }}
-                  disabled={editing !== null}
-                  aria-label={`แก้ไข${s.title}`}
-                  className="disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Pencil className="size-3.5" aria-hidden="true" />
-                  แก้ไข
-                </Button>
-              )}
-            </div>
-            {isEditing ? (
-              <SectionForm
-                fields={s.fields}
-                initial={s.initial}
-                onCancel={() => setEditing(null)}
-                onSubmit={(values, reason) => save(s.id, values, reason)}
-              />
-            ) : (
-              <InfoRows rows={s.rows} />
-            )}
-          </section>
-        );
-      })}
-
-      <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} />
-    </aside>
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2 lg:gap-x-[40px]">
+        <div className="flex min-w-0 flex-col gap-[16px]">{sections.slice(0, 2).map(renderSection)}</div>
+        <div className="flex min-w-0 flex-col gap-[16px]">
+          {sections.slice(2).map(renderSection)}
+          <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} />
+        </div>
+      </div>
+    </article>
   );
 }
 
 /**
  * รีเซ็ตรหัสผ่าน (พนักงานลืมรหัส → HR/IT ยืนยันตัวตนแล้ว → Admin ออกรหัสชั่วคราว)
- * ทำใน dialog แบบ modal: ระหว่างเปิดอยู่เลือกพนักงานคนอื่นหรือเปิดฟอร์มอื่นไม่ได้
- * รหัสชั่วคราวจึงไม่หายเพราะเผลอคลิกแถวอื่น ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
+ * ทำใน dialog แบบ modal: ระหว่างเปิดอยู่ออกจากหน้านี้หรือเปิดฟอร์มอื่นไม่ได้
+ * รหัสชั่วคราวจึงไม่หายเพราะเผลอคลิกที่อื่น ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
  */
 function ResetPasswordSection({
   user,
@@ -786,7 +780,7 @@ function ResetPasswordSection({
       className={cx("flex flex-col gap-[10px] border-t border-line pt-[14px]", dimmed && "opacity-60")}
     >
       <div className="flex min-h-8 items-center justify-between gap-3">
-        <h3 className="text-13 font-semibold text-ink">รหัสผ่าน</h3>
+        <h2 className="text-13 font-semibold text-ink">รหัสผ่าน</h2>
         <Button
           size="sm"
           ref={triggerRef}

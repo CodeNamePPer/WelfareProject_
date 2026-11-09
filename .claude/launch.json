@@ -9,8 +9,27 @@
     {
       "name": "welfare-dev-start",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "Pj_ver1_login", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "Pj_ver1_login",
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "welfare-notebook",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "E:/ระบบพนักงานเเละสวัสดิการ-แบบใหม่/Pj_ver1_login",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
     }
   ]
 }

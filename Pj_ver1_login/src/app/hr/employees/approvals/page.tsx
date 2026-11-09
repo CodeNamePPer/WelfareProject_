@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { EMPLOYEE_APPROVAL_COLUMNS, SkeletonCount, SkeletonTableRows } from "../../HrSkeletons";
 import {
   applyEmployeeRequestStatuses,
   readEmployeeRequestStatuses,
@@ -119,7 +120,7 @@ export default function EmployeeApprovalsPage() {
           <div className="person-requests-heading">
             <h1>อนุมัติคำขอเพิ่มพนักงาน</h1>
             <span className="result-count">
-              {isLoading ? "กำลังโหลดคำขอ..." : `${pendingRequests.length} รายการรออนุมัติ`}
+              {isLoading ? <SkeletonCount label="กำลังโหลดคำขอ..." /> : `${pendingRequests.length} รายการรออนุมัติ`}
             </span>
             <Link href="/hr/employees" className="person-requests-back-button">
               <span aria-hidden="true">←</span> ย้อนกลับ
@@ -159,9 +160,7 @@ export default function EmployeeApprovalsPage() {
                   {!isLoading && pendingRequests.length === 0 ? (
                     <tr><td className="person-request-empty" colSpan={6}>ไม่มีคำขอที่รออนุมัติ</td></tr>
                   ) : null}
-                  {isLoading ? (
-                    <tr><td className="person-request-empty" colSpan={6}>กำลังโหลดคำขอ...</td></tr>
-                  ) : null}
+                  {isLoading ? <SkeletonTableRows columns={EMPLOYEE_APPROVAL_COLUMNS} rows={5} rowClassName="animate-skeleton-in" /> : null}
                 </tbody>
               </table>
             </div>

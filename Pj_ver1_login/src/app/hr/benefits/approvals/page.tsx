@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { BENEFIT_APPROVAL_COLUMNS, SkeletonCount, SkeletonTableRows } from "../../HrSkeletons";
 import {
   applyBenefitRequestStatuses,
   readBenefitRequestStatuses,
@@ -123,7 +124,7 @@ export default function BenefitApprovalsPage() {
           <div className="person-requests-heading">
             <h1>อนุมัติคำขอเพิ่มสวัสดิการ</h1>
             <span className="result-count">
-              {isLoading ? "กำลังโหลดคำขอ..." : `${pendingRequests.length} รายการรออนุมัติ`}
+              {isLoading ? <SkeletonCount label="กำลังโหลดคำขอ..." /> : `${pendingRequests.length} รายการรออนุมัติ`}
             </span>
             <Link href="/hr/benefits" className="person-requests-back-button">
               <span aria-hidden="true">←</span> ย้อนกลับ
@@ -170,9 +171,7 @@ export default function BenefitApprovalsPage() {
                   {!isLoading && pendingRequests.length === 0 ? (
                     <tr><td className="person-request-empty" colSpan={7}>ไม่มีคำขอที่รออนุมัติ</td></tr>
                   ) : null}
-                  {isLoading ? (
-                    <tr><td className="person-request-empty" colSpan={7}>กำลังโหลดคำขอ...</td></tr>
-                  ) : null}
+                  {isLoading ? <SkeletonTableRows columns={BENEFIT_APPROVAL_COLUMNS} rows={5} rowClassName="animate-skeleton-in" /> : null}
                 </tbody>
               </table>
             </div>

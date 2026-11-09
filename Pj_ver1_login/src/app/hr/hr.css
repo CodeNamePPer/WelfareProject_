@@ -4134,7 +4134,6 @@
   stroke-linejoin: round;
 }
 
-.hr-app .employee-history-loading,
 .hr-app .employee-history-load-error {
   color: var(--muted);
 }

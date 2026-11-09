@@ -11,8 +11,8 @@ export default function AdminUsersLoading() {
     <SkeletonScreen className="flex flex-col gap-[24px]">
       <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
 
-      <div className="grid grid-cols-1 rounded-[10px] border border-line bg-white xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[20px] xl:border-b-0 xl:border-r">
+      <div className="rounded-[10px] border border-line bg-white">
+        <section className="flex min-w-0 flex-col gap-[16px] p-[20px]">
           <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-17 font-semibold text-ink">รายชื่อผู้ใช้งานระบบ</h2>
             <Skeleton className="h-10 w-full rounded-lg sm:w-[200px]" />
@@ -57,32 +57,6 @@ export default function AdminUsersLoading() {
             <Skeleton className="h-8 w-40 rounded-lg" />
           </div>
         </section>
-
-        <div className="flex flex-col gap-[14px] p-[20px] xl:self-start">
-          <div className="flex items-start gap-[12px]">
-            <Skeleton className="size-12 shrink-0 rounded-full" />
-            <div className="flex flex-1 flex-col gap-[6px]">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-3 w-36" />
-            </div>
-            <Skeleton className="h-6 w-16 rounded-md" />
-          </div>
-          {[4, 3, 5].map((count, s) => (
-            <div key={s} className="flex flex-col gap-[10px] border-t border-line pt-[14px]">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-28" />
-                {s === 0 ? <Skeleton className="h-8 w-16 rounded-lg" /> : null}
-              </div>
-              {Array.from({ length: count }).map((_, i) => (
-                <div key={i} className="flex justify-between gap-3">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
       </div>
     </SkeletonScreen>
   );

@@ -39,8 +39,8 @@ export default function AdminBenefitsLoading() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_350px]">
-        <section className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[20px] xl:border-b-0 xl:border-r">
+      <div>
+        <section className="flex min-w-0 flex-col gap-[16px] p-[20px]">
           <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-10 w-full rounded-lg sm:w-[180px]" />
@@ -72,28 +72,6 @@ export default function AdminBenefitsLoading() {
             </table>
           </div>
         </section>
-
-        {/* รายละเอียดสวัสดิการที่เลือก */}
-        <div className="flex flex-col gap-[14px] p-[20px] xl:self-start">
-          <div className="flex items-start justify-between gap-[12px]">
-            <div className="flex flex-col gap-[6px]">
-              <Skeleton className="h-5 w-44" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-            <Skeleton className="h-6 w-16 rounded-md" />
-          </div>
-          {[4, 3].map((count, s) => (
-            <div key={s} className="flex flex-col gap-[10px] border-t border-line pt-[14px]">
-              <Skeleton className="h-4 w-28" />
-              {Array.from({ length: count }).map((_, i) => (
-                <div key={i} className="flex justify-between gap-3">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
       </div>
       </div>
     </SkeletonScreen>
