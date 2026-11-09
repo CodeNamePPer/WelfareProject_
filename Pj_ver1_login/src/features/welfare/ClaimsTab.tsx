@@ -2,11 +2,12 @@
 
 import { useState, type ReactNode } from 'react';
 import { FileDown, Paperclip } from 'lucide-react';
+import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { ExportCsvDialog } from '../../components/ui/ExportCsvDialog';
 import { FilterChips } from '../../components/ui/FilterChips';
 import { StatusBadge, statusLabel } from '../../components/ui/StatusBadge';
-import { revealDetail, table } from '../../components/ui/table';
+import { table } from '../../components/ui/table';
 import { downloadCsv } from '../../lib/csv';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
@@ -29,7 +30,6 @@ const CSV_COLUMNS = [
   'เหตุผลปฏิเสธ',
 ];
 const STATUS_FILTERS: ClaimStatus[] = ['approved', 'pending', 'rejected'];
-const DETAIL_ID = 'claim-detail';
 
 type Filter = 'all' | ClaimStatus;
 
@@ -69,7 +69,7 @@ const isPartial = (claim: Claim) => claim.approvedAmount !== null && claim.appro
 const thaiYear = (iso: string) => Number(iso.slice(0, 4)) + 543;
 
 // Admin sees claims read-only: approval belongs to HR / Finance.
-export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: Employee[] }) {
+export function ClaimsTab({ claims, employees, onOpen }: { claims: Claim[]; employees: Employee[]; onOpen: (code: string) => void }) {
   const employeeOf = new Map(employees.map((employee) => [employee.id, employee]));
   const nameOf = (id: string) => employeeOf.get(id)?.name ?? id;
   const departmentOf = (id: string) => employeeOf.get(id)?.department ?? null;
@@ -77,14 +77,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
   const sorted = [...claims].sort((a, b) => b.date.localeCompare(a.date) || b.code.localeCompare(a.code));
   const [exporting, setExporting] = useState(false);
   const [filter, setFilter] = useState<Filter>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const visible = filter === 'all' ? sorted : sorted.filter((claim) => claim.status === filter);
-  const selected = visible.find((claim) => claim.id === selectedId) ?? null;
-
-  const pick = (id: string) => {
-    setSelectedId(id);
-    revealDetail(DETAIL_ID);
-  };
 
   const exportCsv = () =>
     downloadCsv(
@@ -102,7 +95,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           claim.benefit,
           claim.amount,
           claim.approvedAmount ?? '',
-          statusLabel(claim.status),
+          claim.statusText,
           stageOf(claim),
           last?.by ?? '',
           last?.at ?? '',
@@ -112,8 +105,8 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
     );
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <section aria-labelledby="claims-title" className="flex min-w-0 flex-col gap-[16px] border-b border-line p-[16px] sm:p-[20px] xl:border-b-0 xl:border-r">
+    <div>
+      <section aria-labelledby="claims-title" className="flex min-w-0 flex-col gap-[16px] p-[16px] sm:p-[20px]">
         <header className="flex flex-col gap-[12px] sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 id="claims-title" className="text-17 font-semibold text-ink">
@@ -173,22 +166,20 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
                 </thead>
                 <tbody>
                   {visible.map((claim) => {
-                    const isSelected = claim.id === selected?.id;
                     const last = lastAction(claim);
                     const department = departmentOf(claim.employeeId);
                     return (
                       <tr
                         key={claim.id}
-                        onClick={() => pick(claim.id)}
-                        aria-selected={isSelected}
-                        className={cx(table.row, 'cursor-pointer', isSelected ? table.rowSelected : table.rowHover)}
+                        onClick={() => onOpen(claim.code)}
+                        className={cx(table.row, 'cursor-pointer', table.rowHover)}
                       >
                         <td className={cx(table.td, 'font-semibold whitespace-nowrap tabular-nums')}>
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              pick(claim.id);
+                              onOpen(claim.code);
                             }}
                             className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                           >
@@ -209,8 +200,8 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
                           <AmountNote claim={claim} />
                         </td>
                         <td className={table.td}>
-                          <StatusBadge status={claim.status} />
-                          <span className="mt-[4px] block text-12 whitespace-nowrap text-muted">{stageOf(claim)}</span>
+                          <StatusBadge status={claim.status} label={claim.statusText} />
+                          {claim.status === 'rejected' ? <span className="mt-[4px] block text-12 whitespace-nowrap text-muted">{stageOf(claim)}</span> : null}
                         </td>
                         <td className={table.td}>
                           {last ? (
@@ -230,14 +221,12 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
             </div>
             <ul className={table.cards}>
               {visible.map((claim) => {
-                const isSelected = claim.id === selected?.id;
                 return (
                   <li key={claim.id}>
                     <button
                       type="button"
-                      onClick={() => pick(claim.id)}
-                      aria-pressed={isSelected}
-                      className={cx(table.card, table.cardButton, isSelected ? table.cardSelected : table.cardHover)}
+                      onClick={() => onOpen(claim.code)}
+                      className={cx(table.card, table.cardButton, table.cardHover)}
                     >
                       <span className="flex items-start justify-between gap-[8px]">
                         <span className="min-w-0">
@@ -246,7 +235,7 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
                             {nameOf(claim.employeeId)}, {claim.code}
                           </span>
                         </span>
-                        <StatusBadge status={claim.status} />
+                        <StatusBadge status={claim.status} label={claim.statusText} />
                       </span>
                       <span className="mt-[8px] flex items-end justify-between gap-[8px]">
                         <span className="tabular-nums">
@@ -266,31 +255,29 @@ export function ClaimsTab({ claims, employees }: { claims: Claim[]; employees: E
           </>
         )}
       </section>
+    </div>
+  );
+}
 
-      {selected ? (
-        <ClaimPanel
-          key={selected.id}
-          claim={selected}
-          employeeName={nameOf(selected.employeeId)}
-          department={departmentOf(selected.employeeId)}
-          usedThisYear={claims
-            .filter(
-              (other) =>
-                other.status === 'approved' &&
-                other.employeeId === selected.employeeId &&
-                other.benefit === selected.benefit &&
-                other.date.slice(0, 4) === selected.date.slice(0, 4),
-            )
-            .reduce((sum, other) => sum + (other.approvedAmount ?? 0), 0)}
-        />
-      ) : (
-        <p
-          id={DETAIL_ID}
-          className="p-[20px] text-14 text-muted xl:self-start"
-        >
-          เลือกคำขอจากตารางเพื่อดูรายละเอียดและประวัติการอนุมัติ
-        </p>
-      )}
+// หน้ารายละเอียดของคำขอเบิก เปิดจากแถวในตาราง (?claim=เลขที่คำขอ)
+export function ClaimDetailPage({ claim, claims, employees }: { claim: Claim; claims: Claim[]; employees: Employee[] }) {
+  const employee = employees.find((item) => item.id === claim.employeeId);
+  const usedThisYear = claims
+    .filter(
+      (other) =>
+        other.status === 'approved' &&
+        other.employeeId === claim.employeeId &&
+        other.benefit === claim.benefit &&
+        other.date.slice(0, 4) === claim.date.slice(0, 4),
+    )
+    .reduce((sum, other) => sum + (other.approvedAmount ?? 0), 0);
+
+  return (
+    <div className="flex flex-col gap-[12px]">
+      <Breadcrumb items={[{ label: 'คำขอเบิก', href: '/admin/benefits?tab=claims' }, { label: claim.code }]} />
+      <div className="rounded-[10px] border border-line bg-white">
+        <ClaimPanel claim={claim} employeeName={employee?.name ?? claim.employeeId} department={employee?.department ?? null} usedThisYear={usedThisYear} />
+      </div>
     </div>
   );
 }
@@ -323,7 +310,7 @@ function InfoRows({ rows }: { rows: InfoRow[] }) {
 function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-[10px] border-t border-line pt-[16px]">
-      <h4 className="text-13 font-semibold text-ink">{title}</h4>
+      <h2 className="text-13 font-semibold text-ink">{title}</h2>
       {children}
     </section>
   );
@@ -362,20 +349,16 @@ function ClaimPanel({
     );
 
   return (
-    <aside
-      id={DETAIL_ID}
-      aria-labelledby="claim-detail-title"
-      className="flex flex-col gap-[16px] p-[16px] sm:p-[20px] xl:self-start"
-    >
+    <div className="flex flex-col gap-[16px] p-[16px] sm:p-[20px]">
       <header className="flex flex-col gap-[8px]">
         <div className="flex items-start justify-between gap-[8px]">
           <div className="min-w-0">
             <p className="text-12 text-muted tabular-nums">{claim.code}</p>
-            <h3 id="claim-detail-title" className="text-17 font-semibold text-ink">
+            <h1 className="text-22 font-semibold text-ink">
               {claim.benefit}
-            </h3>
+            </h1>
           </div>
-          <StatusBadge status={claim.status} />
+          <StatusBadge status={claim.status} label={claim.statusText} />
         </div>
         <p className="text-13 text-ink">
           {employeeName}
@@ -393,6 +376,8 @@ function ClaimPanel({
         </div>
       ) : null}
 
+      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2 lg:gap-x-[40px]">
+      <div className="flex flex-col gap-[16px]">
       <PanelSection title="ยอดเงิน">
         <InfoRows
           rows={[
@@ -456,6 +441,8 @@ function ClaimPanel({
         <p className="text-12 text-muted">เปิดไฟล์ได้เฉพาะ HR และฝ่ายการเงิน</p>
       </PanelSection>
 
+      </div>
+
       <PanelSection title="ประวัติการดำเนินการ">
         <ol className="flex flex-col">
           {claim.timeline.map((event, index) => {
@@ -474,7 +461,8 @@ function ClaimPanel({
           {nextStep ? <TimelineItem tone="next" connector={false} title={nextStep} /> : null}
         </ol>
       </PanelSection>
-    </aside>
+      </div>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 // กฎการตรวจคำขอ ใช้ร่วมกันระหว่างคิว (/hr/home) และหน้ารายละเอียดคำขอ
 import type { HrEmployee } from "@/lib/hr/employees";
 import { formatThaiDate } from "@/lib/format";
-import type { PendingRequest } from "../sample/queue";
+import type { PendingRequest } from "@/lib/claims/types";
 
 export type RequestAction = "approve" | "reject" | "return";
 

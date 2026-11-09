@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
@@ -233,11 +234,7 @@ export default function EditEmployeePage() {
     <div className="app-shell">
       <div className="app-main employee-add-main">
         <div className="page-content employee-add-content employee-edit-page-content">
-          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
-            <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
-            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">แก้ประวัติพนักงาน</span>
-          </nav>
+          <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "แก้ประวัติพนักงาน" }]} />
           <div className="employee-add-heading">
             <h1>แก้ประวัติพนักงาน</h1>
             <p>{employee ? `${employee.name} · รหัสพนักงาน ${employee.id}` : "ปรับปรุงข้อมูลส่วนตัวและข้อมูลการทำงาน"}</p>

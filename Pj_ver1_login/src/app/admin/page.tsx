@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
-// TODO: claims รอตารางคำขอเบิกสวัสดิการ (ตอนนี้เป็นข้อมูลจำลองที่ผูกกับรหัสพนักงานจริงจาก seed)
-import { claims } from "@/data/mock";
 import { buildPeriods } from "@/lib/periods";
 import { getAdminAlerts } from "@/lib/admin/alerts";
 import { getSession } from "@/lib/auth/get-session";
@@ -18,7 +16,7 @@ export default async function AdminHomePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [{ stats, roleCounts, logEntries, employees }, alerts] = await Promise.all([
+  const [{ stats, roleCounts, logEntries, employees, claims }, alerts] = await Promise.all([
     getAdminDashboard(),
     getAdminAlerts(session.sub),
   ]);

@@ -13,14 +13,14 @@ const config: Record<ClaimStatus, { label: string; badge: string; dot: string }>
     dot: 'bg-status-approved',
   },
   rejected: {
-    label: 'ปฏิเสธ',
+    label: 'ไม่อนุมัติ',
     badge: 'bg-status-rejected-soft text-status-rejected-ink',
     dot: 'bg-status-rejected',
   },
 };
 
-export function StatusBadge({ status }: { status: ClaimStatus }) {
-  const { label, badge, dot } = config[status];
+export function StatusBadge({ status, label }: { status: ClaimStatus; /** Exact status text; defaults to the group label. */ label?: string }) {
+  const { label: groupLabel, badge, dot } = config[status];
   return (
     <span
       className={cx(
@@ -29,7 +29,7 @@ export function StatusBadge({ status }: { status: ClaimStatus }) {
       )}
     >
       <span className={cx('size-1.5 rounded-full', dot)} aria-hidden="true" />
-      {label}
+      {label ?? groupLabel}
     </span>
   );
 }

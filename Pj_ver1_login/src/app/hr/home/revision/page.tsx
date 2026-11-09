@@ -1,27 +1,15 @@
 import type { Metadata } from "next";
 import { getHrEmployees } from "@/lib/hr/employees";
-import { revisionRequests } from "../../sample/revision";
-import { thaiShortDateToIso, sampleActor } from "../../sample/history";
 import { readRequestFilters } from "../../urlFilters";
-import { StatusList, type StatusRow } from "../StatusList";
+import { StatusList } from "../StatusList";
+import { getStatusRows } from "../statusRows";
 
 export const metadata: Metadata = { title: "คำขอที่รอพนักงานแก้ไข" };
 
 export const dynamic = "force-dynamic";
 
-const rows: StatusRow[] = revisionRequests.map((request, index) => ({
-  requestId: request.requestId,
-  itemType: request.itemType,
-  employeeCode: request.employeeId,
-  fallbackName: request.name,
-  benefit: request.benefit,
-  amount: request.amount,
-  date: thaiShortDateToIso(request.submittedAt),
-  actorCode: sampleActor(index),
-  note: request.correction,
-}));
-
 export default async function RevisionRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [employees, params] = await Promise.all([getHrEmployees(), searchParams]);
-  return <StatusList kind="revision" rows={rows} employees={employees} initialFilters={readRequestFilters(params)} />;
+  const [employees, params, data] = await Promise.all([getHrEmployees(), searchParams, getStatusRows("revision")]);
+  if (!data) return <p className="queue-alert" role="alert">โหลดคำขอไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
+  return <StatusList kind="revision" rows={data.rows} counts={data.counts} employees={employees} initialFilters={readRequestFilters(params)} />;
 }

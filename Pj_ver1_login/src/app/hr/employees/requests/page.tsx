@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useEffect, useMemo, useState } from "react";
 import {
   applyEmployeeRequestStatuses,
@@ -72,11 +73,7 @@ export default function EmployeeRequestsPage() {
     <div className="app-shell">
       <div className="app-main employee-management-main">
         <div className="page-content person-requests-content">
-          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
-            <Link href="/hr/employees">จัดการพนักงานและสิทธิ์</Link>
-            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">ติดตามคำขอเพิ่มพนักงาน</span>
-          </nav>
+          <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "ติดตามคำขอเพิ่มพนักงาน" }]} />
           <div className="person-requests-heading">
             <h1>ติดตามคำขอเพิ่มพนักงาน</h1>
             <span className="result-count">{filteredRequests.length} รายการ</span>

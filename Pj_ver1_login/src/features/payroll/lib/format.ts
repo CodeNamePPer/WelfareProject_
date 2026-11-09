@@ -49,3 +49,8 @@ export function formatBaht(amount: number, decimals = true): string {
 export function formatNumber(n: number): string {
   return bahtFormatterInt.format(n);
 }
+
+/** วันนี้ตามเวลาไทย "YYYY-MM-DD" */
+export function todayBangkok(): string {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+}

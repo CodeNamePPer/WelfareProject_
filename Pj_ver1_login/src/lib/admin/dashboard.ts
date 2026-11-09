@@ -4,13 +4,13 @@ import { listAudit } from "../auth/audit";
 import { ROLE_LABELS, type Role } from "../auth/roles";
 import { getAllUsers } from "../auth/users";
 import { toLogEntries } from "../../features/logs/fromAuditLog";
-// TODO: claims ยังเป็น mock รอตารางคำขอเบิกสวัสดิการ
-import { claims } from "../../data/mock";
-import type { AuditEntry, Employee, RoleCount, SummaryStats } from "../../types";
+import { listClaims } from "../claims/service";
+import { ADMIN_STATUSES, toAdminClaim, toBangkokDate } from "../claims/mappers";
+import type { ClaimRecord } from "../claims/types";
+import type { AuditEntry, Claim, Employee, RoleCount, SummaryStats } from "../../types";
 
 /**
  * ข้อมูลหน้า Admin Dashboard จาก Supabase (เรียกฝั่ง server เท่านั้น)
- * ส่วนสวัสดิการ/คำขอเบิก/แจ้งเตือนยังใช้ mock เพราะยังไม่มีตาราง
  */
 export interface AdminDashboardData {
   stats: SummaryStats;
@@ -18,6 +18,7 @@ export interface AdminDashboardData {
   roleCounts: RoleCount[] | null;
   employees: Employee[];
   logEntries: AuditEntry[];
+  claims: Claim[];
 }
 
 const TZ = "Asia/Bangkok";
@@ -118,24 +119,21 @@ function fetchLoginActivity(): Promise<Pick<SummaryStats, "logins" | "loginError
   });
 }
 
-/** คิวคำขอเบิกของ HR – ตอนนี้คำนวณจาก mock claims */
-function hrQueueStats(): SummaryStats["hrQueue"] {
-  // คำขอ pending ที่ HR อนุมัติแล้วกำลังรอการเงิน ไม่ใช่คิวของ HR
-  const atHr = (c: (typeof claims)[number]) => !c.timeline.some((e) => e.kind === "hr-approved");
-  const allPending = claims.filter((c) => c.status === "pending");
-  const pending = allPending.filter(atHr);
+/** คิวคำขอเบิก: งานที่ค้างที่ HR แยกจากงานที่รอการเงิน */
+function hrQueueStats(claims: ClaimRecord[]): SummaryStats["hrQueue"] {
+  const atHr = claims.filter((c) => ["pending_hr", "needs_revision", "finance_returned"].includes(c.status));
   const today = new Date(`${bangkokDate()}T00:00:00Z`).getTime();
-  const ages = pending.map((c) => Math.round((today - new Date(`${c.date}T00:00:00Z`).getTime()) / DAY_MS));
+  const ages = atHr.map((c) => Math.round((today - new Date(`${toBangkokDate(c.submittedAt ?? c.createdAt)}T00:00:00Z`).getTime()) / DAY_MS));
   return {
-    pending: pending.length,
-    atFinance: allPending.length - pending.length,
-    approved: claims.filter((c) => c.status === "approved").length,
+    pending: atHr.length,
+    atFinance: claims.filter((c) => c.status === "pending_finance").length,
+    approved: claims.filter((c) => c.status === "awaiting_payment" || c.status === "paid").length,
     rejected: claims.filter((c) => c.status === "rejected").length,
     oldestPendingDays: ages.length ? Math.max(...ages) : null,
   };
 }
 
-function fetchEmployees(): Promise<Employee[] | null> {
+export function fetchEmployees(): Promise<Employee[] | null> {
   return safe("employees", async () => {
     const [{ data, error }, departments] = await Promise.all([
       supabaseAdmin
@@ -160,12 +158,13 @@ function fetchEmployees(): Promise<Employee[] | null> {
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
   // getAllUsers / listAudit จัดการ error เองแล้ว (log และคืน [])
-  const [users, auditRows, hiredThisMonth, loginActivity, employees] = await Promise.all([
+  const [users, auditRows, hiredThisMonth, loginActivity, employees, claims] = await Promise.all([
     getAllUsers(),
     listAudit(AUDIT_FETCH),
     fetchHiredThisMonth(),
     fetchLoginActivity(),
     fetchEmployees(),
+    listClaims({ statuses: ADMIN_STATUSES }),
   ]);
 
   // getAllUsers กลืน error แล้วคืน [] – แต่ผู้เปิดหน้านี้คือ Admin ที่ล็อกอินอยู่ จึงต้องมีผู้ใช้อย่างน้อย 1 คนเสมอ
@@ -194,12 +193,13 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
             newThisMonth: hiredThisMonth ? users.filter((u) => hiredThisMonth.has(u.employeeId)).length : null,
           }
         : null,
-      hrQueue: hrQueueStats(),
+      hrQueue: claims ? hrQueueStats(claims) : null,
       logins: loginActivity?.logins ?? null,
       loginErrors: loginActivity?.loginErrors ?? null,
     },
     roleCounts,
     employees: employees ?? [],
     logEntries,
+    claims: (claims ?? []).map(toAdminClaim),
   };
 }

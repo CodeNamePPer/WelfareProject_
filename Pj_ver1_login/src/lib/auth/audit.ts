@@ -13,6 +13,8 @@ export type AuditAction =
   | "LOGOUT"
   | "USER_UPDATE"
   | "NOTIFICATION_RESOLVE"
+  | "WELFARE_CREATE"
+  | "WELFARE_UPDATE"
   | "PASSWORD_RESET" // admin รีเซ็ตให้ (targetId = เจ้าของบัญชี)
   | "PASSWORD_CHANGE" // เจ้าของบัญชีตั้งรหัสใหม่เอง
   | "PASSWORD_CHANGE_FAILED"; // ใส่รหัสปัจจุบันผิดตอนเปลี่ยนรหัส

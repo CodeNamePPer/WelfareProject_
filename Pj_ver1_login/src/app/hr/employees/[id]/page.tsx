@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { notFound } from "next/navigation";
 import { getHrEmployees, type HrEmployee } from "@/lib/hr/employees";
 import { getEntitlements } from "@/lib/hr/entitlements";
 import { formatThaiDate } from "@/lib/format";
-import { pendingRequests } from "../../sample/queue";
-import { approvedRequests } from "../../sample/approved";
-import { rejectedRequests } from "../../sample/rejected";
-import { revisionRequests } from "../../sample/revision";
-import { thaiShortDateToIso } from "../../sample/history";
+import { listClaims } from "@/lib/claims/service";
+import { hrStatusOf, toBangkokDate } from "@/lib/claims/mappers";
+import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +34,16 @@ function tenure(hireIso: string, endIso: string | null) {
 
 type HistoryItem = { id: string; benefit: string; amount: number; date: string; status: string; tone: string };
 
-/** คำขอทั้งหมดของพนักงานคนนี้จากข้อมูลตัวอย่างทุกสถานะ ใหม่สุดก่อน */
-function requestHistory(code: string): HistoryItem[] {
-  const items: HistoryItem[] = [
-    ...pendingRequests.filter((r) => r.employeeCode === code).map((r) => ({ id: r.id, benefit: r.benefit, amount: r.amount, date: r.submitted, status: "รอตรวจ", tone: "pending" })),
-    ...revisionRequests.filter((r) => r.employeeId === code).map((r) => ({ id: r.requestId, benefit: r.benefit, amount: r.amount, date: thaiShortDateToIso(r.submittedAt), status: "รอพนักงานแก้ไข", tone: "revision" })),
-    ...rejectedRequests.filter((r) => r.employeeId === code).map((r) => ({ id: r.requestId, benefit: r.benefit, amount: r.amount, date: thaiShortDateToIso(r.rejectedAt), status: "ปฏิเสธแล้ว", tone: "rejected" })),
-    ...approvedRequests.filter((r) => r.employeeId === code).map((r) => ({ id: r.requestId, benefit: r.benefit, amount: r.amount, date: thaiShortDateToIso(r.approvedAt), status: "อนุมัติแล้ว", tone: "approved" })),
-  ];
-  return items.sort((a, b) => b.date.localeCompare(a.date));
+/** คำขอที่ยื่นแล้วทั้งหมดของพนักงานคนนี้ ใหม่สุดก่อน */
+async function requestHistory(code: string): Promise<HistoryItem[]> {
+  const claims = (await listClaims({ employeeCode: code })) ?? [];
+  return claims
+    .flatMap((claim): HistoryItem[] => {
+      const status = hrStatusOf(claim.status);
+      if (!status) return [];
+      return [{ id: claim.claimNo, benefit: claim.benefitName, amount: claim.amountApproved ?? claim.amountRequested, date: toBangkokDate(claim.submittedAt ?? claim.createdAt), status: CLAIM_STATUS_LABEL[claim.status], tone: status }];
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -79,17 +79,13 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
   const entitlementResult = await getEntitlements(employee);
   const entitlements = entitlementResult?.items ?? null;
   const eligibleCount = entitlements?.filter((item) => item.eligible).length ?? 0;
-  const history = requestHistory(code);
+  const history = await requestHistory(code);
   const approvedTotal = history.filter((item) => item.tone === "approved").reduce((sum, item) => sum + item.amount, 0);
   const endDate = employee.status === "ACTIVE" ? null : employee.statusDate;
 
   return (
     <div className="page-content queue-page profile-page">
-      <nav className="profile-breadcrumb" aria-label="ตำแหน่งหน้า">
-        <Link href="/hr/employees">รายชื่อพนักงาน</Link>
-        <span aria-hidden="true"> / </span>
-        <span aria-current="page">{employee.code}</span>
-      </nav>
+      <Breadcrumb items={[{ label: "รายชื่อพนักงาน", href: "/hr/employees" }, { label: employee.code }]} />
 
       <header className="queue-heading">
         <h1>{employee.name}</h1>
@@ -147,9 +143,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
           <p className="queue-meta">
             {entitlements === null
               ? "โหลดข้อมูลสวัสดิการไม่สำเร็จ"
-              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · ${
-                  entitlementResult?.source === "sample" ? "ข้อมูลตัวอย่าง (ฐานข้อมูลยังไม่มีตารางสวัสดิการ)" : "จากตารางสวัสดิการ"
-                } · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
+              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · จากตารางสวัสดิการ · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
           </p>
         </div>
         {entitlements && entitlements.length > 0 ? (
@@ -196,7 +190,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
         <div className="profile-sheet-head">
           <h2 id="profile-requests">คำขอสวัสดิการ</h2>
           <p className="queue-meta">
-            ข้อมูลตัวอย่าง · {history.length} รายการ{approvedTotal > 0 ? ` · อนุมัติแล้วรวม ${baht.format(approvedTotal)} บาท` : ""}
+            {history.length} รายการ{approvedTotal > 0 ? ` · อนุมัติแล้วรวม ${baht.format(approvedTotal)} บาท` : ""}
           </p>
         </div>
         <div className="queue-table-scroll">

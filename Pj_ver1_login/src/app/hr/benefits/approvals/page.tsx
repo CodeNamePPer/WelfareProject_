@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   applyBenefitRequestStatuses,
@@ -118,11 +119,7 @@ export default function BenefitApprovalsPage() {
     <div className="app-shell">
       <div className="app-main employee-management-main">
         <div className="page-content person-requests-content benefit-approval-content">
-          <nav className="breadcrumbs" aria-label="เส้นทางนำทาง">
-            <Link href="/hr/benefits">จัดการสวัสดิการ</Link>
-            <span className="breadcrumb-separator" aria-hidden="true">&gt;</span>
-            <span aria-current="page">อนุมัติคำขอเพิ่มสวัสดิการ</span>
-          </nav>
+          <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการสวัสดิการ", href: "/hr/benefits" }, { label: "อนุมัติคำขอเพิ่มสวัสดิการ" }]} />
           <div className="person-requests-heading">
             <h1>อนุมัติคำขอเพิ่มสวัสดิการ</h1>
             <span className="result-count">

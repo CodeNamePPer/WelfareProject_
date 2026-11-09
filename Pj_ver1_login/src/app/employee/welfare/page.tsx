@@ -1,64 +1,32 @@
-﻿'use client';
-import Link from "next/link";
+﻿import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Heart, Search } from "lucide-react";
+import { getSession } from "@/lib/auth/get-session";
+import { getEmployeeBenefits } from "@/lib/claims/service";
 
-export default function WelfarePage() {
-    const welfareItems = [
-        {
-            category: 'สุขภาพ',
-            title: 'ค่ารักษาพยาบาล',
-            description: 'เบิกค่าตรวจรักษาผู้ป่วยนอกและค่ายาตามใบเสร็จ',
-            amount: '10,000 บาท / ปี',
-            remaining: 'คงเหลือ 7,500 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail1',
-        },
-        {
-            category: 'สุขภาพ',
-            title: 'ค่าทันตกรรม',
-            description: 'เบิกค่ารักษาฟันและบริการทันตกรรมในคลินิกที่ร่วมโครงการ',
-            amount: '5,000 บาท / ปี',
-            remaining: 'คงเหลือ 3,200 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail2',
-        },
-        {
-            category: 'สุขภาพ',
-            title: 'ตรวจสุขภาพประจำปี',
-            description: 'ให้สิทธิเบิกค่าตรวจร่างกายและสุขภาพประจำปี',
-            amount: '3,000 บาท / ปี',
-            remaining: 'คงเหลือ 2,250 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail3',
-        },
-        {
-            category: 'การเรียนรู้',
-            title: 'ค่าลงทะเบียนอบรม',
-            description: 'สนับสนุนค่าอบรมและหลักสูตรฝึกอบรมทางวิชาชีพ',
-            amount: '12,000 บาท / ปี',
-            remaining: 'คงเหลือ 8,500 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail4',
-        },
-        {
-            category: 'ครอบครัว',
-            title: 'ค่ารักษาพยาบาลบุตร',
-            description: 'เบิกค่ารักษาพยาบาลสำหรับสมาชิกในครอบครัวสำคัญ',
-            amount: '8,000 บาท / ปี',
-            remaining: 'คงเหลือ 5,200 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail5',
-        },
-        {
-            category: 'ครอบครัว',
-            title: 'ค่าภูมิคุ้มกันบุตร',
-            description: 'จัดสรรสำหรับค่า vaccine และบริการฉีดวัคซีนตามนโยบาย',
-            amount: '4,500 บาท / ปี',
-            remaining: 'คงเหลือ 2,900 บาท',
-            status: 'ใช้สิทธิ์ได้',
-            href: '/employee/welfare/welfaredetail6',
-        },
-    ];
+const number = new Intl.NumberFormat("th-TH");
+
+export default async function WelfarePage() {
+    const session = await getSession();
+    if (!session) {
+        redirect("/login");
+    }
+
+    const benefits = await getEmployeeBenefits(session.sub);
+    if (!benefits) {
+        return <p className="text-13 text-status-rejected">โหลดสิทธิ์สวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
+    }
+
+    const welfareItems = benefits.map((benefit) => ({
+        category: benefit.category,
+        title: benefit.name,
+        description: benefit.description ?? "เบิกตามเงื่อนไขสวัสดิการของบริษัท",
+        amount: `${number.format(benefit.limit)} บาท / ${benefit.budgetLabel}`,
+        remaining: `คงเหลือ ${number.format(benefit.remaining)} บาท`,
+        status: benefit.remaining > 0 ? "ใช้สิทธิ์ได้" : "ใช้สิทธิ์ครบแล้ว",
+        href: `/employee/withdraw?benefit=${encodeURIComponent(benefit.code)}`,
+    }));
+    const categories = [...new Set(welfareItems.map((item) => item.category))];
 
     return (
         <div className="mx-auto max-w-[1280px] space-y-4 px-1 py-3 text-ink">
@@ -74,13 +42,13 @@ export default function WelfarePage() {
 
                 <div className="rounded border border-line bg-white">
                     <select aria-label="ปีของสิทธิ์" className="h-10 rounded-lg bg-white px-3 text-13 text-ink-soft outline-none">
-                        <option>สิทธิ์ปี 2569</option>
+                        <option>สิทธิ์ปี {new Date().getFullYear() + 543}</option>
                     </select>
                 </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
-                {['ทั้งหมด', 'สุขภาพ', 'การเรียนรู้', 'ครอบครัว'].map((tab, index) => (
+                {['ทั้งหมด', ...categories].map((tab, index) => (
                     <button
                         type="button"
                         key={tab}
@@ -133,7 +101,7 @@ export default function WelfarePage() {
                                 href={item.href}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2.5 text-13 font-medium text-primary-600 transition duration-200 ease-out hover:bg-primary-100"
                             >
-                                <span>ดูรายละเอียด</span>
+                                <span>ยื่นเบิกสวัสดิการ</span>
                                 <ArrowRight className="h-3.5 w-3.5" />
                             </Link>
                         </div>

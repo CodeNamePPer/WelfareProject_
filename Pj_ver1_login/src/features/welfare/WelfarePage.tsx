@@ -4,9 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { cx } from '../../lib/cx';
+import { useDetailParam } from '../../lib/useDetailParam';
 import { formatBahtWhole } from '../../lib/format';
 import type { Claim, Employee, ImportRecord, WelfareItem } from '../../types';
-import { ClaimsTab } from './ClaimsTab';
+import { ClaimDetailPage, ClaimsTab } from './ClaimsTab';
 import { ImportPanel } from './ImportPanel';
 import { WelfareCatalog } from './WelfareCatalog';
 
@@ -43,10 +44,15 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
   const [importedCount, setImportedCount] = useState(0);
 
   const selected = items.find((item) => item.code === selectedCode);
+  // ?claim=เลขที่คำขอ เปิดหน้ารายละเอียด ส่วนรายการยังอยู่เบื้องหลังเพื่อคงตัวกรองไว้
+  const claimDetail = useDetailParam('claim');
+  const openedClaim = claims.find((claim) => claim.code === claimDetail.id);
 
   return (
-    <div className="flex flex-col gap-[20px]">
-      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตอนนี้ยังใช้ข้อมูลตัวอย่าง" />
+    <>
+    {openedClaim ? <ClaimDetailPage claim={openedClaim} claims={claims} employees={employees} /> : null}
+    <div className={cx('flex flex-col gap-[20px]', openedClaim && 'hidden')}>
+      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตัวอย่างการนำเข้าประวัติยังเป็นข้อมูลตัวอย่าง" />
 
       {/* แผ่นเดียว: แถบหมวด, ตัวเลขสรุป, เนื้อหาแต่ละหมวด คั่นด้วยเส้น ไม่แยกเป็นการ์ด
           ไม่ใส่ overflow-hidden เพราะ panel รายละเอียดด้านขวาต้อง sticky ได้ */}
@@ -106,10 +112,11 @@ export function WelfarePage({ initialItems, importPreview, claims, employees, in
         {tab === 'catalog' || tab === 'import' ? (
           <WelfareCatalog items={items} onItemsChange={setItems} selectedCode={selectedCode} onSelect={setSelectedCode} startCreating={startCreating} />
         ) : null}
-        {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} /> : null}
+        {tab === 'claims' ? <ClaimsTab claims={claims} employees={employees} onOpen={(code) => claimDetail.open(code, { tab: 'claims' })} /> : null}
       </div>
       </div>
     </div>
+    </>
   );
 }
 
