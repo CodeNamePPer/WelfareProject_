@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { formatThaiDate } from "@/lib/format";
 import type { HrEmployee } from "@/lib/hr/employees";
@@ -56,6 +57,7 @@ export function StatusList({
   initialFilters: RequestFilters;
 }) {
   const copy = COPY[kind];
+  const router = useRouter();
   const [query, setQuery] = useState(initialFilters.q);
   const [department, setDepartment] = useState(initialFilters.dept);
   const [itemType, setItemType] = useState(initialFilters.type);
@@ -100,6 +102,12 @@ export function StatusList({
   const pageRows = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const filtersActive = query !== "" || department !== ALL || itemType !== ALL;
   const columnCount = copy.noteLabel ? 6 : 5;
+
+  /** คลิกที่ใดก็ได้ในแถวเพื่อเปิดรายละเอียด เหมือนหน้ารอตรวจ ยกเว้นลิงก์ */
+  function openRow(event: React.MouseEvent<HTMLTableRowElement>, id: string) {
+    if ((event.target as HTMLElement).closest("a, button, input")) return;
+    router.push(requestHref(id));
+  }
 
   function resetFilters() {
     setQuery("");
@@ -171,7 +179,7 @@ export function StatusList({
             </thead>
             <tbody>
               {pageRows.map((row) => (
-                <tr key={row.requestId}>
+                <tr key={row.requestId} className="queue-link-row" onClick={(event) => openRow(event, row.requestId)}>
                   <td data-label="พนักงาน">
                     {row.employee ? (
                       <Link className="queue-name queue-name-link" href={`/hr/employees/${encodeURIComponent(row.employeeCode)}`}>{row.name}</Link>

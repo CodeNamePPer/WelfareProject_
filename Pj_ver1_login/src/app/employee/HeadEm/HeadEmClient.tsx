@@ -6,7 +6,7 @@ import type { Subordinate } from '@/lib/employee/subordinates';
 import { fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
 
-const EMPTY_BENEFIT: EmployeeBenefit = { code: '', name: 'ไม่มีสิทธิ์สวัสดิการ', description: null, category: '', formType: 'general', budgetType: 'yearly', budgetLabel: 'ปี', limit: 0, used: 0, pending: 0, remaining: 0 };
+const EMPTY_BENEFIT: EmployeeBenefit = { code: '', name: 'ไม่มีสิทธิ์สวัสดิการ', description: null, category: '', formType: 'general', budgetType: 'yearly', budgetLabel: 'ปี', maxClaimsNote: null, eligibilityNote: null, documents: [], limit: 0, used: 0, pending: 0, remaining: 0 };
 
 const steps = ['ข้อมูลพนักงานและคำขอ', 'เอกสารและยืนยัน'];
 

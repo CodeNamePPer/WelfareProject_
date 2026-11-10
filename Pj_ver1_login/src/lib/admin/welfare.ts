@@ -24,7 +24,7 @@ interface BenefitRow {
   next_effective_from: string | null;
 }
 
-export type WelfareInput = Partial<Pick<WelfareItem, "name" | "amount" | "budgetType" | "maxClaims" | "eligible" | "startDate" | "approver" | "status">>;
+export type WelfareInput = Partial<Pick<WelfareItem, "name" | "amount" | "budgetType" | "maxClaims" | "eligible" | "startDate" | "approver" | "status" | "documents">>;
 
 /** ข้อความที่แสดงให้ผู้ใช้ได้โดยตรง */
 export class WelfareInputError extends Error {}
@@ -38,6 +38,8 @@ export const WELFARE_APPROVER_ROLES: Role[] = ["HR", "FINANCE"];
 const CODE_RE = /^WEL-[0-9]{3,}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TZ = "Asia/Bangkok";
+const MAX_DOCUMENTS = 10;
+const MAX_DOCUMENT_NAME = 120;
 
 const bangkokDate = (at: Date = new Date()) => at.toLocaleDateString("sv-SE", { timeZone: TZ });
 
@@ -127,6 +129,14 @@ export function parseWelfareInput(values: unknown): WelfareInput {
     if (typeof raw.budgetType !== "string" || !(raw.budgetType in BUDGET_DB)) throw new WelfareInputError("ประเภทวงเงินไม่ถูกต้อง");
     input.budgetType = raw.budgetType as BudgetType;
   }
+  if ("documents" in raw) {
+    const list = raw.documents;
+    if (!Array.isArray(list) || list.some((name) => typeof name !== "string")) throw new WelfareInputError("รายการเอกสารไม่ถูกต้อง");
+    const names = [...new Set((list as string[]).map((name) => name.trim()).filter(Boolean))];
+    if (names.length > MAX_DOCUMENTS) throw new WelfareInputError(`กำหนดเอกสารได้ไม่เกิน ${MAX_DOCUMENTS} รายการ`);
+    if (names.some((name) => name.length > MAX_DOCUMENT_NAME)) throw new WelfareInputError(`ชื่อเอกสารแต่ละรายการยาวได้ไม่เกิน ${MAX_DOCUMENT_NAME} ตัวอักษร`);
+    input.documents = names;
+  }
   if ("status" in raw) {
     if (raw.status !== "active" && raw.status !== "inactive") throw new WelfareInputError("สถานะไม่ถูกต้อง");
     input.status = raw.status;
@@ -157,6 +167,7 @@ async function roleIdOf(code: string | undefined): Promise<string | null> {
 /** ค่าที่อ่านรู้เรื่องสำหรับ audit_logs */
 function auditValue(field: keyof WelfareInput, value: unknown): unknown {
   if (value === "" || value === undefined || value === null) return null;
+  if (field === "documents") return (value as string[]).join(", ") || null;
   if (field === "amount") return formatBahtWhole(Number(value));
   if (field === "startDate") return formatShortThaiDate(String(value));
   if (field === "status") return STATUS_LABEL[value as WelfareStatus];
@@ -164,12 +175,15 @@ function auditValue(field: keyof WelfareInput, value: unknown): unknown {
   return value;
 }
 
-const FIELDS = ["name", "amount", "budgetType", "maxClaims", "eligible", "startDate", "approver", "status"] as const;
+const FIELDS = ["name", "amount", "budgetType", "maxClaims", "eligible", "startDate", "approver", "status", "documents"] as const;
+
+// รายการเอกสารเป็นอาร์เรย์ เทียบด้วยค่าข้างใน
+const comparable = (value: unknown) => (Array.isArray(value) ? value.join("\n") : (value ?? ""));
 
 function diff(before: WelfareInput, next: WelfareInput): AuditChanges {
   const changes: AuditChanges = {};
   for (const field of FIELDS) {
-    if ((before[field] ?? "") !== (next[field] ?? "")) {
+    if (comparable(before[field]) !== comparable(next[field])) {
       changes[field] = { old: auditValue(field, before[field]), new: auditValue(field, next[field]) };
     }
   }
@@ -203,6 +217,7 @@ async function createBenefit(code: string, input: WelfareInput): Promise<SaveWel
       max_claims_note: input.maxClaims || null,
       eligibility_note: input.eligible || null,
       approver_role_id: await roleIdOf(input.approver),
+      required_documents: input.documents ?? [],
       // สร้างแล้วยังไม่เปิดให้เบิก จนกว่า Admin จะกดเปิดใช้งาน
       is_active: input.status === "active",
     })
@@ -259,6 +274,7 @@ export async function saveWelfareItem(code: string, input: WelfareInput): Promis
       max_claims_note: next.maxClaims || null,
       eligibility_note: next.eligible || null,
       approver_role_id: await roleIdOf(next.approver),
+      required_documents: next.documents ?? [],
       is_active: next.status === "active",
     })
     .eq("id", row.id);

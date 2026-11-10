@@ -40,6 +40,7 @@ const WELFARE_FIELD_LABELS: Record<string, string> = {
   amount: 'วงเงิน',
   budgetType: 'ประเภทวงเงิน',
   maxClaims: 'จำนวนครั้งที่เบิกได้',
+  documents: 'เอกสารที่ต้องแนบ',
   eligible: 'ผู้มีสิทธิ์',
   startDate: 'วันที่เริ่มใช้',
   approver: 'ผู้อนุมัติการเบิก',

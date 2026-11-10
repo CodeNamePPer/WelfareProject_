@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { FileText } from 'lucide-react';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { Tag } from '../../components/ui/Tag';
-import { useToast } from '../../components/ui/Toast';
 import { ROLE_LABELS, type Role } from '../../lib/auth/roles';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
@@ -30,8 +28,9 @@ interface WelfareDetailProps {
 
 // หน้ารายละเอียดสวัสดิการ เปิดจากแถวในตาราง (?item=รหัสสวัสดิการ)
 export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: WelfareDetailProps) {
-  const { notifyPending } = useToast();
   const [form, setForm] = useState<EditableFields>(item);
+  // แก้เป็นข้อความ หนึ่งรายการต่อบรรทัด แล้วแยกเป็นรายการตอนบันทึก
+  const [documentsText, setDocumentsText] = useState(item.documents.join('\n'));
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -45,7 +44,8 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
     setError('');
     setSaving(true);
     const { amount, budgetType, maxClaims, eligible, startDate, approver } = form;
-    const failure = await onSave({ name: form.name.trim(), amount, budgetType, maxClaims, eligible, startDate, approver });
+    const documents = documentsText.split('\n').map((name) => name.trim()).filter(Boolean);
+    const failure = await onSave({ name: form.name.trim(), amount, budgetType, maxClaims, eligible, startDate, approver, documents });
     setSaving(false);
     if (failure) setError(failure);
   };
@@ -115,19 +115,24 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
           <div className="flex min-w-0 flex-col gap-[16px]">
             <DetailSection title="การอนุมัติและผู้ดูแล">{renderRows(approvalRows)}</DetailSection>
 
-            <DetailSection title={`เอกสารประกอบ (${item.documents.length})`}>
-              {item.documents.length === 0 ? (
-                <p className="text-13 text-muted">ยังไม่มีเอกสารแนบ</p>
+            <DetailSection title={`เอกสารที่พนักงานต้องแนบ (${item.documents.length})`}>
+              {editing ? (
+                <label className="flex flex-col gap-[6px] text-12 text-muted">
+                  พิมพ์หนึ่งรายการต่อบรรทัด ใบเสร็จรับเงินระบบบังคับแนบอยู่แล้ว ไม่ต้องใส่ซ้ำ
+                  <textarea
+                    rows={4}
+                    value={documentsText}
+                    onChange={(event) => setDocumentsText(event.target.value)}
+                    placeholder={'เช่น ใบรับรองแพทย์\nสำเนาสูติบัตรบุตร'}
+                    className="rounded-lg border border-line bg-white px-3 py-2 text-13 text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  />
+                </label>
+              ) : item.documents.length === 0 ? (
+                <p className="text-13 text-muted">ยังไม่ได้กำหนด พนักงานแนบเฉพาะใบเสร็จรับเงิน</p>
               ) : (
-                <ul className="flex flex-col divide-y divide-line">
+                <ul className="flex list-disc flex-col gap-[4px] pl-5 text-13 text-ink">
                   {item.documents.map((doc) => (
-                    <li key={doc} className="flex items-center gap-[8px] py-[8px] text-13 text-ink">
-                      <FileText className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                      <span className="min-w-0 flex-1 truncate">{doc}</span>
-                      <button type="button" onClick={() => notifyPending(`ดูไฟล์ ${doc}`)} className="shrink-0 text-primary-700 hover:underline">
-                        ดู<span className="sr-only"> {doc}</span>
-                      </button>
-                    </li>
+                    <li key={doc}>{doc}</li>
                   ))}
                 </ul>
               )}
@@ -147,6 +152,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
               <Button
                 onClick={() => {
                   setForm(item);
+                  setDocumentsText(item.documents.join('\n'));
                   setError('');
                   onCancel();
                 }}
