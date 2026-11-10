@@ -90,7 +90,7 @@ export default function AddEmployeePage() {
   return (
     <div className="app-shell">
       <div className="app-main employee-add-main">
-        <div className="page-content employee-add-content">
+        <div className="page-content employee-add-content employee-add-page-content">
           <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "เพิ่มพนักงานรายบุคคล" }]} />
           <div className="employee-add-heading">
             <h1>เพิ่มพนักงานรายบุคคล</h1>
@@ -98,101 +98,98 @@ export default function AddEmployeePage() {
           </div>
 
           <form className="employee-profile-form" onSubmit={saveEmployee}>
-            <section className="employee-profile-card" aria-labelledby="employee-profile-title">
-              <h2 id="employee-profile-title">1. แก้ไขข้อมูลส่วนตัวและข้อมูลการทำงาน</h2>
-              <div className="employee-profile-grid">
-                <section className="employee-profile-identity" aria-labelledby="employee-identity-title">
-                  <h3 id="employee-identity-title">ข้อมูลระบุตัวตน</h3>
-                  <div className="employee-identity-fields">
-                    <label className="profile-field">
-                      <span>รหัสพนักงาน</span>
-                      <input value="กำหนดอัตโนมัติ" readOnly aria-describedby="employee-code-hint" />
-                      <small id="employee-code-hint">ระบบจะสร้างรหัสเมื่อบันทึก</small>
-                    </label>
-                    <label className="profile-field">
-                      <span>แผนก</span>
-                      <select required value={form.department} onChange={(event) => updateField("department", event.target.value)}>
-                        {departments.map((item) => <option key={item}>{item}</option>)}
-                      </select>
-                    </label>
-                    <label className="profile-field">
-                      <span>ตำแหน่ง</span>
-                      <select required value={form.position} onChange={(event) => updateField("position", event.target.value)}>
-                        {positions.map((item) => <option key={item}>{item}</option>)}
-                      </select>
-                    </label>
-                    <label className="profile-field">
-                      <span>คำนำหน้า</span>
-                      <select required value={form.prefix} onChange={(event) => updateField("prefix", event.target.value)}>
-                        {prefixes.map((item) => <option key={item}>{item}</option>)}
-                      </select>
-                    </label>
-                    <label className="profile-field">
-                      <span>ชื่อ</span>
-                      <input required value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>นามสกุล</span>
-                      <input required value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>เพศ</span>
-                      <select required value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
-                        <option>ชาย</option>
-                        <option>หญิง</option>
-                        <option>ไม่ระบุ</option>
-                      </select>
-                    </label>
-                    <label className="profile-field">
-                      <span>สัญชาติ</span>
-                      <input required value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>เลขบัตรประชาชน</span>
-                      <input
-                        required
-                        inputMode="numeric"
-                        pattern="[0-9]{13}"
-                        maxLength={13}
-                        value={form.citizenId}
-                        onChange={(event) => updateField("citizenId", event.target.value.replace(/\D/g, ""))}
-                        title="กรอกเลขบัตรประชาชน 13 หลัก"
-                      />
-                    </label>
-                    <label className="profile-field">
-                      <span>วัน/เดือน/ปี เกิด</span>
-                      <input required type="date" value={form.birthDate} onChange={(event) => updateField("birthDate", event.target.value)} />
-                    </label>
-                    <label className="profile-field employee-profile-wide">
-                      <span>ศาสนา</span>
-                      <input required value={form.religion} onChange={(event) => updateField("religion", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>ชื่อ-บิดา</span>
-                      <input required value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>นามสกุล-บิดา</span>
-                      <input required value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>ชื่อ-มารดา</span>
-                      <input required value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>นามสกุล-มารดา</span>
-                      <input required value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
-                    </label>
-                  </div>
-                </section>
+            <section className="employee-profile-card employee-add-form-card" aria-labelledby="employee-profile-title">
+              <header className="employee-add-card-heading">
+                <h2 id="employee-profile-title">ข้อมูลพนักงาน</h2>
+                <p>กรอกข้อมูลตามแต่ละหัวข้อ ช่องที่มี <span aria-hidden="true">*</span> จำเป็นต้องกรอก</p>
+              </header>
 
-                <section className="employee-profile-benefits" aria-labelledby="employee-benefits-title">
-                  <h3 id="employee-benefits-title">เงื่อนไขการคำนวณสิทธิสวัสดิการ</h3>
+              <section className="employee-add-section" aria-labelledby="employee-work-title">
+                <h3 id="employee-work-title">ข้อมูลการทำงาน</h3>
+                <div className="employee-add-field-grid employee-add-work-grid">
+                  <label className="profile-field">
+                    <span>รหัสพนักงาน</span>
+                    <input value="กำหนดอัตโนมัติ" readOnly aria-describedby="employee-code-hint" />
+                    <small id="employee-code-hint">ระบบจะสร้างรหัสเมื่อบันทึก</small>
+                  </label>
+                  <label className="profile-field">
+                    <span>แผนก</span>
+                    <select required value={form.department} onChange={(event) => updateField("department", event.target.value)}>
+                      {departments.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="profile-field">
+                    <span>ตำแหน่ง</span>
+                    <select required value={form.position} onChange={(event) => updateField("position", event.target.value)}>
+                      {positions.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+                  </label>
                   <label className="profile-field">
                     <span>วันเริ่มงาน</span>
                     <input required type="date" value={form.startDate} onChange={(event) => updateField("startDate", event.target.value)} />
                   </label>
-                  <fieldset className="profile-field profile-marital">
+                </div>
+              </section>
+
+              <section className="employee-add-section" aria-labelledby="employee-identity-title">
+                <h3 id="employee-identity-title">ข้อมูลส่วนตัว</h3>
+                <div className="employee-add-field-grid">
+                  <label className="profile-field">
+                    <span>คำนำหน้า</span>
+                    <select required value={form.prefix} onChange={(event) => updateField("prefix", event.target.value)}>
+                      {prefixes.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="profile-field">
+                    <span>ชื่อ</span>
+                    <input required autoComplete="given-name" value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>นามสกุล</span>
+                    <input required autoComplete="family-name" value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>เพศ</span>
+                    <select required value={form.gender} onChange={(event) => updateField("gender", event.target.value)}>
+                      <option>ชาย</option>
+                      <option>หญิง</option>
+                      <option>ไม่ระบุ</option>
+                    </select>
+                  </label>
+                  <label className="profile-field">
+                    <span>สัญชาติ</span>
+                    <input required value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>เลขบัตรประชาชน</span>
+                    <input
+                      required
+                      inputMode="numeric"
+                      pattern="[0-9]{13}"
+                      maxLength={13}
+                      autoComplete="off"
+                      aria-describedby="citizen-id-hint"
+                      value={form.citizenId}
+                      onChange={(event) => updateField("citizenId", event.target.value.replace(/\D/g, ""))}
+                      title="กรอกเลขบัตรประชาชน 13 หลัก"
+                    />
+                    <small id="citizen-id-hint">กรอกตัวเลข 13 หลัก</small>
+                  </label>
+                  <label className="profile-field">
+                    <span>วัน/เดือน/ปีเกิด</span>
+                    <input required type="date" autoComplete="bday" value={form.birthDate} onChange={(event) => updateField("birthDate", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>ศาสนา</span>
+                    <input required value={form.religion} onChange={(event) => updateField("religion", event.target.value)} />
+                  </label>
+                </div>
+              </section>
+
+              <section className="employee-add-section" aria-labelledby="employee-family-title">
+                <h3 id="employee-family-title">ข้อมูลครอบครัวและสิทธิประโยชน์</h3>
+                <div className="employee-add-field-grid">
+                  <fieldset className="profile-field profile-marital employee-add-field-wide">
                     <legend>สถานะสมรส</legend>
                     <div className="marital-options">
                       {maritalStatuses.map((status) => (
@@ -221,23 +218,44 @@ export default function AddEmployeePage() {
                     />
                   </label>
                   <label className="profile-field">
-                    <span>ที่อยู่ปัจจุบัน</span>
-                    <textarea required rows={3} value={form.currentAddress} onChange={(event) => updateField("currentAddress", event.target.value)} />
+                    <span>ชื่อบิดา</span>
+                    <input required autoComplete="off" value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
                   </label>
-                  <h3 className="employee-contact-title">ข้อมูลติดต่อ</h3>
+                  <label className="profile-field">
+                    <span>นามสกุลบิดา</span>
+                    <input required autoComplete="off" value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>ชื่อมารดา</span>
+                    <input required autoComplete="off" value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
+                  </label>
+                  <label className="profile-field">
+                    <span>นามสกุลมารดา</span>
+                    <input required autoComplete="off" value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
+                  </label>
+                </div>
+              </section>
+
+              <section className="employee-add-section" aria-labelledby="employee-contact-title">
+                <h3 id="employee-contact-title">ข้อมูลติดต่อ</h3>
+                <div className="employee-add-field-grid">
                   <label className="profile-field">
                     <span>อีเมล</span>
                     <input required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} />
                   </label>
                   <label className="profile-field">
                     <span>เบอร์โทรศัพท์</span>
-                    <input type="tel" autoComplete="tel" value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
+                    <input type="tel" autoComplete="tel" inputMode="tel" value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
                   </label>
-                </section>
-              </div>
+                  <label className="profile-field employee-add-field-wide">
+                    <span>ที่อยู่ปัจจุบัน</span>
+                    <textarea required autoComplete="street-address" rows={3} value={form.currentAddress} onChange={(event) => updateField("currentAddress", event.target.value)} />
+                  </label>
+                </div>
+              </section>
 
               <footer className="employee-profile-footer">
-                <p><span aria-hidden="true">*</span> ข้อมูลที่จำเป็นต้องกรอก</p>
+                <p>ตรวจสอบข้อมูลให้ครบก่อนบันทึก</p>
                 <div className="form-actions">
                   <Link href="/hr/employees" className="button button-secondary">ยกเลิก</Link>
                   <button type="submit" className="button button-primary">บันทึกพนักงาน</button>
