@@ -187,7 +187,7 @@ export default function AddEmployeePage() {
               </section>
 
               <section className="employee-add-section" aria-labelledby="employee-family-title">
-                <h3 id="employee-family-title">ข้อมูลครอบครัวและสิทธิประโยชน์</h3>
+                <h3 id="employee-family-title">ข้อมูลครอบครัว</h3>
                 <div className="employee-add-field-grid">
                   <fieldset className="profile-field profile-marital employee-add-field-wide">
                     <legend>สถานะสมรส</legend>
@@ -255,7 +255,6 @@ export default function AddEmployeePage() {
               </section>
 
               <footer className="employee-profile-footer">
-                <p>ตรวจสอบข้อมูลให้ครบก่อนบันทึก</p>
                 <div className="form-actions">
                   <Link href="/hr/employees" className="button button-secondary">ยกเลิก</Link>
                   <button type="submit" className="button button-primary">บันทึกพนักงาน</button>
