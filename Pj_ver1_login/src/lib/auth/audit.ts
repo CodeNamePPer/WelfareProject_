@@ -12,6 +12,8 @@ export type AuditAction =
   | "LOGIN_BLOCKED_INACTIVE"
   | "LOGOUT"
   | "USER_UPDATE"
+  | "EMPLOYEE_CREATE" // HR เพิ่มพนักงานใหม่ (targetId = รหัสพนักงาน)
+  | "ACCOUNT_CREATE" // admin ออกบัญชีให้พนักงาน (targetId = รหัสพนักงาน)
   | "NOTIFICATION_RESOLVE"
   | "WELFARE_CREATE"
   | "WELFARE_UPDATE"
