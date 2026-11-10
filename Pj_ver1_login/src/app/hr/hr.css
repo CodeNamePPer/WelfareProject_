@@ -15,6 +15,7 @@
   --primary-500: #3b82f6;
   --primary-100: #dbeafe;
   --primary-50: #eff6ff;
+  --danger: #b3261e;
   --font-sans: var(--font-plex-thai), system-ui, sans-serif;
 }
 
@@ -4680,10 +4681,6 @@
   outline-offset: -2px;
 }
 
-.hr-app .employee-field-row-start {
-  grid-column-start: 1;
-}
-
 .hr-app .profile-field.is-invalid input,
 .hr-app .profile-field.is-invalid textarea {
   border-color: #b91c1c;
@@ -4712,10 +4709,6 @@
   margin: 6px 0 20px;
   color: var(--muted);
   font-size: 14px;
-}
-
-.hr-app .employee-marital-row {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .hr-app .employee-review {
@@ -4800,10 +4793,6 @@
     padding: 18px 16px;
   }
 
-  .hr-app .employee-marital-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .hr-app .employee-review-section dl > div {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
@@ -4854,6 +4843,123 @@
 
   .hr-app .employee-profile-footer .button {
     flex: 1;
+  }
+}
+
+.hr-app .employee-add-page-content {
+  width: min(100%, 1120px);
+}
+
+.hr-app .employee-add-page-content .employee-add-heading h1 {
+  font-size: 22px;
+}
+
+.hr-app .employee-add-page-content .employee-add-heading p {
+  font-size: 13px;
+}
+
+.hr-app .employee-add-page-content .employee-profile-card {
+  border-color: var(--border);
+  border-radius: 10px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px 18px;
+}
+
+.hr-app .employee-add-page-content .employee-add-work-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hr-app .employee-add-page-content .employee-add-field-wide {
+  grid-column: 1 / -1;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea {
+  border-color: var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:not(:read-only):hover,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:hover,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:hover {
+  border-color: var(--muted);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:focus-visible,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:focus-visible,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:focus-visible,
+.hr-app .employee-add-page-content .button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:user-invalid,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:user-invalid,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:user-invalid {
+  border-color: var(--danger);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field small {
+  color: var(--muted);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field.is-invalid input,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field.is-invalid input:hover,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field.is-invalid textarea,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field.is-invalid textarea:hover {
+  border-color: var(--danger);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field .profile-field-error {
+  color: var(--danger);
+}
+
+.hr-app .employee-add-page-content .profile-field:has(input:required) > span::after,
+.hr-app .employee-add-page-content .profile-field:has(select:required) > span::after,
+.hr-app .employee-add-page-content .profile-field:has(textarea:required) > span::after {
+  color: var(--danger);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .marital-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .marital-option {
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .marital-option span {
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .hr-app .employee-add-page-content .employee-add-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .hr-app .employee-add-page-content {
+    width: 100%;
+  }
+
+  .hr-app .employee-add-page-content .employee-add-field-grid,
+  .hr-app .employee-add-page-content .employee-add-work-grid,
+  .hr-app .employee-add-page-content .employee-add-field-grid .marital-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hr-app .employee-add-page-content .employee-add-field-wide {
+    grid-column: auto;
   }
 }
 

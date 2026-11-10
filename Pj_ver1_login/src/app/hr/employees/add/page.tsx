@@ -317,7 +317,7 @@ export default function AddEmployeePage() {
   return (
     <div className="app-shell">
       <div className="app-main employee-add-main">
-        <div className="page-content employee-add-content">
+        <div className="page-content employee-add-content employee-add-page-content">
           <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "เพิ่มพนักงานรายบุคคล" }]} />
           <div className="employee-add-heading">
             <h1>เพิ่มพนักงานรายบุคคล</h1>
@@ -365,7 +365,7 @@ export default function AddEmployeePage() {
                 <p className="employee-step-description">{steps[step].description}</p>
 
                 {step === 0 && (
-                  <div className="employee-identity-fields">
+                  <div className="employee-add-field-grid employee-add-work-grid">
                     <label className="profile-field">
                       <span>รหัสพนักงาน</span>
                       <input value="กำหนดอัตโนมัติ" readOnly aria-describedby="employee-code-hint" />
@@ -392,12 +392,22 @@ export default function AddEmployeePage() {
                 )}
 
                 {step === 1 && (
-                  <div className="employee-identity-fields">
+                  <div className="employee-add-field-grid">
                     <label className="profile-field">
                       <span>คำนำหน้า</span>
                       <select required value={form.prefix} onChange={(event) => updateField("prefix", event.target.value)}>
                         {prefixes.map((item) => <option key={item}>{item}</option>)}
                       </select>
+                    </label>
+                    <label className={fieldClass("firstName")}>
+                      <span>ชื่อ</span>
+                      <input required autoComplete="given-name" value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} {...invalidProps("firstName")} />
+                      {fieldError("firstName")}
+                    </label>
+                    <label className={fieldClass("lastName")}>
+                      <span>นามสกุล</span>
+                      <input required autoComplete="family-name" value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} {...invalidProps("lastName")} />
+                      {fieldError("lastName")}
                     </label>
                     <label className="profile-field">
                       <span>เพศ</span>
@@ -407,15 +417,10 @@ export default function AddEmployeePage() {
                         <option>ไม่ระบุ</option>
                       </select>
                     </label>
-                    <label className={fieldClass("firstName")}>
-                      <span>ชื่อ</span>
-                      <input required value={form.firstName} onChange={(event) => updateField("firstName", event.target.value)} {...invalidProps("firstName")} />
-                      {fieldError("firstName")}
-                    </label>
-                    <label className={fieldClass("lastName")}>
-                      <span>นามสกุล</span>
-                      <input required value={form.lastName} onChange={(event) => updateField("lastName", event.target.value)} {...invalidProps("lastName")} />
-                      {fieldError("lastName")}
+                    <label className={fieldClass("nationality")}>
+                      <span>สัญชาติ</span>
+                      <input required value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} {...invalidProps("nationality")} />
+                      {fieldError("nationality")}
                     </label>
                     <label className={fieldClass("citizenId")}>
                       <span>เลขบัตรประชาชน</span>
@@ -423,6 +428,7 @@ export default function AddEmployeePage() {
                         required
                         inputMode="numeric"
                         maxLength={13}
+                        autoComplete="off"
                         value={form.citizenId}
                         onChange={(event) => updateField("citizenId", event.target.value.replace(/\D/g, ""))}
                         {...invalidProps("citizenId", "employee-citizen-hint")}
@@ -432,13 +438,8 @@ export default function AddEmployeePage() {
                     </label>
                     <label className={fieldClass("birthDate")}>
                       <span>วันเกิด</span>
-                      <input required type="date" max={today || undefined} value={form.birthDate} onChange={(event) => updateField("birthDate", event.target.value)} {...invalidProps("birthDate")} />
+                      <input required type="date" autoComplete="bday" max={today || undefined} value={form.birthDate} onChange={(event) => updateField("birthDate", event.target.value)} {...invalidProps("birthDate")} />
                       {fieldError("birthDate")}
-                    </label>
-                    <label className={fieldClass("nationality")}>
-                      <span>สัญชาติ</span>
-                      <input required value={form.nationality} onChange={(event) => updateField("nationality", event.target.value)} {...invalidProps("nationality")} />
-                      {fieldError("nationality")}
                     </label>
                     <label className="profile-field">
                       <span>ศาสนา</span>
@@ -448,10 +449,10 @@ export default function AddEmployeePage() {
                 )}
 
                 {step === 2 && (
-                  <div className="employee-identity-fields">
-                    <fieldset className="profile-field profile-marital employee-profile-wide">
+                  <div className="employee-add-field-grid">
+                    <fieldset className="profile-field profile-marital employee-add-field-wide">
                       <legend>สถานะสมรส</legend>
-                      <div className="marital-options employee-marital-row">
+                      <div className="marital-options">
                         {maritalStatuses.map((status) => (
                           <label className="marital-option" key={status}>
                             <input
@@ -466,7 +467,7 @@ export default function AddEmployeePage() {
                         ))}
                       </div>
                     </fieldset>
-                    <label className={fieldClass("childrenCount", "employee-field-row-start")}>
+                    <label className={fieldClass("childrenCount")}>
                       <span>จำนวนบุตร (ที่เข้าเงื่อนไขเบิกสิทธิ์)</span>
                       <input
                         required
@@ -480,27 +481,27 @@ export default function AddEmployeePage() {
                       />
                       {fieldError("childrenCount")}
                     </label>
-                    <label className="profile-field employee-field-row-start">
+                    <label className="profile-field">
                       <span>ชื่อบิดา</span>
-                      <input value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
+                      <input autoComplete="off" value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
                     </label>
                     <label className="profile-field">
                       <span>นามสกุลบิดา</span>
-                      <input value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
+                      <input autoComplete="off" value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
                     </label>
                     <label className="profile-field">
                       <span>ชื่อมารดา</span>
-                      <input value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
+                      <input autoComplete="off" value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
                     </label>
                     <label className="profile-field">
                       <span>นามสกุลมารดา</span>
-                      <input value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
+                      <input autoComplete="off" value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
                     </label>
                   </div>
                 )}
 
                 {step === 3 && (
-                  <div className="employee-identity-fields">
+                  <div className="employee-add-field-grid">
                     <label className={fieldClass("email")}>
                       <span>อีเมล</span>
                       <input required type="email" autoComplete="email" value={form.email} onChange={(event) => updateField("email", event.target.value)} {...invalidProps("email")} />
@@ -510,9 +511,9 @@ export default function AddEmployeePage() {
                       <span>เบอร์โทรศัพท์</span>
                       <input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={(event) => updateField("phone", event.target.value)} />
                     </label>
-                    <label className={fieldClass("currentAddress", "employee-profile-wide")}>
+                    <label className={fieldClass("currentAddress", "employee-add-field-wide")}>
                       <span>ที่อยู่ปัจจุบัน</span>
-                      <textarea required rows={3} value={form.currentAddress} onChange={(event) => updateField("currentAddress", event.target.value)} {...invalidProps("currentAddress")} />
+                      <textarea required autoComplete="street-address" rows={3} value={form.currentAddress} onChange={(event) => updateField("currentAddress", event.target.value)} {...invalidProps("currentAddress")} />
                       {fieldError("currentAddress")}
                     </label>
                   </div>
