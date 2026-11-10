@@ -52,9 +52,25 @@ export interface EmployeeProfile {
   resignedDate: string | null;
   deceasedDate: string | null;
   statusReason: string | null;
+  gender: string | null;
+  nationality: string | null;
+  /** แสดงเฉพาะ 4 หลักท้าย เลขเต็มไม่ถูกส่งออกไปหน้าเว็บ */
+  citizenIdMasked: string | null;
+  birthDate: string | null;
+  religion: string | null;
+  maritalStatus: string | null;
+  childrenCount: number | null;
+  fatherFirstName: string | null;
+  fatherLastName: string | null;
+  motherFirstName: string | null;
+  motherLastName: string | null;
 }
 
-export type UserWithProfile = Omit<User, "passwordHash" | "passwordState"> & { profile: EmployeeProfile };
+export type UserWithProfile = Omit<User, "passwordHash" | "passwordState"> & {
+  /** false = อยู่ในตาราง employee แต่ยังไม่มีบัญชีเข้าระบบ */
+  hasAccount: boolean;
+  profile: EmployeeProfile;
+};
 
 interface UserRow {
   employee_uuid: string;
@@ -67,14 +83,15 @@ interface UserRow {
   updated_at: string | null;
 }
 
-interface ProfileRow extends UserRow {
+interface EmployeeProfileRow {
+  employee_code: string;
   title_th: string | null;
   first_name_th: string;
-  last_name_th: string | null;
+  last_name_th: string;
   first_name_en: string | null;
   last_name_en: string | null;
   nickname: string | null;
-  contact_email: string | null;
+  email: string;
   phone: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
@@ -83,24 +100,50 @@ interface ProfileRow extends UserRow {
   district: string | null;
   province: string | null;
   postal_code: string | null;
-  department_name: string | null;
-  position_name: string | null;
-  job_level_name: string | null;
-  manager_code: string | null;
-  manager_name: string | null;
+  department_id: string | null;
+  position_id: string | null;
+  job_level_id: string | null;
+  employment_status: string;
   hire_date: string | null;
   resigned_date: string | null;
   deceased_date: string | null;
   status_reason: string | null;
+  updated_at: string;
+  gender: string | null;
+  nationality: string | null;
+  citizen_id: string | null;
+  birth_date: string | null;
+  religion: string | null;
+  marital_status: string | null;
+  children_count: number | null;
+  father_first_name: string | null;
+  father_last_name: string | null;
+  mother_first_name: string | null;
+  mother_last_name: string | null;
+  department: { name_th: string } | null;
+  position: { name_th: string } | null;
+  job_level: { name_th: string } | null;
+  manager: { employee_code: string; first_name_th: string; last_name_th: string; deleted_at: string | null } | null;
+  credential: { login_name: string; last_login_at: string | null; updated_at: string | null } | null;
+  roles: { revoked_at: string | null; role: { code: string; is_active: boolean } | null }[];
 }
 
 const VIEW_COLUMNS = "employee_uuid, employee_id, email, name, role, status, last_login_at, updated_at";
 
-const PROFILE_COLUMNS = `${VIEW_COLUMNS}, title_th, first_name_th, last_name_th, first_name_en, last_name_en, nickname,
-  contact_email, phone, emergency_contact_name, emergency_contact_phone,
+// อ่านจากตาราง employee เหมือนฝั่ง HR จึงเห็นพนักงานทุกคน รวมถึงคนที่ยังไม่มีบัญชีเข้าระบบ
+const EMPLOYEE_PROFILE_COLUMNS = `employee_code, title_th, first_name_th, last_name_th, first_name_en, last_name_en, nickname,
+  email, phone, emergency_contact_name, emergency_contact_phone,
   address_line, subdistrict, district, province, postal_code,
-  department_name, position_name, job_level_name, manager_code, manager_name,
-  hire_date, resigned_date, deceased_date, status_reason`;
+  department_id, position_id, job_level_id, employment_status,
+  hire_date, resigned_date, deceased_date, status_reason, updated_at,
+  gender, nationality, citizen_id, birth_date, religion, marital_status, children_count,
+  father_first_name, father_last_name, mother_first_name, mother_last_name,
+  department:department_id(name_th),
+  position:position_id(name_th),
+  job_level:job_level_id(name_th),
+  manager:manager_employee_id(employee_code, first_name_th, last_name_th, deleted_at),
+  credential:employee_credential(login_name, last_login_at, updated_at),
+  roles:user_role!employee_id(revoked_at, role:role_id(code, is_active))`;
 
 function toUser(row: UserRow): Omit<User, "passwordHash"> {
   return {
@@ -114,19 +157,34 @@ function toUser(row: UserRow): Omit<User, "passwordHash"> {
   };
 }
 
-type OrgIds = { department_id: string | null; position_id: string | null; job_level_id: string | null };
+const displayName = (first: string, last: string) => (last === "-" ? first : `${first} ${last}`).trim();
 
-function toUserWithProfile(row: ProfileRow, ids?: OrgIds): UserWithProfile {
+/** บทบาทหลักของพนักงาน ใช้ลำดับเดียวกับ view v_app_user */
+function primaryRole(roles: EmployeeProfileRow["roles"]): Role {
+  const active = roles.filter((r) => !r.revoked_at && r.role?.is_active).map((r) => r.role!.code);
+  return (["SUPER_ADMIN", "HR", "FINANCE"].find((code) => active.includes(code)) ?? active[0] ?? "EMPLOYEE") as Role;
+}
+
+function toUserWithProfile(row: EmployeeProfileRow): UserWithProfile {
+  const manager = row.manager && !row.manager.deleted_at ? row.manager : null;
+  const credentialUpdatedAt = row.credential?.updated_at ?? "";
   return {
-    ...toUser(row),
+    employeeId: row.employee_code,
+    email: row.credential?.login_name ?? "",
+    name: displayName(row.first_name_th, row.last_name_th),
+    role: primaryRole(row.roles),
+    status: row.employment_status.toUpperCase() as EmploymentStatus,
+    lastLoginAt: row.credential?.last_login_at ?? undefined,
+    updatedAt: credentialUpdatedAt > row.updated_at ? credentialUpdatedAt : row.updated_at,
+    hasAccount: row.credential !== null,
     profile: {
       titleTh: row.title_th,
       firstNameTh: row.first_name_th,
-      lastNameTh: row.last_name_th,
+      lastNameTh: row.last_name_th === "-" ? null : row.last_name_th,
       firstNameEn: row.first_name_en,
       lastNameEn: row.last_name_en,
       nickname: row.nickname,
-      contactEmail: row.contact_email,
+      contactEmail: row.email,
       phone: row.phone,
       emergencyContactName: row.emergency_contact_name,
       emergencyContactPhone: row.emergency_contact_phone,
@@ -135,18 +193,29 @@ function toUserWithProfile(row: ProfileRow, ids?: OrgIds): UserWithProfile {
       district: row.district,
       province: row.province,
       postalCode: row.postal_code,
-      departmentId: ids?.department_id ?? null,
-      departmentName: row.department_name,
-      positionId: ids?.position_id ?? null,
-      positionName: row.position_name,
-      jobLevelId: ids?.job_level_id ?? null,
-      jobLevelName: row.job_level_name,
-      managerCode: row.manager_code,
-      managerName: row.manager_name,
+      departmentId: row.department_id,
+      departmentName: row.department?.name_th ?? null,
+      positionId: row.position_id,
+      positionName: row.position?.name_th ?? null,
+      jobLevelId: row.job_level_id,
+      jobLevelName: row.job_level?.name_th ?? null,
+      managerCode: manager?.employee_code ?? null,
+      managerName: manager ? displayName(manager.first_name_th, manager.last_name_th) : null,
       hireDate: row.hire_date,
       resignedDate: row.resigned_date,
       deceasedDate: row.deceased_date,
       statusReason: row.status_reason,
+      gender: row.gender,
+      nationality: row.nationality,
+      citizenIdMasked: row.citizen_id ? `•••••••••${row.citizen_id.slice(-4)}` : null,
+      birthDate: row.birth_date,
+      religion: row.religion,
+      maritalStatus: row.marital_status,
+      childrenCount: row.children_count,
+      fatherFirstName: row.father_first_name,
+      fatherLastName: row.father_last_name,
+      motherFirstName: row.mother_first_name,
+      motherLastName: row.mother_last_name,
     },
   };
 }
@@ -228,17 +297,16 @@ export async function getAllUsers(): Promise<Omit<User, "passwordHash">[]> {
   return [];
 }
 
-/** บัญชีผู้ใช้พร้อมข้อมูลพนักงาน (ที่อยู่ เบอร์โทร ฯลฯ) ใช้เฉพาะหน้าตั้งค่าผู้ใช้งานของ SUPER_ADMIN */
+/** พนักงานทุกคนจากตาราง employee พร้อมบัญชีเข้าระบบ (ถ้ามี) ใช้เฉพาะหน้าตั้งค่าผู้ใช้งานของ SUPER_ADMIN */
 export async function getAllUsersWithProfile(): Promise<UserWithProfile[]> {
   try {
     const { data, error } = await supabaseAdmin
-      .from("v_app_user")
-      .select(PROFILE_COLUMNS)
-      .order("employee_id", { ascending: true });
+      .from("employee")
+      .select(EMPLOYEE_PROFILE_COLUMNS)
+      .is("deleted_at", null)
+      .order("employee_code", { ascending: true });
     if (error) throw error;
-    const rows = data as unknown as ProfileRow[];
-    const ids = await loadOrgIds(rows.map((r) => r.employee_uuid));
-    return rows.map((r) => toUserWithProfile(r, ids.get(r.employee_uuid)));
+    return (data as unknown as EmployeeProfileRow[]).map(toUserWithProfile);
   } catch (err) {
     console.error("Supabase getAllUsersWithProfile error", err);
   }
@@ -247,26 +315,13 @@ export async function getAllUsersWithProfile(): Promise<UserWithProfile[]> {
 
 export async function getUserWithProfileById(employeeId: string): Promise<UserWithProfile | null> {
   const { data, error } = await supabaseAdmin
-    .from("v_app_user")
-    .select(PROFILE_COLUMNS)
-    .eq("employee_id", employeeId)
+    .from("employee")
+    .select(EMPLOYEE_PROFILE_COLUMNS)
+    .eq("employee_code", employeeId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return null;
-  const row = data as unknown as ProfileRow;
-  const ids = await loadOrgIds([row.employee_uuid]);
-  return toUserWithProfile(row, ids.get(row.employee_uuid));
-}
-
-/** รหัสแผนก/ตำแหน่ง/ระดับ (uuid) ใช้เป็นค่าเริ่มต้นของ dropdown ในฟอร์มแก้ไข */
-async function loadOrgIds(employeeUuids: string[]): Promise<Map<string, OrgIds>> {
-  if (employeeUuids.length === 0) return new Map();
-  const { data, error } = await supabaseAdmin
-    .from("employee")
-    .select("id, department_id, position_id, job_level_id")
-    .in("id", employeeUuids);
-  if (error) throw error;
-  return new Map((data as (OrgIds & { id: string })[]).map((r) => [r.id, r]));
+  return data ? toUserWithProfile(data as unknown as EmployeeProfileRow) : null;
 }
 
 export type OrgOption = { id: string; name: string };
@@ -319,6 +374,17 @@ export const EMPLOYEE_EDITABLE_COLUMNS = [
   "job_level_id",
   "manager_employee_id",
   "hire_date",
+  "gender",
+  "nationality",
+  "citizen_id",
+  "birth_date",
+  "religion",
+  "marital_status",
+  "children_count",
+  "father_first_name",
+  "father_last_name",
+  "mother_first_name",
+  "mother_last_name",
 ] as const;
 
 export type EmployeeColumn = (typeof EMPLOYEE_EDITABLE_COLUMNS)[number];
@@ -350,6 +416,16 @@ export async function findEmployeeCodeByUuid(uuid: string): Promise<string | nul
   const { data, error } = await supabaseAdmin.from("employee").select("employee_code").eq("id", uuid).maybeSingle();
   if (error) throw error;
   return (data as { employee_code: string } | null)?.employee_code ?? null;
+}
+
+/** ออกบัญชีให้พนักงานที่ยังไม่มีบัญชี ต้องเปลี่ยนรหัสตอนล็อกอินครั้งแรก */
+export async function issueUserAccount(employeeId: string, loginName: string, passwordHash: string): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("admin_issue_user_account", {
+    p_employee_code: employeeId,
+    p_login_name: loginName,
+    p_password_hash: passwordHash,
+  });
+  if (error) throw error;
 }
 
 export async function getUserById(employeeId: string): Promise<Omit<User, "passwordHash"> | null> {

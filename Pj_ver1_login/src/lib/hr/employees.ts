@@ -72,6 +72,47 @@ function toHrEmployee(row: EmployeeRow): HrEmployee {
   };
 }
 
+export interface NewEmployee {
+  title_th: string | null;
+  first_name_th: string;
+  last_name_th: string;
+  first_name_en: string | null;
+  last_name_en: string | null;
+  nickname: string | null;
+  email: string;
+  phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  address_line: string;
+  subdistrict: string | null;
+  district: string | null;
+  province: string | null;
+  postal_code: string | null;
+  department_id: string;
+  position_id: string;
+  job_level_id: string | null;
+  manager_employee_id: string | null;
+  hire_date: string;
+  gender: string;
+  nationality: string;
+  citizen_id: string;
+  birth_date: string;
+  religion: string | null;
+  marital_status: string;
+  children_count: number;
+  father_first_name: string | null;
+  father_last_name: string | null;
+  mother_first_name: string | null;
+  mother_last_name: string | null;
+}
+
+/** เพิ่มพนักงานลงตาราง employee แล้วคืนรหัสพนักงานที่ระบบออกให้ */
+export async function createHrEmployee(employee: NewEmployee): Promise<string> {
+  const { data, error } = await supabaseAdmin.from("employee").insert(employee).select("employee_code").single();
+  if (error) throw error;
+  return (data as { employee_code: string }).employee_code;
+}
+
 /** คืน null เมื่อโหลดไม่สำเร็จ เพื่อให้หน้าจอแจ้ง "โหลดไม่สำเร็จ" แทนการแสดงรายชื่อว่างหรือข้อมูลปลอม */
 export async function getHrEmployees(): Promise<HrEmployee[] | null> {
   try {

@@ -26,13 +26,15 @@ type FieldSpec = {
   required?: boolean;
   pattern?: RegExp;
   patternMessage?: string;
+  /** ไม่เก็บค่าเต็มใน log */
+  masked?: boolean;
 };
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** ฟิลด์ของตาราง employee ที่แก้ได้ แยกตามส่วนในหน้าตั้งค่าผู้ใช้งาน (ชื่อฟิลด์ตรงกับ EmployeeProfile) */
-const EMPLOYEE_SECTIONS: Record<"personal" | "contact" | "work", Record<string, FieldSpec>> = {
+const EMPLOYEE_SECTIONS: Record<"personal" | "family" | "contact" | "work", Record<string, FieldSpec>> = {
   personal: {
     titleTh: { column: "title_th", label: "คำนำหน้า" },
     firstNameTh: { column: "first_name_th", label: "ชื่อ (ไทย)", required: true },
@@ -40,6 +42,19 @@ const EMPLOYEE_SECTIONS: Record<"personal" | "contact" | "work", Record<string, 
     firstNameEn: { column: "first_name_en", label: "ชื่อ (อังกฤษ)" },
     lastNameEn: { column: "last_name_en", label: "นามสกุล (อังกฤษ)" },
     nickname: { column: "nickname", label: "ชื่อเล่น" },
+    gender: { column: "gender", label: "เพศ" },
+    birthDate: { column: "birth_date", label: "วันเกิด", pattern: DATE_RE, patternMessage: "รูปแบบวันเกิดไม่ถูกต้อง" },
+    citizenId: { column: "citizen_id", label: "เลขบัตรประชาชน", pattern: /^\d{13}$/, patternMessage: "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก", masked: true },
+    nationality: { column: "nationality", label: "สัญชาติ" },
+    religion: { column: "religion", label: "ศาสนา" },
+  },
+  family: {
+    maritalStatus: { column: "marital_status", label: "สถานะสมรส" },
+    childrenCount: { column: "children_count", label: "จำนวนบุตร", pattern: /^\d+$/, patternMessage: "จำนวนบุตรต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป" },
+    fatherFirstName: { column: "father_first_name", label: "ชื่อบิดา" },
+    fatherLastName: { column: "father_last_name", label: "นามสกุลบิดา" },
+    motherFirstName: { column: "mother_first_name", label: "ชื่อมารดา" },
+    motherLastName: { column: "mother_last_name", label: "นามสกุลมารดา" },
   },
   contact: {
     contactEmail: { column: "email", label: "อีเมลติดต่อ", required: true, pattern: EMAIL_RE, patternMessage: "รูปแบบอีเมลติดต่อไม่ถูกต้อง" },
@@ -122,7 +137,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: pg.message }, { status: 400 });
     }
     if (pg?.code === "23505") {
-      return NextResponse.json({ error: "อีเมล/ชื่อล็อกอินนี้ถูกใช้งานแล้ว" }, { status: 409 });
+      const isCitizenId = pg.message?.includes("citizen_id");
+      return NextResponse.json({ error: isCitizenId ? "เลขบัตรประชาชนนี้มีในระบบแล้ว" : "อีเมล/ชื่อล็อกอินนี้ถูกใช้งานแล้ว" }, { status: 409 });
     }
     if (pg?.code === "23514") {
       return NextResponse.json({ error: "ข้อมูลไม่ผ่านเงื่อนไขของระบบ กรุณาตรวจสอบอีกครั้ง" }, { status: 400 });
@@ -203,7 +219,15 @@ async function saveEmployee(
       next = managerUuid;
     }
 
-    if (next === before[spec.column]) continue;
+    if (spec.masked) {
+      const mask = (value: unknown) => (value ? `•••••••••${String(value).slice(-4)}` : null);
+      oldLabel = mask(oldLabel);
+      newLabel = mask(newLabel);
+    }
+
+    // children_count เป็นตัวเลขในฐานข้อมูล เทียบเป็นข้อความเหมือนค่าที่ส่งมา
+    const current = before[spec.column];
+    if (next === (current == null ? null : String(current))) continue;
     patch[spec.column] = next;
     changes[key] = { old: oldLabel, new: newLabel };
   }

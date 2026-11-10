@@ -48,7 +48,7 @@ export function EmployeesClient({ employees, initialQuery = "" }: { employees: H
   const [page, setPage] = useState(1);
   const [notice, setNotice] = useState("");
 
-  // หน้าเพิ่ม/แก้ไขพนักงานยังบันทึกไว้ในเบราว์เซอร์เท่านั้น แจ้งตามจริงแทนการแสดงว่าบันทึกสำเร็จ
+  // หน้าแก้ไขพนักงานยังบันทึกไว้ในเบราว์เซอร์เท่านั้น แจ้งตามจริงแทนการแสดงว่าบันทึกสำเร็จ
   useEffect(() => {
     const timer = window.setTimeout(() => {
       try {

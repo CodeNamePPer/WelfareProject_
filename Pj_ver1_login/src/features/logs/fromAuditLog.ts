@@ -17,6 +17,17 @@ const FIELD_LABELS: Record<string, string> = {
   firstNameEn: 'ชื่อ (อังกฤษ)',
   lastNameEn: 'นามสกุล (อังกฤษ)',
   nickname: 'ชื่อเล่น',
+  gender: 'เพศ',
+  birthDate: 'วันเกิด',
+  citizenId: 'เลขบัตรประชาชน',
+  nationality: 'สัญชาติ',
+  religion: 'ศาสนา',
+  maritalStatus: 'สถานะสมรส',
+  childrenCount: 'จำนวนบุตร',
+  fatherFirstName: 'ชื่อบิดา',
+  fatherLastName: 'นามสกุลบิดา',
+  motherFirstName: 'ชื่อมารดา',
+  motherLastName: 'นามสกุลมารดา',
   contactEmail: 'อีเมลติดต่อ',
   phone: 'เบอร์โทร',
   emergencyContactName: 'ผู้ติดต่อฉุกเฉิน',
@@ -156,6 +167,22 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
           category: 'settings' as AuditCategory,
           target: row.targetId ? { code: `แจ้งเตือน #${row.targetId}`, href: '/admin/notifications' } : undefined,
           action: 'system',
+        },
+      ];
+    }
+
+    if (row.action === 'EMPLOYEE_CREATE' || row.action === 'ACCOUNT_CREATE') {
+      const targetName = (row.targetId && users.get(row.targetId)?.name) || undefined;
+      const isEmployee = row.action === 'EMPLOYEE_CREATE';
+      return [
+        {
+          ...base,
+          title: `${isEmployee ? 'เพิ่มพนักงาน' : 'ออกบัญชีให้'} ${targetName ?? row.targetId ?? ''}`,
+          detail: row.detail ?? '',
+          category: 'settings' as AuditCategory,
+          action: 'user-update',
+          target: row.targetId ? { code: row.targetId, name: targetName, href: `/admin/users?user=${row.targetId}` } : undefined,
+          change: { fields: [], reason: row.reason },
         },
       ];
     }

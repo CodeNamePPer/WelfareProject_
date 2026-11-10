@@ -30,6 +30,7 @@ type User = {
   status: string;
   lastLoginAt?: string;
   updatedAt?: string;
+  hasAccount: boolean;
   profile: EmployeeProfile;
 };
 
@@ -55,8 +56,14 @@ const CSV_COLUMNS = [
   "ใช้งานล่าสุด",
 ];
 
+const NO_ACCOUNT = "ยังไม่มีบัญชี";
 const roleLabel = (role: string) => ROLE_LABELS[role as Role] ?? role;
 const statusLabel = employmentStatusLabel;
+
+function RoleTag({ user }: { user: Pick<User, "role" | "hasAccount"> }) {
+  if (!user.hasAccount) return <Tag tone="neutral">{NO_ACCOUNT}</Tag>;
+  return <Tag tone={user.role === "SUPER_ADMIN" ? "info" : "outline"}>{roleLabel(user.role)}</Tag>;
+}
 
 const joinParts = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ") || null;
 const addressLabel = (p: EmployeeProfile) =>
@@ -121,7 +128,7 @@ export default function AdminUsersClient({
           p.jobLevelName ?? "",
           p.managerName ?? "",
           p.hireDate ?? "",
-          roleLabel(u.role),
+          u.hasAccount ? roleLabel(u.role) : NO_ACCOUNT,
           statusLabel(u.status),
           u.lastLoginAt ?? "",
         ];
@@ -247,11 +254,9 @@ export default function AdminUsersClient({
                         {u.profile.departmentName ?? <span className="text-muted">—</span>}
                         {u.profile.positionName ? <span className="block text-12 text-muted">{u.profile.positionName}</span> : null}
                       </td>
-                      <td className={cx(table.td, "break-all text-muted")}>{u.email}</td>
+                      <td className={cx(table.td, "break-all text-muted")}>{u.email || u.profile.contactEmail}</td>
                       <td className={table.td}>
-                        <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"}>
-                          {roleLabel(u.role)}
-                        </Tag>
+                        <RoleTag user={u} />
                       </td>
                       <td className={table.td}>
                         <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
@@ -293,11 +298,9 @@ export default function AdminUsersClient({
                       </span>
                       <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
                     </span>
-                    <span className="mt-[6px] block break-all text-12 text-muted">{u.email}</span>
+                    <span className="mt-[6px] block break-all text-12 text-muted">{u.email || u.profile.contactEmail}</span>
                     <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-                      <Tag tone={u.role === "SUPER_ADMIN" ? "info" : "outline"}>
-                        {roleLabel(u.role)}
-                      </Tag>
+                      <RoleTag user={u} />
                       <span className="ml-auto text-11 text-muted tabular-nums">
                         ใช้งานล่าสุด {u.lastLoginAt ? formatShortThaiDate(u.lastLoginAt) : "—"}
                       </span>
@@ -362,7 +365,7 @@ type FieldDef = {
 
 type Values = Record<string, string>;
 
-type SectionId = "account" | "personal" | "contact" | "work";
+type SectionId = "account" | "personal" | "family" | "contact" | "work";
 
 /** ฟอร์มแก้ไขของแต่ละส่วน (mount ใหม่ทุกครั้งที่กดแก้ไข ค่าเริ่มต้นจึงตรงกับข้อมูลล่าสุด) */
 function SectionForm({
@@ -474,6 +477,10 @@ function SectionForm({
 }
 
 const EMPTY_CHOICE: Choice = { value: "", label: "— ไม่ระบุ —" };
+// ค่าเดียวกับฟอร์มเพิ่มพนักงานของ HR
+const GENDER_OPTIONS = ["ชาย", "หญิง", "ไม่ระบุ"];
+const MARITAL_OPTIONS = ["โสด", "สมรส", "หย่าร้าง / หม้าย"];
+const withEmpty = (options: string[]): Choice[] => [EMPTY_CHOICE, ...options.map((value) => ({ value, label: value }))];
 
 /** ตัวเลือก dropdown + ค่าปัจจุบัน (กรณีถูกปิดใช้งานแล้ว) เพื่อไม่ให้ค่าเดิมหายไปเงียบ ๆ */
 function toChoices(options: OrgOption[], currentId: string | null, currentName: string | null): Choice[] {
@@ -542,17 +549,17 @@ function UserPanel({
     {
       id: "account",
       title: "บัญชีเข้าใช้งาน",
-      rows: [
-        ["ชื่อล็อกอิน", <span key="email" className="break-all">{user.email}</span>],
-        [
-          "บทบาท",
-          <Tag key="role" tone={user.role === "SUPER_ADMIN" ? "info" : "outline"}>
-            {roleLabel(user.role)}
-          </Tag>,
-        ],
-        ["สถานะ", statusLabel(user.status)],
-        ["ใช้งานล่าสุด", user.lastLoginAt ? formatShortThaiDate(user.lastLoginAt) : null],
-      ],
+      rows: user.hasAccount
+        ? [
+            ["ชื่อล็อกอิน", <span key="email" className="break-all">{user.email}</span>],
+            ["บทบาท", <RoleTag key="role" user={user} />],
+            ["สถานะ", statusLabel(user.status)],
+            ["ใช้งานล่าสุด", user.lastLoginAt ? formatShortThaiDate(user.lastLoginAt) : null],
+          ]
+        : [
+            ["บัญชีเข้าใช้งาน", <RoleTag key="role" user={user} />],
+            ["สถานะ", statusLabel(user.status)],
+          ],
       fields: [
         { key: "email", label: "ชื่อล็อกอิน / อีเมล", required: true, wide: true },
         { key: "role", label: "บทบาท", type: "select", wide: true, options: ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] })) },
@@ -567,6 +574,11 @@ function UserPanel({
         ["ชื่อ (ไทย)", joinParts(p.titleTh, p.firstNameTh, p.lastNameTh)],
         ["ชื่อ (อังกฤษ)", joinParts(p.firstNameEn, p.lastNameEn)],
         ["ชื่อเล่น", p.nickname],
+        ["เพศ", p.gender],
+        ["วันเกิด", p.birthDate ? formatThaiDate(p.birthDate) : null],
+        ["เลขบัตรประชาชน", p.citizenIdMasked],
+        ["สัญชาติ", p.nationality],
+        ["ศาสนา", p.religion],
       ],
       fields: [
         { key: "titleTh", label: "คำนำหน้า", list: "title-th-options", placeholder: "นาย / นาง / นางสาว" },
@@ -575,6 +587,12 @@ function UserPanel({
         { key: "lastNameTh", label: "นามสกุล (ไทย)", required: true },
         { key: "firstNameEn", label: "ชื่อ (อังกฤษ)" },
         { key: "lastNameEn", label: "นามสกุล (อังกฤษ)" },
+        { key: "gender", label: "เพศ", type: "select", options: withEmpty(GENDER_OPTIONS) },
+        { key: "birthDate", label: "วันเกิด", type: "date" },
+        // เลขเต็มไม่ถูกส่งมาหน้าเว็บ เว้นว่างไว้คือไม่เปลี่ยน
+        { key: "citizenId", label: "เลขบัตรประชาชน", inputMode: "numeric", maxLength: 13, wide: true, placeholder: p.citizenIdMasked ?? "ตัวเลข 13 หลัก" },
+        { key: "nationality", label: "สัญชาติ" },
+        { key: "religion", label: "ศาสนา" },
       ],
       initial: {
         titleTh: p.titleTh ?? "",
@@ -583,6 +601,37 @@ function UserPanel({
         lastNameTh: p.lastNameTh ?? "",
         firstNameEn: p.firstNameEn ?? "",
         lastNameEn: p.lastNameEn ?? "",
+        gender: p.gender ?? "",
+        birthDate: p.birthDate ?? "",
+        citizenId: "",
+        nationality: p.nationality ?? "",
+        religion: p.religion ?? "",
+      },
+    },
+    {
+      id: "family",
+      title: "ครอบครัว",
+      rows: [
+        ["สถานะสมรส", p.maritalStatus],
+        ["จำนวนบุตร", p.childrenCount === null ? null : String(p.childrenCount)],
+        ["บิดา", joinParts(p.fatherFirstName, p.fatherLastName)],
+        ["มารดา", joinParts(p.motherFirstName, p.motherLastName)],
+      ],
+      fields: [
+        { key: "maritalStatus", label: "สถานะสมรส", type: "select", options: withEmpty(MARITAL_OPTIONS) },
+        { key: "childrenCount", label: "จำนวนบุตร", inputMode: "numeric" },
+        { key: "fatherFirstName", label: "ชื่อบิดา" },
+        { key: "fatherLastName", label: "นามสกุลบิดา" },
+        { key: "motherFirstName", label: "ชื่อมารดา" },
+        { key: "motherLastName", label: "นามสกุลมารดา" },
+      ],
+      initial: {
+        maritalStatus: p.maritalStatus ?? "",
+        childrenCount: p.childrenCount === null ? "" : String(p.childrenCount),
+        fatherFirstName: p.fatherFirstName ?? "",
+        fatherLastName: p.fatherLastName ?? "",
+        motherFirstName: p.motherFirstName ?? "",
+        motherLastName: p.motherLastName ?? "",
       },
     },
     {
@@ -665,7 +714,7 @@ function UserPanel({
           <h2 className="text-13 font-semibold text-ink">{s.title}</h2>
           {isEditing ? (
             <span className="text-12 text-primary-700">กำลังแก้ไข</span>
-          ) : (
+          ) : s.id === "account" && !user.hasAccount ? null : (
             <Button
               size="sm"
               variant="ghost"
@@ -738,10 +787,10 @@ function UserPanel({
       </datalist>
 
       <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2 lg:gap-x-[40px]">
-        <div className="flex min-w-0 flex-col gap-[16px]">{sections.slice(0, 2).map(renderSection)}</div>
+        <div className="flex min-w-0 flex-col gap-[16px]">{sections.slice(0, 3).map(renderSection)}</div>
         <div className="flex min-w-0 flex-col gap-[16px]">
-          {sections.slice(2).map(renderSection)}
-          <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} />
+          {sections.slice(3).map(renderSection)}
+          <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} onIssued={onSaved} />
         </div>
       </div>
     </article>
@@ -758,17 +807,27 @@ function ResetPasswordSection({
   isSelf,
   emailDelivery,
   dimmed,
+  onIssued,
 }: {
   user: User;
   isSelf: boolean;
   emailDelivery: EmailDelivery;
   dimmed: boolean;
+  onIssued: (user: User) => void;
 }) {
   const [open, setOpen] = useState(false);
   const hintId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const issuing = !user.hasAccount;
+  const loginEmail = deliverableEmail(user.profile.contactEmail);
 
-  const blocked = isSelf
+  const blocked = issuing
+    ? user.status !== "ACTIVE"
+      ? "ออกบัญชีได้เฉพาะพนักงานที่ยังทำงานอยู่"
+      : !loginEmail
+        ? "พนักงานคนนี้ยังไม่มีอีเมลที่ใช้เป็นชื่อล็อกอินได้ ให้แก้อีเมลติดต่อก่อน"
+        : null
+    : isSelf
     ? "รหัสผ่านของตัวเองให้เปลี่ยนที่หน้าโปรไฟล์"
     : user.status !== "ACTIVE"
       ? "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่"
@@ -784,24 +843,28 @@ function ResetPasswordSection({
         <Button
           size="sm"
           ref={triggerRef}
-          variant="danger-outline"
+          variant={issuing ? "primary" : "danger-outline"}
           onClick={() => setOpen(true)}
           disabled={dimmed || blocked !== null}
           aria-describedby={hintId}
           className="disabled:cursor-not-allowed disabled:opacity-40"
         >
           <KeyRound className="size-3.5" aria-hidden="true" />
-          รีเซ็ตรหัสผ่าน
+          {issuing ? "ออกบัญชี" : "รีเซ็ตรหัสผ่าน"}
         </Button>
       </div>
       <p id={hintId} className="text-12 text-muted">
-        {blocked ?? "ใช้เมื่อพนักงานลืมรหัสผ่าน ยืนยันตัวตนกับพนักงานก่อนรีเซ็ตทุกครั้ง"}
+        {blocked ??
+          (issuing
+            ? `พนักงานยังล็อกอินไม่ได้ กดเพื่อสร้างบัญชีโดยใช้ ${loginEmail} เป็นชื่อล็อกอิน`
+            : "ใช้เมื่อพนักงานลืมรหัสผ่าน ยืนยันตัวตนกับพนักงานก่อนรีเซ็ตทุกครั้ง")}
       </p>
 
       {open ? (
         <ResetPasswordDialog
           user={user}
           emailDelivery={emailDelivery}
+          onIssued={onIssued}
           onClose={() => {
             setOpen(false);
             // Safari ไม่โฟกัสปุ่มตอนคลิก dialog จึงคืนโฟกัสเองไม่ได้ ส่งโฟกัสกลับปุ่มรีเซ็ตเสมอ
@@ -816,12 +879,17 @@ function ResetPasswordSection({
 function ResetPasswordDialog({
   user,
   emailDelivery,
+  onIssued,
   onClose,
 }: {
   user: User;
   emailDelivery: EmailDelivery;
+  onIssued: (user: User) => void;
   onClose: () => void;
 }) {
+  // พนักงานที่ยังไม่มีบัญชี dialog นี้ทำหน้าที่ออกบัญชีแทนการรีเซ็ต (ขั้นตอนแสดงรหัสชั่วคราวเหมือนกัน)
+  const issuing = !user.hasAccount;
+  const [issuedUser, setIssuedUser] = useState<User | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const resultRef = useRef<HTMLButtonElement>(null);
@@ -861,6 +929,8 @@ function ResetPasswordDialog({
   const dismiss = () => {
     ref.current?.close();
     onClose();
+    // อัปเดตข้อมูลหลังปิด ไม่ให้หน้าเปลี่ยนสถานะระหว่างที่รหัสชั่วคราวยังแสดงอยู่
+    if (issuedUser) onIssued(issuedUser);
   };
 
   const requestClose = () => {
@@ -871,28 +941,29 @@ function ResetPasswordDialog({
     event.preventDefault();
     if (saving) return;
     if (!reason.trim()) {
-      setError("กรุณาระบุเหตุผลการรีเซ็ตรหัสผ่าน");
+      setError(issuing ? "กรุณาระบุเหตุผลการออกบัญชี" : "กรุณาระบุเหตุผลการรีเซ็ตรหัสผ่าน");
       reasonRef.current?.focus();
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/users/reset-password", {
+      const res = await fetch(issuing ? "/api/admin/users/issue-account" : "/api/admin/users/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ employeeId: user.employeeId, reason: reason.trim() }),
       });
       const result = await res.json().catch(() => ({}));
       if (!res.ok || !(result.tempPassword || result.emailedTo)) {
-        setError(result.error || "รีเซ็ตรหัสผ่านไม่สำเร็จ");
+        setError(result.error || (issuing ? "ออกบัญชีไม่สำเร็จ" : "รีเซ็ตรหัสผ่านไม่สำเร็จ"));
       } else {
         setTempPassword(result.tempPassword ?? null);
         setEmailedTo(result.emailedTo ?? null);
         setFallback(result.fallback ?? null);
+        if (issuing) setIssuedUser(result.user ?? { ...user, hasAccount: true, email: user.profile.contactEmail ?? "" });
       }
     } catch {
-      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ รหัสผ่านยังไม่ถูกรีเซ็ต ลองอีกครั้ง");
+      setError(issuing ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาโหลดหน้าใหม่เพื่อตรวจว่าออกบัญชีแล้วหรือยัง" : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ รหัสผ่านยังไม่ถูกรีเซ็ต ลองอีกครั้ง");
     }
     setSaving(false);
   };
@@ -921,7 +992,9 @@ function ResetPasswordDialog({
     ? `รหัสผ่านชั่วคราวของ ${user.name}`
     : emailedTo
       ? "ส่งรหัสผ่านชั่วคราวแล้ว"
-      : `รีเซ็ตรหัสผ่านของ ${user.name}?`;
+      : issuing
+        ? `ออกบัญชีให้ ${user.name}?`
+        : `รีเซ็ตรหัสผ่านของ ${user.name}?`;
 
   return (
     <dialog
@@ -954,7 +1027,7 @@ function ResetPasswordDialog({
           </h2>
           {!done ? (
             <p className="break-words text-13 text-muted">
-              {user.employeeId}, {user.email}
+              {user.employeeId}, {user.email || user.profile.contactEmail}
             </p>
           ) : null}
         </div>
@@ -962,13 +1035,14 @@ function ResetPasswordDialog({
         {!done ? (
           <form onSubmit={submit} noValidate className="flex flex-col gap-[16px]">
             <ul className="list-disc space-y-[2px] pl-[18px] text-13 text-muted">
+              {issuing ? <li className="break-words">ใช้ {contactEmail} เป็นชื่อล็อกอิน บทบาทเริ่มต้นเป็นพนักงาน</li> : null}
               <li className="break-words">{deliveryPlan}</li>
               <li>{user.name} ต้องตั้งรหัสใหม่ตอนล็อกอินครั้งถัดไป</li>
-              <li>ทุกเครื่องที่ล็อกอินค้างไว้จะถูกออกจากระบบ</li>
+              {issuing ? null : <li>ทุกเครื่องที่ล็อกอินค้างไว้จะถูกออกจากระบบ</li>}
             </ul>
             <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
               <span>
-                เหตุผลการรีเซ็ต <span className="text-danger">*</span>
+                {issuing ? "เหตุผลการออกบัญชี" : "เหตุผลการรีเซ็ต"} <span className="text-danger">*</span>
               </span>
               <textarea
                 ref={reasonRef}
@@ -981,7 +1055,7 @@ function ResetPasswordDialog({
                 maxLength={500}
                 aria-required="true"
                 aria-invalid={error ? true : undefined}
-                placeholder="เช่น พนักงานลืมรหัสผ่าน ยืนยันตัวตนด้วยบัตรพนักงานแล้ว"
+                placeholder={issuing ? "เช่น พนักงานใหม่เริ่มงาน" : "เช่น พนักงานลืมรหัสผ่าน ยืนยันตัวตนด้วยบัตรพนักงานแล้ว"}
                 className="w-full resize-y rounded-lg border border-line bg-white px-3 py-2 text-13 font-normal text-ink placeholder:text-muted focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 aria-[invalid=true]:border-danger"
               />
             </label>
@@ -994,8 +1068,8 @@ function ResetPasswordDialog({
               <Button onClick={requestClose} disabled={saving}>
                 ยกเลิก
               </Button>
-              <Button type="submit" variant="danger" loading={saving}>
-                {saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
+              <Button type="submit" variant={issuing ? "primary" : "danger"} loading={saving}>
+                {issuing ? (saving ? "กำลังออกบัญชี…" : "ออกบัญชี") : saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
               </Button>
             </div>
           </form>
@@ -1012,7 +1086,7 @@ function ResetPasswordDialog({
               ) : (
                 <>
                   ส่งไปที่ <span className="font-medium text-ink">{emailedTo}</span> ให้ {user.name} เช็กอีเมล (รวมถึงโฟลเดอร์สแปม)
-                  แล้วล็อกอินเพื่อตั้งรหัสใหม่ ถ้าไม่ได้รับอีเมล ให้รีเซ็ตอีกครั้ง
+                  แล้วล็อกอินเพื่อตั้งรหัสใหม่ ถ้าไม่ได้รับอีเมล ให้รีเซ็ตรหัสผ่านจากหน้านี้
                 </>
               )}
             </p>
@@ -1030,7 +1104,7 @@ function ResetPasswordDialog({
               <div className="flex gap-[8px] rounded-[8px] bg-status-pending-soft px-[10px] py-[8px] text-13 text-status-pending-ink">
                 <TriangleAlert className="mt-[2px] size-[14px] shrink-0" aria-hidden="true" />
                 <p className="break-words">
-                  ส่งอีเมลไปที่ {emailDelivery.testTo ?? contactEmail} ไม่สำเร็จ รหัสผ่านถูกรีเซ็ตแล้ว ให้แจ้งรหัสด้านล่างกับพนักงานเอง
+                  ส่งอีเมลไปที่ {emailDelivery.testTo ?? contactEmail} ไม่สำเร็จ {issuing ? "สร้างบัญชีแล้ว" : "รหัสผ่านถูกรีเซ็ตแล้ว"} ให้แจ้งรหัสด้านล่างกับพนักงานเอง
                 </p>
               </div>
             ) : null}
@@ -1044,7 +1118,7 @@ function ResetPasswordDialog({
               </Button>
             </div>
             <p className="text-12 text-muted">
-              แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตใหม่
+              แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตรหัสผ่านใหม่
             </p>
             <label className="flex items-start gap-[8px] text-13 text-ink">
               <input

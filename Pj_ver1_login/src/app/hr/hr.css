@@ -4682,8 +4682,15 @@
 }
 
 .hr-app .profile-field.is-invalid input,
+.hr-app .profile-field.is-invalid select,
 .hr-app .profile-field.is-invalid textarea {
   border-color: #b91c1c;
+}
+
+.hr-app .employee-save-error {
+  margin: 16px 0 0;
+  color: var(--danger);
+  font-size: 14px;
 }
 
 .hr-app .profile-field.is-invalid input:focus,

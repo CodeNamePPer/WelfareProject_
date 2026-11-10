@@ -1,4 +1,3 @@
-import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
@@ -8,15 +7,11 @@ import { createAdminAlert } from "@/lib/admin/alerts";
 import { clearFailures } from "@/lib/auth/rate-limit";
 import { savePassword } from "@/lib/auth/credential";
 import { getUserWithProfileById } from "@/lib/auth/users";
-import { deliverableEmail, type ResetFallback } from "@/lib/email/address";
-import { escapeHtml, isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { deliverTempPassword, generateTempPassword } from "@/lib/auth/tempPassword";
+import { deliverableEmail } from "@/lib/email/address";
+import { escapeHtml } from "@/lib/email/resend";
 
 export const runtime = "nodejs";
-
-// ตัดตัวที่อ่านสับสน (0/O, 1/l/I) เพราะ admin ต้องบอกรหัสให้พนักงานด้วยปากหรือกระดาษ
-const LETTERS = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
-const DIGITS = "23456789";
-const TEMP_LENGTH = 12;
 
 function resetEmail(name: string, loginName: string, tempPassword: string, loginUrl: string) {
   const subject = "รหัสผ่านชั่วคราวสำหรับเข้าสู่ระบบพนักงานและสวัสดิการ";
@@ -39,18 +34,6 @@ function resetEmail(name: string, loginName: string, tempPassword: string, login
 <p style="color:#64748b">ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน กรุณาแจ้งฝ่ายบุคคล (HR) หรือ IT ทันที</p>
 </div>`;
   return { subject, text, html };
-}
-
-function generateTempPassword(): string {
-  const all = LETTERS + DIGITS;
-  const chars = [LETTERS[randomInt(LETTERS.length)], DIGITS[randomInt(DIGITS.length)]];
-  while (chars.length < TEMP_LENGTH) chars.push(all[randomInt(all.length)]);
-  // สลับตำแหน่ง ไม่ให้ตัวอักษร/ตัวเลขที่บังคับอยู่ต้นรหัสเสมอ
-  for (let i = chars.length - 1; i > 0; i--) {
-    const j = randomInt(i + 1);
-    [chars[i], chars[j]] = [chars[j], chars[i]];
-  }
-  return chars.join("");
 }
 
 /**
@@ -85,6 +68,7 @@ export async function POST(req: NextRequest) {
   try {
     const target = await getUserWithProfileById(employeeId);
     if (!target) return NextResponse.json({ error: "ไม่พบผู้ใช้งาน" }, { status: 404 });
+    if (!target.hasAccount) return NextResponse.json({ error: "พนักงานคนนี้ยังไม่มีบัญชีเข้าใช้งาน" }, { status: 400 });
     if (target.status !== "ACTIVE") {
       return NextResponse.json({ error: "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่" }, { status: 400 });
     }
@@ -98,24 +82,8 @@ export async function POST(req: NextRequest) {
 
     // ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่า Resend / ส่งพลาด) ให้แสดงบนจอแทน
     const contactEmail = deliverableEmail(target.profile.contactEmail);
-    let emailedTo: string | null = null;
-    let emailError: string | null = null;
-    let fallback: ResetFallback | null = null;
-    if (!contactEmail) {
-      emailError = "พนักงานคนนี้ยังไม่มีอีเมลติดต่อ";
-      fallback = "no-email";
-    } else if (!isEmailConfigured()) {
-      emailError = "ระบบยังไม่ได้ตั้งค่าการส่งอีเมล";
-      fallback = "not-configured";
-    } else {
-      const mail = resetEmail(target.name, target.email, tempPassword, new URL("/login", req.url).toString());
-      const sent = await sendEmail({ to: contactEmail, ...mail });
-      if (sent.ok) emailedTo = sent.deliveredTo;
-      else {
-        emailError = "ส่งอีเมลไม่สำเร็จ";
-        fallback = "send-failed";
-      }
-    }
+    const mail = resetEmail(target.name, target.email, tempPassword, new URL("/login", req.url).toString());
+    const { emailedTo, emailError, fallback } = await deliverTempPassword(contactEmail, mail);
 
     await writeAudit({
       action: "PASSWORD_RESET",
