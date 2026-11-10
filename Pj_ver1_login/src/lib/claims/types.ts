@@ -85,6 +85,11 @@ export type EmployeeBenefit = {
   formType: string;
   budgetType: BudgetKind;
   budgetLabel: string;
+  /** เงื่อนไขจำนวนครั้ง เช่น "1 ครั้ง/ปี" */
+  maxClaimsNote: string | null;
+  eligibilityNote: string | null;
+  /** เอกสารที่แอดมินกำหนดให้แนบเพิ่มจากใบเสร็จ */
+  documents: string[];
   limit: number;
   used: number;
   pending: number;

@@ -6755,3 +6755,36 @@
 .hr-app .benefit-approval-dialog form {
   margin-top: 16px;
 }
+
+/* รายการสวัสดิการ: ทั้งแถวเปิดหน้ารายละเอียด */
+.hr-app .benefits-link-row {
+  position: relative;
+  cursor: pointer;
+}
+
+.hr-app .benefits-link-row:hover td {
+  background: #f1f5fb;
+}
+
+.hr-app .benefits-name a {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+}
+
+.hr-app .benefits-name a::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+
+.hr-app .benefits-link-row:focus-within td {
+  background: #f1f5fb;
+}
+
+.hr-app .benefit-detail-documents {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  list-style: decimal;
+  line-height: 1.8;
+}

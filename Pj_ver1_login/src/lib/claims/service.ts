@@ -201,6 +201,9 @@ interface BenefitRow {
   budget_type: BudgetKind;
   category: string | null;
   form_type: string | null;
+  max_claims_note: string | null;
+  eligibility_note: string | null;
+  required_documents: string[] | null;
 }
 
 /** สวัสดิการที่พนักงานคนนี้ใช้ได้ พร้อมยอดคงเหลือ คืน null เมื่อโหลดไม่สำเร็จ */
@@ -217,7 +220,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
     if (!employee || employee.employment_status !== "active") return [];
 
     const [benefits, limits, restrictions, usage] = await Promise.all([
-      supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
+      supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type, max_claims_note, eligibility_note, required_documents").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
       supabaseAdmin.from("v_welfare_benefit_current").select("id, current_amount").returns<{ id: string; current_amount: number | string | null }[]>(),
       supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department_id").returns<{ benefit_id: string; department_id: string }[]>(),
       fetchUsage([employee.id]),
@@ -247,6 +250,9 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         formType: benefit.form_type ?? "general",
         budgetType: benefit.budget_type,
         budgetLabel: BUDGET_LABEL[benefit.budget_type],
+        maxClaimsNote: benefit.max_claims_note,
+        eligibilityNote: benefit.eligibility_note,
+        documents: benefit.required_documents ?? [],
         limit,
         used,
         pending,

@@ -45,8 +45,11 @@ export default async function BenefitsPage() {
                   </thead>
                   <tbody>
                     {benefits.map((benefit) => (
-                      <tr key={benefit.code}>
-                        <td className="benefits-name">{benefit.name}</td>
+                      <tr key={benefit.code} className="benefits-link-row">
+                        <td className="benefits-name">
+                          {/* ลิงก์ขยายคลุมทั้งแถว คลิกตรงไหนของแถวก็เปิดรายละเอียด */}
+                          <Link href={`/hr/benefits/${encodeURIComponent(benefit.code)}`}>{benefit.name}</Link>
+                        </td>
                         <td>{benefit.category ?? "—"}</td>
                         <td>{formatBahtWhole(benefit.amount)} {benefit.budgetType}</td>
                         <td>
