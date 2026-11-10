@@ -4613,8 +4613,16 @@
   }
 }
 
+.hr-app .employee-add-page-content {
+  width: min(100%, 1120px);
+}
+
 .hr-app .employee-add-page-content .employee-add-heading h1 {
   font-size: 22px;
+}
+
+.hr-app .employee-add-page-content .employee-add-heading p {
+  font-size: 13px;
 }
 
 .hr-app .employee-add-page-content .employee-profile-card {
@@ -4655,7 +4663,7 @@
 
 .hr-app .employee-add-page-content .employee-add-section h3 {
   margin: 0 0 14px;
-  color: #18253f;
+  color: var(--text);
   font-size: 14px;
   font-weight: 600;
 }
@@ -4683,8 +4691,34 @@
   font-size: 13px;
 }
 
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:not(:read-only):hover,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:hover,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:hover {
+  border-color: var(--muted);
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:focus-visible,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:focus-visible,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:focus-visible,
+.hr-app .employee-add-page-content .button:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:user-invalid,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select:user-invalid,
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea:user-invalid {
+  border-color: var(--danger);
+}
+
 .hr-app .employee-add-page-content .employee-add-field-grid .profile-field small {
   color: var(--muted);
+}
+
+.hr-app .employee-add-page-content .profile-field:has(input:required) > span::after,
+.hr-app .employee-add-page-content .profile-field:has(select:required) > span::after,
+.hr-app .employee-add-page-content .profile-field:has(textarea:required) > span::after {
+  color: var(--danger);
 }
 
 .hr-app .employee-add-page-content .employee-add-field-grid .marital-options {
@@ -4701,6 +4735,10 @@
   line-height: 1.4;
 }
 
+.hr-app .employee-add-page-content .employee-profile-footer {
+  justify-content: flex-end;
+}
+
 @media (max-width: 900px) {
   .hr-app .employee-add-page-content .employee-add-field-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4708,6 +4746,10 @@
 }
 
 @media (max-width: 620px) {
+  .hr-app .employee-add-page-content {
+    width: 100%;
+  }
+
   .hr-app .employee-add-page-content .employee-add-card-heading {
     padding: 16px;
   }
