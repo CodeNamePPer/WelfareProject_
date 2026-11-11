@@ -114,6 +114,8 @@ export function WelfareCatalog({ items, onItemsChange, onOpen, onSave, startCrea
       status: 'inactive',
       budgetType: 'รายปี',
       maxClaims: '',
+      maxClaimsPerYear: null,
+      formType: 'general',
       eligible: 'พนักงานประจำ',
       startDate: '',
       approver: 'HR',

@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { Subordinate } from '@/lib/employee/subordinates';
-import { fieldsFor, toClaimPayload } from '@/lib/claims/forms';
+import { APPROVAL_FLOW, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
+import { ATTACHMENT_RULE, RequiredDocuments } from '@/features/welfare/RequiredDocuments';
 
-const EMPTY_BENEFIT: EmployeeBenefit = { code: '', name: 'ไม่มีสิทธิ์สวัสดิการ', description: null, category: '', formType: 'general', budgetType: 'yearly', budgetLabel: 'ปี', maxClaimsNote: null, eligibilityNote: null, documents: [], limit: 0, used: 0, pending: 0, remaining: 0 };
+const EMPTY_BENEFIT: EmployeeBenefit = { code: '', name: 'ไม่มีสิทธิ์สวัสดิการ', description: null, category: '', formType: 'general', budgetType: 'yearly', budgetLabel: 'ปี', maxClaimsNote: null, maxClaims: null, claimsThisYear: 0, eligibilityNote: null, documents: [], limit: 0, used: 0, pending: 0, remaining: 0 };
 
 const steps = ['ข้อมูลพนักงานและคำขอ', 'เอกสารและยืนยัน'];
 
@@ -40,6 +41,9 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
   const requestedAmount = Number(currentFormData.amount) || 0;
   const remainingAfterRequest = Math.max(benefit.remaining - requestedAmount, 0);
   const amountExceedsBalance = requestedAmount > benefit.remaining;
+  // ฐานข้อมูลตรวจอีกชั้นตอนส่ง
+  const claimsLeft = benefit.maxClaims !== null ? Math.max(benefit.maxClaims - benefit.claimsThisYear, 0) : null;
+  const outOfClaims = claimsLeft === 0;
 
   const requestDetails = fields.map((field) => ({
     label: field.label,
@@ -95,6 +99,11 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
 
     if (amountExceedsBalance) {
       setFormError('ยอดที่ขอเบิกเกินวงเงินสวัสดิการคงเหลือ');
+      return;
+    }
+
+    if (outOfClaims) {
+      setFormError(`พนักงานเบิกสวัสดิการนี้ครบ ${benefit.maxClaims} ครั้งของปีนี้แล้ว`);
       return;
     }
 
@@ -274,6 +283,23 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
                           ))}
                         </select>
                       </div>
+                      <dl className="col-span-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-12 leading-5">
+                        <dt className="text-muted">ผู้มีสิทธิ์</dt>
+                        <dd className="text-ink-soft">{benefit.eligibilityNote || 'พนักงานทุกคน'}</dd>
+                        <dt className="text-muted">จำนวนครั้ง</dt>
+                        <dd className={outOfClaims ? 'text-status-rejected' : 'text-ink-soft'}>
+                          {benefit.maxClaims !== null
+                            ? `${benefit.maxClaims} ครั้ง/ปี · ปีนี้ใช้ไป ${benefit.claimsThisYear} ครั้ง เหลือ ${claimsLeft} ครั้ง`
+                            : benefit.maxClaimsNote || 'ไม่จำกัดจำนวนครั้ง'}
+                        </dd>
+                        <dt className="text-muted">ขั้นตอนอนุมัติ</dt>
+                        <dd className="text-ink-soft">{APPROVAL_FLOW}</dd>
+                      </dl>
+                      <div className="col-span-2 rounded-md border border-line bg-surface p-3">
+                        <p className="text-13 font-medium text-ink">เอกสารที่ต้องเตรียม</p>
+                        <p className="mb-2 mt-0.5 text-12 text-muted">แนบในขั้นตอนถัดไป {ATTACHMENT_RULE}</p>
+                        <RequiredDocuments documents={benefit.documents} />
+                      </div>
                       {fields.map((field) => {
                         const fieldId = `request-${field.key}`;
                         const className = 'h-10 w-full rounded-md border border-line bg-white px-3 text-13 text-ink outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100';
@@ -329,6 +355,15 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
                                 ยอดเบิกเกินวงเงินคงเหลือ {formatAmount(benefit.remaining)} บาท
                               </p>
                             )}
+                            {field.key === 'amount' && (
+                              <div className="mt-1.5 space-y-1 text-12 leading-5 text-muted">
+                                <p>
+                                  เบิกได้สูงสุด <span className="font-medium text-ink">{formatAmount(benefit.remaining)} บาท</span>
+                                  {' '}(วงเงินคงเหลือต่อ{benefit.budgetLabel})
+                                </p>
+                                <p>กรอกตามยอดในใบเสร็จ ถ้ายอดในใบเสร็จเกินวงเงินคงเหลือ ให้กรอกเท่าวงเงินคงเหลือ</p>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -354,9 +389,10 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
                   </div>
 
                   <div className="rounded-lg border border-dashed border-line bg-surface p-5 text-center">
-                    <p className="mb-1 text-13 font-medium text-ink">
-                      เอกสารประกอบคำขอ <span className="text-status-rejected">*</span>
+                    <p className="mb-2 text-left text-13 font-medium text-ink">
+                      เอกสารที่ต้องแนบสำหรับ{benefit.name} <span className="text-status-rejected">*</span>
                     </p>
+                    <RequiredDocuments documents={benefit.documents} />
                     <label
                       htmlFor="documents"
                       className="flex cursor-pointer flex-col items-center rounded-md px-4 py-6 text-13 text-ink-soft hover:bg-white"
@@ -521,7 +557,7 @@ export default function HeadEmClient({ employees, benefitsByEmployee }: { employ
               <h3 className="font-semibold text-ink">เงื่อนไขการยื่นแทน</h3>
               <ul className="mt-2 list-disc space-y-1 pl-4">
                 <li>ตรวจสอบข้อมูลพนักงานและวงเงินก่อนส่งคำขอ</li>
-                <li>แนบหลักฐานการเบิกให้ครบถ้วนและอ่านได้ชัดเจน</li>
+                <li>แนบเอกสารครบ {benefit.documents.length + 1} รายการตามที่ระบุในฟอร์ม และอ่านได้ชัดเจน</li>
                 <li>ผู้ยื่นต้องได้รับอนุญาตจากพนักงานผู้รับสิทธิ์</li>
               </ul>
             </div>

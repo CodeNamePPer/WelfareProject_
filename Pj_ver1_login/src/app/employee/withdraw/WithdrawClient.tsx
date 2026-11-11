@@ -2,8 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
-import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
+import { ALLOWED_ATTACHMENT_TYPES, APPROVAL_FLOW, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
+import { ATTACHMENT_RULE, RequiredDocuments } from '@/features/welfare/RequiredDocuments';
 
 const steps = [
     { label: 'กรอกข้อมูล', active: 'กรอกข้อมูลและแนบเอกสาร' },
@@ -55,6 +56,10 @@ export default function WithdrawClient({
     const benefit = benefits.find((item) => item.code === benefitCode);
     const fields = fieldsFor(benefit?.formType);
     const amount = Number(values.amount) || 0;
+    const overLimit = Boolean(benefit) && amount > (benefit?.remaining ?? 0);
+    // คำขอที่ส่งกลับมาแก้ไขถูกนับอยู่แล้ว จึงไม่กันซ้ำที่หน้าจอ ฐานข้อมูลตรวจอีกชั้นตอนส่ง
+    const claimsLeft = benefit && benefit.maxClaims !== null ? Math.max(benefit.maxClaims - benefit.claimsThisYear, 0) : null;
+    const outOfClaims = claimsLeft === 0 && !initial;
 
     const summaryItems = useMemo(() => {
         if (!benefit) return [];
@@ -82,6 +87,7 @@ export default function WithdrawClient({
 
     function validateFields() {
         const missing = fields.some((field) => !field.optional && !values[field.key]?.trim());
+        if (outOfClaims) return `เบิกสวัสดิการนี้ครบ ${benefit?.maxClaims} ครั้งของปีนี้แล้ว`;
         if (missing || amount <= 0) return 'กรุณากรอกข้อมูลให้ครบถ้วน';
         if (benefit && amount > benefit.remaining) return `ยอดเบิกเกินวงเงินคงเหลือ ${money(benefit.remaining)} บาท`;
         return '';
@@ -140,7 +146,7 @@ export default function WithdrawClient({
     return (
         <div className="mx-auto max-w-[1250px] px-4 py-5 text-ink">
             <div className="mb-4">
-                <h1 className="text-22 font-semibold tracking-[-0.04em] text-ink">ยื่นคำขอวัสดิการ</h1>
+                <h1 className="text-22 font-semibold tracking-[-0.04em] text-ink">ยื่นคำขอสวัสดิการ</h1>
                 <p className="mt-1 text-13 text-muted">แบบฟอร์มยื่นคำขอเบิกสวัสดิการตามสิทธิ์ของคุณ{claimNo ? ` · ${claimNo}` : ''}</p>
             </div>
 
@@ -224,6 +230,29 @@ export default function WithdrawClient({
                                             </select>
                                         </div>
 
+                                        {benefit ? (
+                                            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-12 leading-5">
+                                                <dt className="text-muted">ผู้มีสิทธิ์</dt>
+                                                <dd className="text-ink-soft">{benefit.eligibilityNote || 'พนักงานทุกคน'}</dd>
+                                                <dt className="text-muted">จำนวนครั้ง</dt>
+                                                <dd className={outOfClaims ? 'text-status-rejected' : 'text-ink-soft'}>
+                                                    {benefit.maxClaims !== null
+                                                        ? `${benefit.maxClaims} ครั้ง/ปี · ปีนี้ใช้ไป ${benefit.claimsThisYear} ครั้ง เหลือ ${claimsLeft} ครั้ง`
+                                                        : benefit.maxClaimsNote || 'ไม่จำกัดจำนวนครั้ง'}
+                                                </dd>
+                                                <dt className="text-muted">ขั้นตอนอนุมัติ</dt>
+                                                <dd className="text-ink-soft">{APPROVAL_FLOW}</dd>
+                                            </dl>
+                                        ) : null}
+
+                                        {benefit ? (
+                                            <div className="rounded-lg border border-line bg-white p-4">
+                                                <p className="text-13 font-medium text-ink">เอกสารที่ต้องเตรียม</p>
+                                                <p className="mb-2 mt-0.5 text-12 text-muted">แนบในขั้นตอนถัดไป {ATTACHMENT_RULE}</p>
+                                                <RequiredDocuments documents={benefit.documents} />
+                                            </div>
+                                        ) : null}
+
                                         {fields.map((field) => {
                                             const value = values[field.key] ?? '';
                                             return (
@@ -243,6 +272,38 @@ export default function WithdrawClient({
                                                             <option value="">เลือก</option>
                                                             {field.options?.map((option) => <option key={option}>{option}</option>)}
                                                         </select>
+                                                    ) : field.key === 'amount' ? (
+                                                        <>
+                                                            <div className="relative">
+                                                                <input
+                                                                    id={field.key}
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    min={0}
+                                                                    max={benefit?.remaining}
+                                                                    step="0.01"
+                                                                    value={value}
+                                                                    onChange={(e) => setValue(field.key, e.target.value)}
+                                                                    placeholder="0.00"
+                                                                    aria-describedby="amount-hint"
+                                                                    aria-invalid={overLimit}
+                                                                    className={`${inputClass} pr-12 tabular-nums ${overLimit ? 'border-status-rejected focus:border-status-rejected' : ''}`}
+                                                                />
+                                                                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-13 text-muted">บาท</span>
+                                                            </div>
+                                                            {benefit ? (
+                                                                <div id="amount-hint" className="mt-2 space-y-1 text-12 leading-5 text-muted">
+                                                                    {overLimit ? (
+                                                                        <p role="alert" className="text-status-rejected">ยอดเบิกเกินวงเงินคงเหลือ {money(benefit.remaining)} บาท</p>
+                                                                    ) : null}
+                                                                    <p>
+                                                                        เบิกได้สูงสุด <span className="font-medium text-ink">{money(benefit.remaining)} บาท</span>
+                                                                        {' '}(วงเงินคงเหลือต่อ{benefit.budgetLabel})
+                                                                    </p>
+                                                                    <p>กรอกตามยอดในใบเสร็จ ถ้ายอดในใบเสร็จเกินวงเงินคงเหลือ ให้กรอกเท่าวงเงินคงเหลือ</p>
+                                                                </div>
+                                                            ) : null}
+                                                        </>
                                                     ) : (
                                                         <input
                                                             id={field.key}
@@ -294,6 +355,10 @@ export default function WithdrawClient({
                             </div>
 
                             <div className="rounded-xl border border-dashed border-line bg-surface p-4">
+                                <div className="mb-3">
+                                    <p className="mb-2 text-13 font-medium text-ink">เอกสารที่ต้องแนบสำหรับ{benefit?.name}</p>
+                                    <RequiredDocuments documents={benefit?.documents ?? []} />
+                                </div>
                                 <div className="flex items-center justify-between rounded-lg border border-line bg-white p-3">
                                     <div className="flex items-center gap-3">
                                         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary-50 text-ink-soft">PDF</div>
@@ -373,7 +438,7 @@ export default function WithdrawClient({
                     <div className="mt-5 rounded-xl border border-line bg-white p-4 text-13 text-ink-soft">
                         <div className="font-medium text-ink">เงื่อนไข</div>
                         <ul className="mt-3 space-y-2">
-                            <li>• ต้องแนบหลักฐานการเบิกให้ครบถ้วน</li>
+                            <li>• ต้องแนบเอกสารครบ {(benefit?.documents.length ?? 0) + 1} รายการตามที่ระบุในฟอร์ม</li>
                             <li>• ยอดที่รอตรวจสอบจะถูกกันจากวงเงินคงเหลือทันที</li>
                             <li>• ใบเสร็จใบเดียวกันใช้ยื่นซ้ำไม่ได้</li>
                         </ul>
