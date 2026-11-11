@@ -86,7 +86,7 @@ export async function getEntitlements(employee: HrEmployee): Promise<Entitlement
         budget,
         limit: toNumber(row.current_amount),
         nextLimit: nextAmount !== null && row.next_effective_from ? { amount: nextAmount, from: row.next_effective_from } : null,
-        claims: row.max_claims !== null ? `${row.max_claims} ครั้ง${budget}` : row.max_claims_note ?? "ไม่จำกัด",
+        claims: row.max_claims !== null ? `${row.max_claims} ครั้ง/ปี` : row.max_claims_note ?? "ไม่จำกัด",
         ...status,
       };
     });

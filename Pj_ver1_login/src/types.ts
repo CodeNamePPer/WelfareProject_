@@ -158,7 +158,12 @@ export interface WelfareItem {
   amount: number;
   status: WelfareStatus;
   budgetType: BudgetType;
+  /** ข้อความแสดงผล เช่น "1 ครั้ง/ปี" ('' = ไม่จำกัด) */
   maxClaims: string;
+  /** จำนวนครั้งที่เบิกได้ต่อปี ระบบบังคับตอนยื่นคำขอ (null = ไม่จำกัด) */
+  maxClaimsPerYear: number | null;
+  /** ชุดแบบฟอร์มยื่นคำขอ คีย์ของ FORM_FIELDS ใน lib/claims/forms.ts */
+  formType: string;
   eligible: string;
   /** วันที่เริ่มใช้วงเงินปัจจุบัน – ISO date, YYYY-MM-DD ('' = ยังไม่กำหนด) */
   startDate: string;

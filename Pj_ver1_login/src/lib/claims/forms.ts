@@ -69,6 +69,25 @@ export const FORM_FIELDS: Record<string, BenefitField[]> = {
   ],
 };
 
+/** ชื่อชุดแบบฟอร์มที่ Admin เลือกให้แต่ละสวัสดิการ */
+export const FORM_TYPE_LABELS: Record<string, string> = {
+  general: "ทั่วไป",
+  medical: "ค่ารักษาพยาบาล",
+  dental: "ทันตกรรม",
+  checkup: "ตรวจสุขภาพ",
+  training: "อบรม",
+  child_medical: "ค่ารักษาพยาบาลบุตร",
+  child_vaccine: "วัคซีนบุตร",
+};
+
+/** ทุกคำขอเดินเส้นทางเดียวกัน ตาม RULES ใน service.ts */
+export const APPROVAL_FLOW = "HR ตรวจสอบ แล้วส่งต่อการเงินจ่ายเงิน";
+
+/** ข้อความจำนวนครั้งที่เบิกได้ ตัวเลขนับต่อปีของวันที่เกิดค่าใช้จ่ายและระบบบังคับ ข้อความเป็นเงื่อนไขประกอบ */
+export function maxClaimsLabel(maxClaims: number | null, note: string | null): string {
+  return maxClaims !== null ? `${maxClaims} ครั้ง/ปี` : (note ?? "");
+}
+
 export function fieldsFor(formType: string | null | undefined): BenefitField[] {
   return FORM_FIELDS[formType ?? "general"] ?? FORM_FIELDS.general;
 }

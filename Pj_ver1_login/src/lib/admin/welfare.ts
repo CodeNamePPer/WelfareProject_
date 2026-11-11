@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../supabase";
 import type { AuditChanges } from "../auth/audit";
 import { ROLE_LABELS, type Role } from "../auth/roles";
 import { formatBahtWhole, formatShortThaiDate } from "../format";
+import { FORM_FIELDS, FORM_TYPE_LABELS, maxClaimsLabel } from "../claims/forms";
 import type { BudgetType, WelfareItem, WelfareStatus } from "../../types";
 
 type DbBudgetType = "yearly" | "monthly" | "per_claim";
@@ -12,7 +13,10 @@ interface BenefitRow {
   code: string;
   name_th: string;
   budget_type: DbBudgetType;
+  max_claims: number | null;
   max_claims_note: string | null;
+  /** ไม่อยู่ใน v_welfare_benefit_current จึงอ่านจาก welfare_benefit แยก */
+  form_type?: string | null;
   eligibility_note: string | null;
   approver_role_id: string | null;
   required_documents: string[];
@@ -24,13 +28,13 @@ interface BenefitRow {
   next_effective_from: string | null;
 }
 
-export type WelfareInput = Partial<Pick<WelfareItem, "name" | "amount" | "budgetType" | "maxClaims" | "eligible" | "startDate" | "approver" | "status" | "documents">>;
+export type WelfareInput = Partial<Pick<WelfareItem, "name" | "amount" | "budgetType" | "maxClaimsPerYear" | "formType" | "eligible" | "startDate" | "approver" | "status" | "documents">>;
 
 /** ข้อความที่แสดงให้ผู้ใช้ได้โดยตรง */
 export class WelfareInputError extends Error {}
 
 const COLUMNS =
-  "id, code, name_th, budget_type, max_claims_note, eligibility_note, approver_role_id, required_documents, is_active, updated_at, current_amount, current_effective_from, next_amount, next_effective_from";
+  "id, code, name_th, budget_type, max_claims, max_claims_note, eligibility_note, approver_role_id, required_documents, is_active, updated_at, current_amount, current_effective_from, next_amount, next_effective_from";
 const BUDGET_LABEL: Record<DbBudgetType, BudgetType> = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
 const BUDGET_DB: Record<BudgetType, DbBudgetType> = { รายปี: "yearly", รายเดือน: "monthly", ต่อครั้ง: "per_claim" };
 const STATUS_LABEL: Record<WelfareStatus, string> = { active: "ใช้งาน", inactive: "หยุดใช้" };
@@ -40,6 +44,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TZ = "Asia/Bangkok";
 const MAX_DOCUMENTS = 10;
 const MAX_DOCUMENT_NAME = 120;
+const MAX_CLAIMS_PER_YEAR = 365;
 
 const bangkokDate = (at: Date = new Date()) => at.toLocaleDateString("sv-SE", { timeZone: TZ });
 
@@ -68,7 +73,9 @@ function toItem(row: BenefitRow, lookup: LookupData): WelfareItem {
     amount,
     status: row.is_active ? "active" : "inactive",
     budgetType: BUDGET_LABEL[row.budget_type],
-    maxClaims: row.max_claims_note ?? "",
+    maxClaims: maxClaimsLabel(row.max_claims, row.max_claims_note),
+    maxClaimsPerYear: row.max_claims,
+    formType: row.form_type && row.form_type in FORM_FIELDS ? row.form_type : "general",
     eligible: row.eligibility_note ?? "",
     startDate: row.current_effective_from ?? row.next_effective_from ?? "",
     approver: row.approver_role_id ? (lookup.roleCodeById.get(row.approver_role_id) ?? "") : "",
@@ -97,12 +104,15 @@ async function fetchLookup(): Promise<LookupData> {
 /** คืน null เมื่อโหลดไม่สำเร็จ เพื่อให้หน้าจอแจ้งตามจริงแทนการแสดงรายการว่าง */
 export async function getWelfareItems(): Promise<WelfareItem[] | null> {
   try {
-    const [benefits, lookup] = await Promise.all([
+    const [benefits, forms, lookup] = await Promise.all([
       supabaseAdmin.from("v_welfare_benefit_current").select(COLUMNS).order("code").returns<BenefitRow[]>(),
+      supabaseAdmin.from("welfare_benefit").select("id, form_type").is("deleted_at", null).returns<{ id: string; form_type: string | null }[]>(),
       fetchLookup(),
     ]);
     if (benefits.error) throw benefits.error;
-    return (benefits.data ?? []).map((row) => toItem(row, lookup));
+    if (forms.error) throw forms.error;
+    const formTypeOf = new Map((forms.data ?? []).map((row) => [row.id, row.form_type]));
+    return (benefits.data ?? []).map((row) => toItem({ ...row, form_type: formTypeOf.get(row.id) }, lookup));
   } catch (err) {
     console.error("[admin welfare] load failed", err);
     return null;
@@ -115,7 +125,7 @@ export function parseWelfareInput(values: unknown): WelfareInput {
   const raw = values as Record<string, unknown>;
   const input: WelfareInput = {};
 
-  for (const key of ["name", "maxClaims", "eligible", "startDate", "approver"] as const) {
+  for (const key of ["name", "eligible", "startDate", "approver"] as const) {
     if (key in raw) {
       if (typeof raw[key] !== "string") throw new WelfareInputError("ข้อมูลไม่ถูกต้อง");
       input[key] = (raw[key] as string).trim();
@@ -124,6 +134,17 @@ export function parseWelfareInput(values: unknown): WelfareInput {
   if ("amount" in raw) {
     if (typeof raw.amount !== "number" || !Number.isFinite(raw.amount)) throw new WelfareInputError("วงเงินไม่ถูกต้อง");
     input.amount = raw.amount;
+  }
+  if ("maxClaimsPerYear" in raw) {
+    const count = raw.maxClaimsPerYear;
+    if (count !== null && (typeof count !== "number" || !Number.isInteger(count) || count < 1 || count > MAX_CLAIMS_PER_YEAR)) {
+      throw new WelfareInputError(`จำนวนครั้งที่เบิกได้ต่อปีต้องเป็นจำนวนเต็ม 1–${MAX_CLAIMS_PER_YEAR} หรือเว้นว่างเมื่อไม่จำกัด`);
+    }
+    input.maxClaimsPerYear = count;
+  }
+  if ("formType" in raw) {
+    if (typeof raw.formType !== "string" || !(raw.formType in FORM_FIELDS)) throw new WelfareInputError("แบบฟอร์มยื่นคำขอไม่ถูกต้อง");
+    input.formType = raw.formType;
   }
   if ("budgetType" in raw) {
     if (typeof raw.budgetType !== "string" || !(raw.budgetType in BUDGET_DB)) throw new WelfareInputError("ประเภทวงเงินไม่ถูกต้อง");
@@ -168,6 +189,8 @@ async function roleIdOf(code: string | undefined): Promise<string | null> {
 function auditValue(field: keyof WelfareInput, value: unknown): unknown {
   if (value === "" || value === undefined || value === null) return null;
   if (field === "documents") return (value as string[]).join(", ") || null;
+  if (field === "maxClaimsPerYear") return `${value} ครั้ง/ปี`;
+  if (field === "formType") return FORM_TYPE_LABELS[value as string] ?? value;
   if (field === "amount") return formatBahtWhole(Number(value));
   if (field === "startDate") return formatShortThaiDate(String(value));
   if (field === "status") return STATUS_LABEL[value as WelfareStatus];
@@ -175,7 +198,7 @@ function auditValue(field: keyof WelfareInput, value: unknown): unknown {
   return value;
 }
 
-const FIELDS = ["name", "amount", "budgetType", "maxClaims", "eligible", "startDate", "approver", "status", "documents"] as const;
+const FIELDS = ["name", "amount", "budgetType", "maxClaimsPerYear", "formType", "eligible", "startDate", "approver", "status", "documents"] as const;
 
 // รายการเอกสารเป็นอาร์เรย์ เทียบด้วยค่าข้างใน
 const comparable = (value: unknown) => (Array.isArray(value) ? value.join("\n") : (value ?? ""));
@@ -214,7 +237,8 @@ async function createBenefit(code: string, input: WelfareInput): Promise<SaveWel
       code,
       name_th: input.name,
       budget_type: BUDGET_DB[input.budgetType],
-      max_claims_note: input.maxClaims || null,
+      max_claims: input.maxClaimsPerYear ?? null,
+      form_type: input.formType ?? "general",
       eligibility_note: input.eligible || null,
       approver_role_id: await roleIdOf(input.approver),
       required_documents: input.documents ?? [],
@@ -253,6 +277,10 @@ export async function saveWelfareItem(code: string, input: WelfareInput): Promis
   if (error) throw error;
   if (!row) return createBenefit(code, input);
 
+  const form = await supabaseAdmin.from("welfare_benefit").select("form_type").eq("id", row.id).single();
+  if (form.error) throw form.error;
+  row.form_type = form.data.form_type as string | null;
+
   const lookup = await fetchLookup();
   const before = toItem(row, lookup);
   const next: WelfareInput = { ...before, ...input };
@@ -271,7 +299,10 @@ export async function saveWelfareItem(code: string, input: WelfareInput): Promis
     .update({
       name_th: next.name,
       budget_type: BUDGET_DB[next.budgetType as BudgetType],
-      max_claims_note: next.maxClaims || null,
+      max_claims: next.maxClaimsPerYear ?? null,
+      // กำหนดเป็นตัวเลขแล้ว ข้อความเงื่อนไขเดิมไม่ใช้อีก
+      ...(changes.maxClaimsPerYear && next.maxClaimsPerYear ? { max_claims_note: null } : {}),
+      form_type: next.formType ?? "general",
       eligibility_note: next.eligible || null,
       approver_role_id: await roleIdOf(next.approver),
       required_documents: next.documents ?? [],

@@ -5,15 +5,14 @@ import type { FormEvent, ReactNode } from 'react';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { Tag } from '../../components/ui/Tag';
-import { ROLE_LABELS, type Role } from '../../lib/auth/roles';
+import { APPROVAL_FLOW, FORM_TYPE_LABELS, fieldsFor } from '../../lib/claims/forms';
 import { cx } from '../../lib/cx';
 import { formatBahtWhole, formatShortThaiDate } from '../../lib/format';
 import type { BudgetType, WelfareItem } from '../../types';
 
 const budgetTypes: BudgetType[] = ['รายปี', 'รายเดือน', 'ต่อครั้ง'];
-const approverRoles: Role[] = ['HR', 'FINANCE'];
 
-type EditableFields = Pick<WelfareItem, 'name' | 'amount' | 'budgetType' | 'maxClaims' | 'eligible' | 'startDate' | 'approver'>;
+type EditableFields = Pick<WelfareItem, 'name' | 'amount' | 'budgetType' | 'maxClaimsPerYear' | 'formType' | 'eligible' | 'startDate'>;
 
 type Row = { label: string; value: string; field?: keyof EditableFields };
 
@@ -43,17 +42,17 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
     if (!(form.amount > 0)) return setError('วงเงินต้องมากกว่า 0');
     setError('');
     setSaving(true);
-    const { amount, budgetType, maxClaims, eligible, startDate, approver } = form;
+    const { amount, budgetType, maxClaimsPerYear, formType, eligible, startDate } = form;
     const documents = documentsText.split('\n').map((name) => name.trim()).filter(Boolean);
-    const failure = await onSave({ name: form.name.trim(), amount, budgetType, maxClaims, eligible, startDate, approver, documents });
+    const failure = await onSave({ name: form.name.trim(), amount, budgetType, maxClaimsPerYear, formType, eligible, startDate, documents });
     setSaving(false);
     if (failure) setError(failure);
   };
 
   const conditionRows: Row[] = [
     { label: 'ประเภทวงเงิน', value: item.budgetType, field: 'budgetType' },
-    { label: 'วงเงินต่อปี', value: formatBahtWhole(item.amount), field: 'amount' },
-    { label: 'จำนวนครั้งที่เบิกได้', value: item.maxClaims || '—', field: 'maxClaims' },
+    { label: `วงเงิน${item.budgetType}`, value: formatBahtWhole(item.amount), field: 'amount' },
+    { label: 'จำนวนครั้งที่เบิกได้ต่อปี', value: item.maxClaims || 'ไม่จำกัด', field: 'maxClaimsPerYear' },
     { label: 'ผู้มีสิทธิ์', value: item.eligible || '—', field: 'eligible' },
     { label: 'วันที่เริ่มใช้', value: item.startDate ? formatShortThaiDate(item.startDate) : '—', field: 'startDate' },
     ...(item.nextLimit
@@ -61,7 +60,7 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
       : []),
   ];
   const approvalRows: Row[] = [
-    { label: 'ผู้อนุมัติการเบิก', value: ROLE_LABELS[item.approver as Role] ?? '—', field: 'approver' },
+    { label: 'ขั้นตอนอนุมัติ', value: APPROVAL_FLOW },
     { label: 'งบรวมโดยประมาณ', value: item.estimatedBudget },
     { label: 'ผู้ดูแล', value: item.owner },
     { label: 'แก้ไขล่าสุด', value: formatShortThaiDate(item.updatedAt) },
@@ -108,8 +107,30 @@ export function WelfareDetail({ item, editing, onEdit, onCancel, onSave }: Welfa
             ) : null}
             {renderRows(conditionRows)}
             {editing ? (
-              <p className="text-12 text-muted">ปรับวงเงินต้องเลือกวันที่เริ่มใช้ตั้งแต่วันนี้เป็นต้นไป วงเงินเดิมจะเก็บไว้เป็นประวัติ</p>
+              <p className="text-12 leading-5 text-muted">
+                ปรับวงเงินต้องเลือกวันที่เริ่มใช้ตั้งแต่วันนี้เป็นต้นไป วงเงินเดิมจะเก็บไว้เป็นประวัติ จำนวนครั้งนับตามปีของวันที่เกิดค่าใช้จ่าย
+                เว้นว่างเมื่อไม่จำกัด ส่วนผู้มีสิทธิ์เป็นข้อความที่แสดงให้พนักงานและ HR เห็น ระบบไม่ได้ตรวจให้
+              </p>
             ) : null}
+
+            <div className="flex flex-col gap-[8px] border-t border-line pt-[12px]">
+              <div className="flex items-center justify-between gap-3 text-13">
+                <span className="shrink-0 text-muted">แบบฟอร์มยื่นคำขอ</span>
+                <span className="min-w-0 text-right font-medium text-ink">
+                  {editing ? (
+                    <EditInput field="formType" form={form} set={set} label="แบบฟอร์มยื่นคำขอ" />
+                  ) : (
+                    (FORM_TYPE_LABELS[item.formType] ?? item.formType)
+                  )}
+                </span>
+              </div>
+              <p className="text-12 leading-5 text-muted">
+                ช่องที่พนักงานต้องกรอก:{' '}
+                {fieldsFor(editing ? form.formType : item.formType)
+                  .map((field) => field.label)
+                  .join(' · ')}
+              </p>
+            </div>
           </DetailSection>
 
           <div className="flex min-w-0 flex-col gap-[16px]">
@@ -208,15 +229,30 @@ function EditInput({
       </select>
     );
   }
-  if (field === 'approver') {
+  if (field === 'formType') {
     return (
-      <select aria-label={label} className={editInputClass} value={form.approver} onChange={(event) => set('approver', event.target.value)}>
-        {approverRoles.map((role) => (
-          <option key={role} value={role}>
-            {ROLE_LABELS[role]}
+      <select aria-label={label} className={editInputClass} value={form.formType} onChange={(event) => set('formType', event.target.value)}>
+        {Object.entries(FORM_TYPE_LABELS).map(([key, name]) => (
+          <option key={key} value={key}>
+            {name}
           </option>
         ))}
       </select>
+    );
+  }
+  if (field === 'maxClaimsPerYear') {
+    return (
+      <input
+        aria-label={label}
+        type="number"
+        min={1}
+        step={1}
+        inputMode="numeric"
+        placeholder="ไม่จำกัด"
+        className={cx(editInputClass, 'text-right tabular-nums')}
+        value={form.maxClaimsPerYear ?? ''}
+        onChange={(event) => set('maxClaimsPerYear', event.target.value === '' ? null : Number(event.target.value))}
+      />
     );
   }
   if (field === 'startDate') {
@@ -236,5 +272,5 @@ function EditInput({
       />
     );
   }
-  return <input aria-label={label} className={cx(editInputClass, 'text-right')} value={String(form[field])} onChange={(event) => set(field as 'maxClaims', event.target.value)} />;
+  return <input aria-label={label} className={cx(editInputClass, 'text-right')} value={String(form[field])} onChange={(event) => set(field as 'eligible', event.target.value)} />;
 }

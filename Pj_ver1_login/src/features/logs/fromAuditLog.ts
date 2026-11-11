@@ -51,6 +51,8 @@ const WELFARE_FIELD_LABELS: Record<string, string> = {
   amount: 'วงเงิน',
   budgetType: 'ประเภทวงเงิน',
   maxClaims: 'จำนวนครั้งที่เบิกได้',
+  maxClaimsPerYear: 'จำนวนครั้งที่เบิกได้ต่อปี',
+  formType: 'แบบฟอร์มยื่นคำขอ',
   documents: 'เอกสารที่ต้องแนบ',
   eligible: 'ผู้มีสิทธิ์',
   startDate: 'วันที่เริ่มใช้',
