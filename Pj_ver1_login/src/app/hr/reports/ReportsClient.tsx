@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download, RotateCcw } from "lucide-react";
 import { downloadCsv } from "@/lib/csv";
+import { requestHref } from "../home/queueRules";
 
 export type ReportRequest = {
   id: string;
@@ -45,6 +48,7 @@ function csvText(value: string) {
 }
 
 export default function ReportsClient({ requests }: { requests: ReportRequest[] }) {
+  const router = useRouter();
   const thisYear = new Date().getFullYear();
   const initialStartDate = `${thisYear}-01-01`;
   const initialEndDate = `${thisYear}-12-31`;
@@ -120,6 +124,11 @@ export default function ReportsClient({ requests }: { requests: ReportRequest[] 
     setBenefit("ทั้งหมด");
     setStatus("ทั้งหมด");
     setPage(1);
+  }
+
+  function openRequest(event: React.MouseEvent<HTMLTableRowElement>, requestNumber: string) {
+    if ((event.target as HTMLElement).closest("a, button, input")) return;
+    router.push(requestHref(requestNumber));
   }
 
   function exportReport() {
@@ -270,7 +279,11 @@ export default function ReportsClient({ requests }: { requests: ReportRequest[] 
               </thead>
               <tbody>
                 {pageRequests.map((request) => (
-                  <tr key={request.requestNumber}>
+                  <tr
+                    key={request.requestNumber}
+                    className="report-request-row"
+                    onClick={(event) => openRequest(event, request.requestNumber)}
+                  >
                     <td data-label="พนักงาน" className="report-employee-cell">
                       <strong>{request.name}</strong>
                       <span>{request.id}</span>
@@ -278,7 +291,9 @@ export default function ReportsClient({ requests }: { requests: ReportRequest[] 
                     <td data-label="แผนก">{request.department}</td>
                     <td data-label="สวัสดิการ">{request.benefit}</td>
                     <td data-label="เลขที่คำขอ / เอกสาร" className="report-reference-cell">
-                      <strong>{request.requestNumber}</strong>
+                      <Link className="report-request-link" href={requestHref(request.requestNumber)}>
+                        {request.requestNumber}
+                      </Link>
                       <span>เอกสาร {request.documentNumber}</span>
                     </td>
                     <td data-label="วันที่ยื่น"><time dateTime={request.date}>{formatDate(request.date)}</time></td>
