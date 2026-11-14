@@ -132,41 +132,112 @@ export function toPaymentRequest(claim: ClaimRecord): PaymentRequest {
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
-const ADMIN_EVENT: Partial<Record<ClaimEventKind, ClaimEvent["kind"]>> = {
+const ADMIN_EVENT: Record<ClaimEventKind, ClaimEvent["kind"]> = {
   submitted: "submitted",
+  resubmitted: "resubmitted",
+  revision_requested: "revision-requested",
+  amount_adjusted: "amount-adjusted",
   hr_approved: "hr-approved",
   finance_approved: "finance-approved",
   rejected: "rejected",
+  returned: "returned",
+  cancelled: "cancelled",
   paid: "paid",
+  pay_date_changed: "pay-date-changed",
+  payment_failed: "payment-failed",
+  payment_reversed: "payment-reversed",
+  receipt_submitted: "receipt-submitted",
+  receipt_approved: "receipt-approved",
+  receipt_returned: "receipt-returned",
+  advance_cancelled: "advance-cancelled",
+  refund_received: "refund-received",
 };
 
-const ROLE_SUFFIX: Record<string, string> = { HR: "HR", FINANCE: "การเงิน" };
+const ADVANCE_STATUS_LABEL: Record<string, string> = {
+  pending: "รอพิจารณาเบิกล่วงหน้า",
+  disbursed: "โอนเงินล่วงหน้าแล้ว · รอแนบใบเสร็จจริง",
+  receipt_submitted: "แนบใบเสร็จแล้ว · รอ HR ตรวจ",
+  settled: "เคลียร์ยอดใบเสร็จเรียบร้อย",
+  overdue: "เกินกำหนดส่งใบเสร็จ",
+  cancelled: "ยกเลิกเบิกล่วงหน้า",
+};
+
+const ROLE_SUFFIX: Record<string, string> = { HR: "HR", FINANCE: "การเงิน", SUPER_ADMIN: "Admin" };
 
 export function toAdminClaim(claim: ClaimRecord): Claim {
-  const status: Claim["status"] = claim.status === "rejected" ? "rejected" : claim.status === "awaiting_payment" || claim.status === "paid" ? "approved" : "pending";
+  const status: Claim["status"] =
+    claim.status === "rejected" || claim.status === "cancelled"
+      ? "rejected"
+      : claim.status === "awaiting_payment" || claim.status === "paid"
+        ? "approved"
+        : "pending";
   const timeline = claim.events.flatMap((event): ClaimEvent[] => {
     const kind = ADMIN_EVENT[event.kind];
     if (!kind) return [];
     const role = event.actorRole ? ROLE_SUFFIX[event.actorRole] : undefined;
-    return [{ kind, at: toBangkokDate(event.at), by: kind === "submitted" ? undefined : event.actorName ? `${event.actorName}${role ? ` (${role})` : ""}` : undefined, note: event.note ?? undefined }];
+    return [
+      {
+        kind,
+        at: toBangkokDate(event.at),
+        by: kind === "submitted" && claim.submittedByCode === claim.employeeCode ? undefined : event.actorName ? `${event.actorName}${role ? ` (${role})` : ""}` : undefined,
+        note: event.note ?? undefined,
+      },
+    ];
   });
+  const approvedAmount =
+    claim.status === "rejected" || claim.status === "cancelled"
+      ? null
+      : claim.amountApproved !== null
+        ? claim.amountApproved
+        : status === "approved"
+          ? claim.amountRequested
+          : null;
   return {
     id: claim.id,
     code: claim.claimNo,
     employeeId: claim.employeeCode,
     benefit: claim.benefitName,
     amount: claim.amountRequested,
-    approvedAmount: status === "approved" ? (claim.amountApproved ?? claim.amountRequested) : null,
+    approvedAmount,
     status,
     statusText: CLAIM_STATUS_LABEL[claim.status],
     date: toBangkokDate(claim.submittedAt ?? claim.createdAt),
     expenseDate: claim.expenseDate ?? "",
     annualLimit: claim.limit || null,
     note: claim.note ?? undefined,
+    submittedByName: claim.submittedByCode !== claim.employeeCode ? claim.submittedByName : null,
+    proxyReason: claim.proxyReason ?? null,
+    beneficiaryRelation: claim.beneficiaryRelation ?? null,
+    beneficiaryName: claim.beneficiaryName ?? null,
+    totalCost: claim.totalCost ?? null,
+    insurancePaid: claim.insurancePaid ?? null,
+    insurerName: claim.insurerName ?? null,
+    advance: claim.advance
+      ? {
+          ...claim.advance,
+          statusLabel: ADVANCE_STATUS_LABEL[claim.advance.status] ?? claim.advance.status,
+        }
+      : null,
     attachments: claim.attachments.map((file) => file.fileName),
+    attachmentItems: claim.attachments.map((file) => ({
+      id: file.id,
+      name: file.fileName,
+      docKind: file.docKind ?? undefined,
+      isRestricted: Boolean(file.isRestricted),
+      src: `/api/claims/attachments/${file.id}`,
+    })),
     timeline,
   };
 }
 
 /** สถานะที่แสดงในหน้าผู้ดูแลระบบ */
-export const ADMIN_STATUSES: ClaimDbStatus[] = ["pending_hr", "needs_revision", "pending_finance", "finance_returned", "awaiting_payment", "paid", "rejected"];
+export const ADMIN_STATUSES: ClaimDbStatus[] = [
+  "pending_hr",
+  "needs_revision",
+  "pending_finance",
+  "finance_returned",
+  "awaiting_payment",
+  "paid",
+  "rejected",
+  "cancelled",
+];

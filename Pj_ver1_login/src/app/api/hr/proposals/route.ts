@@ -8,10 +8,12 @@ import { ProposalError, createBenefitDirect, createProposal } from "@/lib/hr/pro
 
 export const runtime = "nodejs";
 
-// HR เสนอสร้างสวัสดิการ (ร่าง หรือส่งให้หัวหน้า HR) · หัวหน้า HR สร้างเองได้ทันที
+// HR หรือ Admin เสนอสร้าง/แก้ไข/ปิดใช้สวัสดิการ (ร่าง หรือส่งให้หัวหน้า HR) · หัวหน้า HR สร้างเองได้ทันที
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "HR") return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  if (!session || (session.role !== "HR" && session.role !== "SUPER_ADMIN")) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  }
 
   let body: Record<string, unknown>;
   try {
@@ -19,9 +21,11 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
   }
+  const kind = body.kind === "update" || body.kind === "close" ? body.kind : "create";
+  const benefitCode = typeof body.benefitCode === "string" ? body.benefitCode.trim() : undefined;
   const input = parseProposalInput(body.input);
   try {
-    if (await isHrHead(session)) {
+    if (kind === "create" && session.role === "HR" && (await isHrHead(session))) {
       const created = await createBenefitDirect(input);
       await writeAudit({
         action: "WELFARE_CREATE",
@@ -33,7 +37,12 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({ ok: true, benefitCode: created.code }, { status: 201 });
     }
-    const proposal = await createProposal(input, { code: session.sub, role: "HR" }, body.submit === true);
+    const proposal = await createProposal(
+      input,
+      { code: session.sub, role: session.role },
+      body.submit === true,
+      { kind, benefitCode },
+    );
     return NextResponse.json({ ok: true, ...proposal }, { status: 201 });
   } catch (err) {
     if (err instanceof ProposalError) return NextResponse.json({ error: err.message, field: err.field }, { status: err.status });

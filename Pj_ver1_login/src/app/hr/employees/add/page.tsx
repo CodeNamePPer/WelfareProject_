@@ -89,7 +89,7 @@ const initialForm: EmployeeForm = {
 const steps = [
   { title: "ข้อมูลการทำงาน", description: "ใช้กำหนดสิทธิ์และวงเงินสวัสดิการ" },
   { title: "ข้อมูลส่วนตัว", description: "กรอกตามบัตรประชาชน" },
-  { title: "ครอบครัว", description: "ใช้คำนวณสิทธิ์ที่เกี่ยวกับคู่สมรส บุตร และบิดามารดา" },
+  { title: "ครอบครัว", description: "ใช้คำนวณสิทธิ์สวัสดิการสำหรับคู่สมรสและบุตร (สูงสุด 2 คน)" },
   { title: "ข้อมูลติดต่อ", description: "ใช้ติดต่อพนักงาน" },
   { title: "ตรวจสอบ", description: "ตรวจข้อมูลทั้งหมดก่อนบันทึก กดแก้ไขเพื่อกลับไปยังขั้นตอนนั้น" },
 ];
@@ -142,7 +142,7 @@ function validateStep(step: number, form: EmployeeForm): FieldErrors {
   }
 
   if (step === 2) {
-    if (!/^\d+$/.test(form.childrenCount.trim())) errors.childrenCount = "กรอกจำนวนบุตรเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป";
+    if (!/^[0-2]$/.test(form.childrenCount.trim())) errors.childrenCount = "จำนวนบุตรที่เข้าเงื่อนไขเบิกได้สูงสุด 2 คน (0–2)";
   }
 
   if (step === 3) {
@@ -190,9 +190,7 @@ function getSummary(form: EmployeeForm, org: OrgChoices): [string, string][][] {
     ],
     [
       ["สถานะสมรส", form.maritalStatus],
-      ["จำนวนบุตร", form.childrenCount],
-      ["บิดา", joinName(form.fatherFirstName, form.fatherLastName)],
-      ["มารดา", joinName(form.motherFirstName, form.motherLastName)],
+      ["จำนวนบุตร (สูงสุด 2 คน)", `${form.childrenCount} คน`],
     ],
     [
       ["อีเมล", form.email],
@@ -586,34 +584,18 @@ export default function AddEmployeePage() {
                       </div>
                     </fieldset>
                     <label className={fieldClass("childrenCount")}>
-                      <span>จำนวนบุตร (ที่เข้าเงื่อนไขเบิกสิทธิ์)</span>
-                      <input
+                      <span>จำนวนบุตร (สูงสุด 2 คน)</span>
+                      <select
                         required
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        step="1"
                         value={form.childrenCount}
                         onChange={(event) => updateField("childrenCount", event.target.value)}
                         {...invalidProps("childrenCount")}
-                      />
+                      >
+                        <option value="0">0 คน (ไม่มีบุตร)</option>
+                        <option value="1">1 คน</option>
+                        <option value="2">2 คน</option>
+                      </select>
                       {fieldError("childrenCount")}
-                    </label>
-                    <label className="profile-field">
-                      <span>ชื่อบิดา</span>
-                      <input autoComplete="off" value={form.fatherFirstName} onChange={(event) => updateField("fatherFirstName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>นามสกุลบิดา</span>
-                      <input autoComplete="off" value={form.fatherLastName} onChange={(event) => updateField("fatherLastName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>ชื่อมารดา</span>
-                      <input autoComplete="off" value={form.motherFirstName} onChange={(event) => updateField("motherFirstName", event.target.value)} />
-                    </label>
-                    <label className="profile-field">
-                      <span>นามสกุลมารดา</span>
-                      <input autoComplete="off" value={form.motherLastName} onChange={(event) => updateField("motherLastName", event.target.value)} />
                     </label>
                   </div>
                 )}

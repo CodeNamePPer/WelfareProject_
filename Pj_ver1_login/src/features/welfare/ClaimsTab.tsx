@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { FileDown, Paperclip } from 'lucide-react';
+import { FileDown, Lock, Paperclip } from 'lucide-react';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { ExportCsvDialog } from '../../components/ui/ExportCsvDialog';
 import { FilterChips } from '../../components/ui/FilterChips';
 import { StatusBadge, statusLabel } from '../../components/ui/StatusBadge';
+import { Tag } from '../../components/ui/Tag';
 import { table } from '../../components/ui/table';
 import { downloadCsv } from '../../lib/csv';
 import { cx } from '../../lib/cx';
@@ -35,10 +36,29 @@ type Filter = 'all' | ClaimStatus;
 
 const EVENT_LABEL: Record<ClaimEventKind, string> = {
   submitted: 'ยื่นคำขอ',
+  resubmitted: 'แก้ไขและส่งคำขอใหม่',
+  'revision-requested': 'HR ขอให้แก้ไขข้อมูล',
+  'amount-adjusted': 'ปรับยอดอนุมัติ',
   'hr-approved': 'HR ตรวจสอบผ่าน',
   'finance-approved': 'การเงินอนุมัติ',
   rejected: 'ปฏิเสธคำขอ',
+  returned: 'การเงินส่งกลับให้ HR',
+  cancelled: 'ผู้เบิกยกเลิกคำขอ',
   paid: 'จ่ายเงินแล้ว',
+  'pay-date-changed': 'เลื่อนกำหนดวันจ่าย',
+  'payment-failed': 'โอนเงินไม่สำเร็จ',
+  'payment-reversed': 'ยกเลิกรายการจ่าย',
+  'receipt-submitted': 'แนบใบเสร็จจริง (เบิกล่วงหน้า)',
+  'receipt-approved': 'HR ตรวจใบเสร็จจริงผ่าน',
+  'receipt-returned': 'HR ส่งกลับใบเสร็จจริงให้แก้ไข',
+  'advance-cancelled': 'ยกเลิกเบิกล่วงหน้า',
+  'refund-received': 'รับเงินคืนส่วนต่างแล้ว',
+};
+
+const RELATION_LABEL: Record<string, string> = {
+  self: 'พนักงานเอง',
+  spouse: 'คู่สมรส',
+  child: 'บุตร',
 };
 
 const has = (claim: Claim, kind: ClaimEventKind) => claim.timeline.some((event) => event.kind === kind);
@@ -193,8 +213,18 @@ export function ClaimsTab({ claims, employees, onOpen }: { claims: Claim[]; empl
                             {claim.employeeId}
                             {department ? `, ${department}` : ''}
                           </span>
+                          {claim.submittedByName ? (
+                            <span className="mt-0.5 block text-11 text-primary-700">ยื่นแทนโดย {claim.submittedByName}</span>
+                          ) : null}
                         </td>
-                        <td className={table.td}>{claim.benefit}</td>
+                        <td className={table.td}>
+                          <span>{claim.benefit}</span>
+                          {claim.advance ? (
+                            <span className="mt-0.5 block">
+                              <Tag tone="info">เบิกล่วงหน้า</Tag>
+                            </span>
+                          ) : null}
+                        </td>
                         <td className={cx(table.td, 'whitespace-nowrap text-right tabular-nums')}>
                           <span className="font-medium">{formatBahtWhole(claim.amount)}</span>
                           <AmountNote claim={claim} />
@@ -422,23 +452,86 @@ function ClaimPanel({
         <InfoRows
           rows={[
             ['วันที่ยื่น', formatShortThaiDate(claim.date)],
-            ['วันที่เกิดค่าใช้จ่าย', formatShortThaiDate(claim.expenseDate)],
+            ['วันที่เกิดค่าใช้จ่าย', claim.expenseDate ? formatShortThaiDate(claim.expenseDate) : '—'],
             ['ขั้นตอนปัจจุบัน', stageOf(claim)],
+            ...(claim.submittedByName
+              ? ([
+                  ['ผู้ยื่นคำขอแทน', `${claim.submittedByName}${claim.proxyReason ? ` (${claim.proxyReason})` : ''}`],
+                ] as InfoRow[])
+              : []),
+            ...(claim.beneficiaryRelation && claim.beneficiaryRelation !== 'self'
+              ? ([
+                  [
+                    'ผู้รับผลประโยชน์',
+                    `${RELATION_LABEL[claim.beneficiaryRelation] ?? claim.beneficiaryRelation}${claim.beneficiaryName ? ` · ${claim.beneficiaryName}` : ''}`,
+                  ],
+                ] as InfoRow[])
+              : []),
+            ...(claim.totalCost !== null && claim.totalCost !== undefined
+              ? ([['ค่ารักษา/ค่าใช้จ่ายทั้งหมด', formatBahtWhole(claim.totalCost)]] as InfoRow[])
+              : []),
+            ...(claim.insurancePaid !== null && claim.insurancePaid !== undefined && claim.insurancePaid > 0
+              ? ([
+                  [
+                    'ประกันจ่ายแล้ว',
+                    `${formatBahtWhole(claim.insurancePaid)}${claim.insurerName ? ` (${claim.insurerName})` : ''}`,
+                  ],
+                ] as InfoRow[])
+              : []),
             ...(claim.note ? ([['หมายเหตุผู้เบิก', claim.note]] as InfoRow[]) : []),
           ]}
         />
       </PanelSection>
 
-      <PanelSection title={`เอกสารแนบ (${claim.attachments.length})`}>
+      {claim.advance ? (
+        <PanelSection title="ข้อมูลการเบิกล่วงหน้า">
+          <InfoRows
+            rows={[
+              ['สถานะเบิกล่วงหน้า', claim.advance.statusLabel],
+              ['ยอดเบิกล่วงหน้า', formatBahtWhole(claim.advance.advanceAmount)],
+              ['กำหนดส่งใบเสร็จจริง', formatShortThaiDate(claim.advance.receiptDueDate)],
+              ...(claim.advance.receiptAmount !== null
+                ? ([['ยอดตามใบเสร็จจริง', formatBahtWhole(claim.advance.receiptAmount)]] as InfoRow[])
+                : []),
+              ...(claim.advance.extraAmountApproved !== null && claim.advance.extraAmountApproved > 0
+                ? ([['อนุมัติจ่ายเพิ่ม', formatBahtWhole(claim.advance.extraAmountApproved)]] as InfoRow[])
+                : []),
+              ...(claim.advance.refundAmount !== null && claim.advance.refundAmount > 0
+                ? ([['ยอดที่ต้องคืนบริษัท', formatBahtWhole(claim.advance.refundAmount)]] as InfoRow[])
+                : []),
+            ]}
+          />
+        </PanelSection>
+      ) : null}
+
+      <PanelSection title={`เอกสารแนบ (${claim.attachmentItems?.length ?? claim.attachments.length})`}>
         <ul className="flex flex-col gap-[6px]">
-          {claim.attachments.map((file) => (
-            <li key={file} className="flex items-center gap-[8px] text-13 text-ink">
-              <Paperclip className="size-4 shrink-0 text-muted" aria-hidden="true" />
-              <span className="min-w-0 break-all">{file}</span>
+          {(claim.attachmentItems ?? claim.attachments.map((name) => ({ id: name, name, isRestricted: false, src: undefined }))).map((file) => (
+            <li key={file.id} className="flex items-center justify-between gap-[8px] text-13 text-ink">
+              <div className="flex min-w-0 items-center gap-[8px]">
+                {file.isRestricted ? (
+                  <Lock className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                ) : (
+                  <Paperclip className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                )}
+                {file.src && !file.isRestricted ? (
+                  <a
+                    href={file.src}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="min-w-0 break-all font-medium text-primary-700 hover:underline"
+                  >
+                    {file.name}
+                  </a>
+                ) : (
+                  <span className="min-w-0 break-all text-muted">{file.name}</span>
+                )}
+              </div>
+              {file.isRestricted ? <Tag tone="neutral">เฉพาะผู้เบิก / HR</Tag> : null}
             </li>
           ))}
         </ul>
-        <p className="text-12 text-muted">เปิดไฟล์ได้เฉพาะ HR และฝ่ายการเงิน</p>
+        <p className="text-12 text-muted">เอกสารการแพทย์ (เช่น ใบรับรองแพทย์) จำกัดสิทธิ์การเข้าถึงเฉพาะผู้เบิกและฝ่าย HR</p>
       </PanelSection>
 
       </div>

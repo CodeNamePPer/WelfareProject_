@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   if (!nationality) return invalid("nationality", "กรอกสัญชาติ");
   if (!GENDERS.includes(gender)) return invalid("gender", "เลือกเพศ");
   if (!MARITAL_STATUSES.includes(maritalStatus)) return invalid("maritalStatus", "เลือกสถานะสมรส");
-  if (!/^\d+$/.test(childrenCount)) return invalid("childrenCount", "กรอกจำนวนบุตรเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป");
+  if (!/^[0-2]$/.test(childrenCount)) return invalid("childrenCount", "จำนวนบุตรที่เบิกได้สูงสุด 2 คน (0–2)");
   if (!EMAIL_RE.test(email)) return invalid("email", "รูปแบบอีเมลไม่ถูกต้อง เช่น name@company.co.th");
   if (!currentAddress) return invalid("currentAddress", "กรอกที่อยู่");
   const postalCode = text("postalCode");

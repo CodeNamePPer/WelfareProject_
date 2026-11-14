@@ -1,9 +1,11 @@
 import { ImageIcon } from 'lucide-react';
 import { cx } from '@/lib/cx';
+import { BenefitThumb } from '@/features/requester/ui';
 
 // การ์ดที่พนักงานจะเห็น (พรีวิวใน H04 และ HH2)
 export function BenefitPreview({
   imageUrl,
+  category,
   label,
   name,
   description,
@@ -13,6 +15,7 @@ export function BenefitPreview({
   className,
 }: {
   imageUrl: string | null;
+  category?: string | null;
   /** บรรทัดเล็กด้านบน เช่น "ใหม่ · สุขภาพ" หรือ "WEL-014 · สุขภาพ" */
   label: string;
   name: string;
@@ -27,6 +30,8 @@ export function BenefitPreview({
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- รูปจาก storage ผ่านลิงก์ชั่วคราว
         <img src={imageUrl} alt={`รูปประกอบ: ${name || 'สวัสดิการ'}`} className="h-[150px] w-full object-cover" />
+      ) : category ? (
+        <BenefitThumb category={category} className="h-[150px] w-full" />
       ) : (
         <div role="img" aria-label="ยังไม่มีรูปประกอบ" className="flex h-[150px] flex-col items-center justify-center gap-1.5 bg-mist text-11 text-muted">
           <ImageIcon className="size-7" strokeWidth={1.5} aria-hidden="true" />

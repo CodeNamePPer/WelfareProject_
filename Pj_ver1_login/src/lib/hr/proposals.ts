@@ -46,7 +46,11 @@ export class ProposalError extends Error {
 const today = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
 
 /** ตรวจข้อมูลข้อเสนอ ใช้ทั้งตอนบันทึกร่าง (draft = ตรวจน้อย) และตอนส่ง */
-export function validateProposal(input: ProposalInput, mode: "draft" | "submit") {
+export function validateProposal(input: ProposalInput, mode: "draft" | "submit", kind: ProposalKind = "create", requireImage = false) {
+  if (kind === "close") {
+    if (mode === "submit" && !input.reason.trim()) throw new ProposalError("ระบุเหตุผลที่เสนอปิดสวัสดิการ", "reason");
+    return;
+  }
   if (!input.name.trim()) throw new ProposalError("กรอกชื่อสวัสดิการ", "name");
   if (input.description.length > 80) throw new ProposalError("คำอธิบายสั้นไม่เกิน 80 ตัวอักษร", "description");
   for (const limit of input.limits) {
@@ -55,12 +59,16 @@ export function validateProposal(input: ProposalInput, mode: "draft" | "submit")
   if (input.maxClaims !== null && (!Number.isInteger(input.maxClaims) || input.maxClaims < 1)) throw new ProposalError("จำนวนครั้งต้องเป็นจำนวนเต็มตั้งแต่ 1", "maxClaims");
   if (mode === "draft") return;
   if (!input.category.trim()) throw new ProposalError("เลือกหมวด", "category");
-  if (!input.description.trim()) throw new ProposalError("กรอกคำอธิบายสั้นบนการ์ด", "description");
-  if (!input.imagePath) throw new ProposalError("อัปโหลดรูปประกอบ", "image");
+  if (kind === "create" && !input.description.trim()) {
+    throw new ProposalError("กรอกคำอธิบายสั้นบนการ์ด", "description");
+  }
+  if (kind === "create" && requireImage && !input.imagePath) {
+    throw new ProposalError("อัปโหลดรูปประกอบ", "image");
+  }
   if (input.limits.length === 0 || input.limits.every((limit) => limit.amount <= 0)) throw new ProposalError("กรอกวงเงินอย่างน้อย 1 ระดับ", "limits");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.effectiveFrom)) throw new ProposalError("เลือกวันที่มีผล", "effectiveFrom");
   if (input.effectiveFrom < today()) throw new ProposalError("วันที่มีผลต้องเป็นวันนี้หรือหลังจากนี้", "effectiveFrom");
-  if (input.documents.length === 0) throw new ProposalError("เพิ่มเอกสารที่ต้องแนบอย่างน้อย 1 รายการ", "documents");
+  if (kind === "create" && input.documents.length === 0) throw new ProposalError("เพิ่มเอกสารที่ต้องแนบอย่างน้อย 1 รายการ", "documents");
   if (!input.reason.trim()) throw new ProposalError("ระบุเหตุผลที่เสนอ", "reason");
 }
 
@@ -105,15 +113,49 @@ async function addEvent(proposalId: string, kind: string, actorId: string, actor
   if (error) throw error;
 }
 
-/** HR เสนอสร้างสวัสดิการใหม่ (submit = ส่งให้หัวหน้า HR เลย, ไม่งั้นเป็นร่าง) */
-export async function createProposal(input: ProposalInput, actor: { code: string; role: "HR" | "SUPER_ADMIN" }, submit: boolean) {
-  validateProposal(input, submit ? "submit" : "draft");
+/** เสนอสร้าง/แก้ไข/ปิดสวัสดิการ (submit = ส่งให้หัวหน้า HR เลย, ไม่งั้นเป็นร่าง) */
+export async function createProposal(
+  input: ProposalInput,
+  actor: { code: string; role: "HR" | "SUPER_ADMIN" },
+  submit: boolean,
+  options: { kind?: ProposalKind; benefitCode?: string } = {},
+) {
+  const kind: ProposalKind = options.kind ?? "create";
+  validateProposal(input, submit ? "submit" : "draft", kind, false);
   const actorId = await uuidOf(actor.code);
+
+  let benefitId: string | null = null;
+  let closeRow: { name_th: string; category: string | null; budget_type: BudgetType } | null = null;
+  if (kind !== "create") {
+    if (!options.benefitCode) throw new ProposalError("ไม่พบรหัสสวัสดิการที่ต้องการเสนอ", undefined, 400);
+    const { data: benefit, error: benefitError } = await supabaseAdmin
+      .from("welfare_benefit")
+      .select("id, name_th, category, budget_type")
+      .eq("code", options.benefitCode)
+      .is("deleted_at", null)
+      .maybeSingle<{ id: string; name_th: string; category: string | null; budget_type: BudgetType }>();
+    if (benefitError) throw benefitError;
+    if (!benefit) throw new ProposalError("ไม่พบสวัสดิการนี้ในระบบ", undefined, 404);
+    benefitId = benefit.id;
+    closeRow = benefit;
+  }
+
+  const rowData =
+    kind === "close" && closeRow
+      ? {
+          name_th: closeRow.name_th,
+          category: closeRow.category,
+          budget_type: closeRow.budget_type,
+          reason: input.reason.trim(),
+        }
+      : proposalRow(input);
+
   const { data, error } = await supabaseAdmin
     .from("welfare_benefit_proposal")
     .insert({
-      ...proposalRow(input),
-      kind: "create",
+      ...rowData,
+      kind,
+      benefit_id: benefitId,
       status: submit ? "pending" : "draft",
       submitted_at: submit ? new Date().toISOString() : null,
       proposed_by: actorId,
@@ -121,17 +163,22 @@ export async function createProposal(input: ProposalInput, actor: { code: string
     })
     .select("id, proposal_no")
     .single();
-  if (error) throw error;
-  await writeLimits(data.id, input.limits);
+  if (error) {
+    if ((error as { code?: string }).code === "23505") {
+      throw new ProposalError("สวัสดิการนี้มีข้อเสนอที่กำลังรออนุมัติอยู่แล้ว", undefined, 409);
+    }
+    throw error;
+  }
+  if (kind !== "close") await writeLimits(data.id, input.limits);
   if (submit) await addEvent(data.id, "submitted", actorId, actor.role, input.reason.trim(), input);
   return { id: data.id as string, proposalNo: data.proposal_no as string };
 }
 
-type OwnRow = { id: string; status: ProposalStatus; proposed_by: string; proposer_role: string };
+type OwnRow = { id: string; kind: ProposalKind; status: ProposalStatus; proposed_by: string; proposer_role: string };
 
 async function loadOwn(id: string, actorCode: string): Promise<OwnRow & { actorId: string }> {
   const actorId = await uuidOf(actorCode);
-  const { data, error } = await supabaseAdmin.from("welfare_benefit_proposal").select("id, status, proposed_by, proposer_role").eq("id", id).is("deleted_at", null).maybeSingle<OwnRow>();
+  const { data, error } = await supabaseAdmin.from("welfare_benefit_proposal").select("id, kind, status, proposed_by, proposer_role").eq("id", id).is("deleted_at", null).maybeSingle<OwnRow>();
   if (error) throw error;
   if (!data) throw new ProposalError("ไม่พบข้อเสนอ", undefined, 404);
   if (data.proposed_by !== actorId) throw new ProposalError("แก้ได้เฉพาะข้อเสนอของคุณ", undefined, 403);
@@ -142,11 +189,11 @@ async function loadOwn(id: string, actorCode: string): Promise<OwnRow & { actorI
 export async function reviseProposal(id: string, input: ProposalInput, actorCode: string, submit: boolean, message: string) {
   const own = await loadOwn(id, actorCode);
   if (own.status !== "draft" && own.status !== "needs_info") throw new ProposalError("ข้อเสนอนี้แก้ไม่ได้แล้ว", undefined, 409);
-  validateProposal(input, submit ? "submit" : "draft");
+  validateProposal(input, submit ? "submit" : "draft", own.kind, false);
   const { error } = await supabaseAdmin
     .from("welfare_benefit_proposal")
     .update({
-      ...proposalRow(input),
+      ...(own.kind === "close" ? { reason: input.reason.trim() || null } : proposalRow(input)),
       status: submit ? "pending" : own.status,
       submitted_at: submit ? new Date().toISOString() : null,
       // ส่งกลับแล้วเริ่มรอการตัดสินใหม่
@@ -154,7 +201,7 @@ export async function reviseProposal(id: string, input: ProposalInput, actorCode
     })
     .eq("id", id);
   if (error) throw error;
-  await writeLimits(id, input.limits);
+  if (own.kind !== "close") await writeLimits(id, input.limits);
   if (submit) await addEvent(id, own.status === "needs_info" ? "revised" : "submitted", own.actorId, own.proposer_role, message.trim() || input.reason.trim(), input);
 }
 
@@ -210,6 +257,63 @@ async function insertBenefit(input: ProposalInput) {
   return { id: data.id as string, code };
 }
 
+/** อัปเดตสวัสดิการเดิมเมื่อหัวหน้า HR อนุมัติข้อเสนอแก้ไข */
+async function applyBenefitUpdate(benefitId: string, benefitCode: string, input: ProposalInput) {
+  const notes = [input.allowFamily ? "เบิกให้ครอบครัวได้" : null, input.allowInsurance ? "เบิกส่วนเกินจากประกันได้" : null].filter(Boolean).join(" · ");
+  const { error } = await supabaseAdmin
+    .from("welfare_benefit")
+    .update({
+      name_th: input.name.trim(),
+      description: input.description.trim() || null,
+      detail: input.detail.trim() || null,
+      category: input.category.trim() || null,
+      ...(input.imagePath ? { image_path: input.imagePath } : {}),
+      budget_type: input.budgetType,
+      max_claims: input.maxClaims,
+      eligibility_note: notes || null,
+      required_documents: input.documents,
+      allow_advance: input.allowAdvance,
+      is_active: true,
+    })
+    .eq("id", benefitId);
+  if (error) throw error;
+
+  const positive = input.limits.filter((limit) => limit.amount > 0);
+  if (positive.length > 0) {
+    const central = positive.find((limit) => limit.levelId === null)?.amount ?? Math.min(...positive.map((limit) => limit.amount));
+    const rows = [
+      { benefit_id: benefitId, employee_id: null, job_level_id: null, amount: central, effective_from: input.effectiveFrom, reason: input.reason.trim() || "ปรับวงเงินสวัสดิการ" },
+      ...positive
+        .filter((limit) => limit.levelId !== null)
+        .map((limit) => ({
+          benefit_id: benefitId,
+          employee_id: null,
+          job_level_id: limit.levelId,
+          amount: limit.amount,
+          effective_from: input.effectiveFrom,
+          reason: input.reason.trim() || "ปรับวงเงินสวัสดิการ",
+        })),
+    ];
+    for (const row of rows) {
+      let query = supabaseAdmin.from("welfare_benefit_limit").select("id").eq("benefit_id", benefitId).is("employee_id", null).eq("effective_from", row.effective_from);
+      query = row.job_level_id === null ? query.is("job_level_id", null) : query.eq("job_level_id", row.job_level_id);
+      const { data: existing } = await query.maybeSingle<{ id: string }>();
+      const write = existing
+        ? await supabaseAdmin.from("welfare_benefit_limit").update({ amount: row.amount, reason: row.reason }).eq("id", existing.id)
+        : await supabaseAdmin.from("welfare_benefit_limit").insert(row);
+      if (write.error) throw write.error;
+    }
+  }
+  return { id: benefitId, code: benefitCode };
+}
+
+/** ปิดสวัสดิการเมื่อหัวหน้า HR อนุมัติข้อเสนอปิด */
+async function applyBenefitClose(benefitId: string, benefitCode: string) {
+  const { error } = await supabaseAdmin.from("welfare_benefit").update({ is_active: false }).eq("id", benefitId);
+  if (error) throw error;
+  return { id: benefitId, code: benefitCode };
+}
+
 /** หัวหน้า HR สร้างสวัสดิการเองโดยไม่ต้องเสนอ */
 export async function createBenefitDirect(input: ProposalInput) {
   validateProposal(input, "submit");
@@ -224,13 +328,22 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
   if (detail.status !== "pending") throw new ProposalError("ข้อเสนอนี้ไม่ได้รออนุมัติแล้ว", undefined, 409);
   if (detail.proposedById === actorId) throw new ProposalError("อนุมัติข้อเสนอของตัวเองไม่ได้", undefined, 403);
   if (decision !== "approve" && !note.trim()) throw new ProposalError(decision === "needs_info" ? "ระบุสิ่งที่ต้องการให้แก้" : "ระบุเหตุผลที่ไม่อนุมัติ", "note");
-  if (detail.kind !== "create") throw new ProposalError("ยังรองรับเฉพาะข้อเสนอสร้างสวัสดิการใหม่", undefined, 409);
 
   let applied: { id: string; code: string } | null = null;
   if (decision === "approve") {
     const input = detail.input;
-    validateProposal({ ...input, effectiveFrom: input.effectiveFrom < today() ? today() : input.effectiveFrom }, "submit");
-    applied = await insertBenefit({ ...input, effectiveFrom: input.effectiveFrom < today() ? today() : input.effectiveFrom });
+    const effective = input.effectiveFrom && input.effectiveFrom < today() ? today() : input.effectiveFrom || today();
+    if (detail.kind === "create") {
+      validateProposal({ ...input, effectiveFrom: effective }, "submit", "create", detail.proposerRole === "HR");
+      applied = await insertBenefit({ ...input, effectiveFrom: effective });
+    } else if (detail.kind === "update") {
+      if (!detail.benefitId || !detail.benefitCode) throw new ProposalError("ไม่พบสวัสดิการที่ต้องการแก้ไข", undefined, 404);
+      validateProposal({ ...input, effectiveFrom: effective }, "submit", "update", false);
+      applied = await applyBenefitUpdate(detail.benefitId, detail.benefitCode, { ...input, effectiveFrom: effective });
+    } else if (detail.kind === "close") {
+      if (!detail.benefitId || !detail.benefitCode) throw new ProposalError("ไม่พบสวัสดิการที่ต้องการปิด", undefined, 404);
+      applied = await applyBenefitClose(detail.benefitId, detail.benefitCode);
+    }
   }
   const status: ProposalStatus = decision === "approve" ? "approved" : decision === "needs_info" ? "needs_info" : "rejected";
   const { error } = await supabaseAdmin
@@ -239,7 +352,7 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
     .eq("id", id);
   if (error) throw error;
   await addEvent(id, decision === "approve" ? "approved" : decision === "needs_info" ? "info_requested" : "rejected", actorId, "HR_HEAD", note.trim() || null);
-  return { status, benefitCode: applied?.code ?? null };
+  return { status, kind: detail.kind, benefitCode: applied?.code ?? null };
 }
 
 // -----------------------------------------------------------------------------
@@ -247,19 +360,24 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
 // -----------------------------------------------------------------------------
 
 type Person = { employee_code: string; first_name_th: string; last_name_th: string; position: { name_th: string } | null } | null;
-const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.last_name_th}` : "—");
+const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.last_name_th === "-" ? "" : person.last_name_th}`.trim() : "—");
 
 export type ProposalSummary = {
   id: string;
   proposalNo: string;
   kind: ProposalKind;
   status: ProposalStatus;
+  benefitId: string | null;
+  benefitCode: string | null;
   name: string;
   category: string | null;
   imagePath: string | null;
   proposerName: string;
+  proposerCode: string | null;
   proposerRole: "HR" | "SUPER_ADMIN";
   submittedAt: string | null;
+  createdAt: string;
+  decisionNote: string | null;
   /** เช่น "฿3,000–6,000 / ปี" */
   limitLabel: string;
 };
@@ -269,19 +387,22 @@ type SummaryRow = {
   proposal_no: string;
   kind: ProposalKind;
   status: ProposalStatus;
+  benefit_id: string | null;
   name_th: string | null;
   category: string | null;
   image_path: string | null;
   budget_type: BudgetType | null;
   proposer_role: "HR" | "SUPER_ADMIN";
   submitted_at: string | null;
-  benefit: { name_th: string } | null;
+  created_at: string;
+  decision_note: string | null;
+  benefit: { code: string; name_th: string } | null;
   proposer: Person;
   limits: { amount: number | string }[];
 };
 
 const SUMMARY_SELECT =
-  "id, proposal_no, kind, status, name_th, category, image_path, budget_type, proposer_role, submitted_at, benefit:benefit_id(name_th), proposer:proposed_by(employee_code, first_name_th, last_name_th, position:position_id(name_th)), limits:welfare_benefit_proposal_limit(amount)";
+  "id, proposal_no, kind, status, benefit_id, name_th, category, image_path, budget_type, proposer_role, submitted_at, created_at, decision_note, benefit:benefit_id(code, name_th), proposer:proposed_by(employee_code, first_name_th, last_name_th, position:position_id(name_th)), limits:welfare_benefit_proposal_limit(amount)";
 
 const PER: Record<BudgetType, string> = { yearly: "ปี", monthly: "เดือน", per_claim: "ครั้ง" };
 const baht = (value: number) => value.toLocaleString("th-TH", { maximumFractionDigits: 2 });
@@ -299,13 +420,18 @@ function toSummary(row: SummaryRow): ProposalSummary {
     proposalNo: row.proposal_no,
     kind: row.kind,
     status: row.status,
+    benefitId: row.benefit_id,
+    benefitCode: row.benefit?.code ?? null,
     name: row.name_th ?? row.benefit?.name_th ?? "—",
     category: row.category,
     imagePath: row.image_path,
     proposerName: nameOf(row.proposer),
+    proposerCode: row.proposer?.employee_code ?? null,
     proposerRole: row.proposer_role,
     submittedAt: row.submitted_at,
-    limitLabel: limitLabel(row.limits.map((limit) => Number(limit.amount)), row.budget_type),
+    createdAt: row.created_at,
+    decisionNote: row.decision_note,
+    limitLabel: row.kind === "close" ? "เสนอปิดสวัสดิการ" : limitLabel(row.limits.map((limit) => Number(limit.amount)), row.budget_type),
   };
 }
 
@@ -327,6 +453,9 @@ export async function listProposals(statuses: ProposalStatus[]): Promise<Proposa
 
 /** ข้อเสนอที่ยังเปิดอยู่ (ร่าง รออนุมัติ ขอข้อมูลเพิ่ม) */
 export const getOpenProposals = () => listProposals(["draft", "pending", "needs_info"]);
+
+/** ข้อเสนอทั้งหมด (เปิดอยู่ + ตัดสินแล้ว) สำหรับหน้าจัดการสวัสดิการของ Admin */
+export const getAllProposals = () => listProposals(["draft", "pending", "needs_info", "approved", "rejected", "withdrawn"]);
 
 export async function countPendingProposals(): Promise<number> {
   const { count } = await supabaseAdmin.from("welfare_benefit_proposal").select("id", { count: "exact", head: true }).eq("status", "pending").is("deleted_at", null);

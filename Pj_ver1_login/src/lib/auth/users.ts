@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Role } from "./roles";
 import { supabaseAdmin } from "../supabase";
 import { toPasswordState, type PasswordState } from "./credential";
+import { checkLock, clearFailures } from "./rate-limit";
 
 /**
  * บัญชีผู้ใช้อ่านจาก view `v_app_user` (employee + employee_credential + user_role)
@@ -69,6 +70,9 @@ export interface EmployeeProfile {
 export type UserWithProfile = Omit<User, "passwordHash" | "passwordState"> & {
   /** false = อยู่ในตาราง employee แต่ยังไม่มีบัญชีเข้าระบบ */
   hasAccount: boolean;
+  /** เวลาที่บัญชีถูกล็อกถึง (ISO) หรือ null ถ้าไม่ได้ถูกล็อก */
+  lockedUntil?: string | null;
+  failedAttempts?: number;
   profile: EmployeeProfile;
 };
 
@@ -124,7 +128,11 @@ interface EmployeeProfileRow {
   position: { name_th: string } | null;
   job_level: { name_th: string } | null;
   manager: { employee_code: string; first_name_th: string; last_name_th: string; deleted_at: string | null } | null;
-  credential: { login_name: string; last_login_at: string | null; updated_at: string | null } | null;
+  credential: {
+    login_name: string;
+    last_login_at: string | null;
+    updated_at: string | null;
+  } | null;
   roles: { revoked_at: string | null; role: { code: string; is_active: boolean } | null }[];
 }
 
@@ -168,6 +176,9 @@ function primaryRole(roles: EmployeeProfileRow["roles"]): Role {
 function toUserWithProfile(row: EmployeeProfileRow): UserWithProfile {
   const manager = row.manager && !row.manager.deleted_at ? row.manager : null;
   const credentialUpdatedAt = row.credential?.updated_at ?? "";
+  const codeLock = checkLock(row.employee_code.toLowerCase());
+  const loginLock = row.credential?.login_name ? checkLock(row.credential.login_name.toLowerCase()) : { locked: false, retryAfterSec: 0 };
+  const retryAfterSec = Math.max(codeLock.locked ? codeLock.retryAfterSec : 0, loginLock.locked ? loginLock.retryAfterSec : 0);
   return {
     employeeId: row.employee_code,
     email: row.credential?.login_name ?? "",
@@ -177,6 +188,8 @@ function toUserWithProfile(row: EmployeeProfileRow): UserWithProfile {
     lastLoginAt: row.credential?.last_login_at ?? undefined,
     updatedAt: credentialUpdatedAt > row.updated_at ? credentialUpdatedAt : row.updated_at,
     hasAccount: row.credential !== null,
+    lockedUntil: retryAfterSec > 0 ? new Date(Date.now() + retryAfterSec * 1000).toISOString() : null,
+    failedAttempts: 0,
     profile: {
       titleTh: row.title_th,
       firstNameTh: row.first_name_th,
@@ -473,4 +486,14 @@ export async function updateUser(
       .eq("employee_id", uuid);
     if (error) throw error;
   }
+}
+
+/** ปลดล็อกบัญชีที่ถูกล็อกจากล็อกอินผิดเกินกำหนด */
+export async function unlockUserAccount(employeeId: string): Promise<boolean> {
+  const user = await getUserWithProfileById(employeeId);
+  if (!user) return false;
+  clearFailures(employeeId.toLowerCase());
+  if (user.email) clearFailures(user.email.toLowerCase());
+  if (user.profile.contactEmail) clearFailures(user.profile.contactEmail.toLowerCase());
+  return true;
 }

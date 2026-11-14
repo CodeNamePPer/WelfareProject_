@@ -37,7 +37,7 @@ const iconTone: Record<Tone, string> = {
 export const reviewHref: Partial<Record<AlertCategory, string>> = {
   access: '/admin/users',
   security: '/admin/logs',
-  welfare: '/admin/benefits',
+  welfare: '/admin/benefits?tab=proposals',
 };
 
 /** ไอคอนประเภทแจ้งเตือน – วางลอยบนพื้นแผ่น ไม่มีกล่องสีรองพื้น สีของเส้นไอคอนบอกระดับความสำคัญ */

@@ -100,6 +100,10 @@ export function NotificationsPage({ initialAlerts }: { initialAlerts: AdminAlert
     persist({ action: 'resolve', id: alert.id }, (prev) =>
       prev.map((item) => (item.id === alert.id ? { ...item, unread: false, actionable: false } : item)),
     );
+    if (alert.id.startsWith('prop-')) {
+      router.push(`/admin/benefits?tab=proposals&proposal=${encodeURIComponent(alert.id.slice(5))}`);
+      return;
+    }
     const href = reviewHref[alert.category];
     if (href) router.push(href);
   };

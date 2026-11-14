@@ -24,11 +24,23 @@ export type ClaimEventKind =
   | "pay_date_changed"
   | "paid"
   | "payment_failed"
-  | "payment_reversed";
+  | "payment_reversed"
+  | "receipt_submitted"
+  | "receipt_approved"
+  | "receipt_returned"
+  | "advance_cancelled"
+  | "refund_received";
 
 export type BudgetKind = "yearly" | "monthly" | "per_claim";
 
-export type ClaimAttachment = { id: string; fileName: string; mimeType: string; sizeBytes: number };
+export type ClaimAttachment = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  docKind?: string | null;
+  isRestricted?: boolean;
+};
 
 export type ClaimEventRecord = {
   kind: ClaimEventKind;
@@ -37,6 +49,16 @@ export type ClaimEventRecord = {
   actorName: string | null;
   actorRole: string | null;
   note: string | null;
+};
+
+export type ClaimAdvanceRecord = {
+  status: string;
+  advanceAmount: number;
+  receiptDueDate: string;
+  receiptAmount: number | null;
+  settlement: string | null;
+  extraAmountApproved: number | null;
+  refundAmount: number | null;
 };
 
 export type ClaimRecord = {
@@ -48,6 +70,13 @@ export type ClaimRecord = {
   department: string | null;
   submittedByCode: string;
   submittedByName: string;
+  proxyReason?: string | null;
+  beneficiaryRelation?: string | null;
+  beneficiaryName?: string | null;
+  totalCost?: number | null;
+  insurancePaid?: number | null;
+  insurerName?: string | null;
+  advance?: ClaimAdvanceRecord | null;
   benefitCode: string;
   benefitName: string;
   budgetType: BudgetKind;
