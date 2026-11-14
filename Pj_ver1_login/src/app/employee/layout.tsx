@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
-import { getSubordinates } from "@/lib/employee/subordinates";
+import { countClaimsToRevise } from "@/lib/claims/service";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -26,20 +26,20 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
     redirect("/login");
   }
 
-  const subordinates = await getSubordinates(session.sub);
+  const todoCount = await countClaimsToRevise(session.sub);
   const hiddenNavIds = Object.values(BACK_LINK_BY_ROLE).filter((id) => id !== BACK_LINK_BY_ROLE[session.role]);
-  if (!subordinates?.length) hiddenNavIds.push("HeadEm");
 
   return (
     <ToastProvider>
       <NavigationProgress />
       <AppShell
         section="employee"
-        notificationCount={0}
+        notificationCount={todoCount}
         hiddenNavIds={hiddenNavIds}
         user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}
       >
-        <div className="text-13 text-ink">{children}</div>
+        {/* ความกว้างเนื้อหาและระยะห่างระหว่างส่วนตามดีไซน์ฝั่งผู้ส่งคำขอ */}
+        <div className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">{children}</div>
       </AppShell>
     </ToastProvider>
   );

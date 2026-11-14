@@ -12,7 +12,6 @@ import {
   ListChecks,
   Network,
   UserCog,
-  UserPlus,
   Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -22,6 +21,8 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   badge?: number;
+  /** Screen-reader words before the badge number. Default: "ยังไม่อ่าน". */
+  badgeLabel?: string;
   href?: string;
   /** Leaves the staff workspace for the requester one, so the sidebar tells the user first. */
   switchesToRequester?: boolean;
@@ -81,18 +82,19 @@ export const NAV: Record<NavSection, SectionConfig> = {
       REQUEST_ITEM,
     ],
   },
-  // Same menu as the applicant team's original sidebar. Layout hides HeadEm and the back links by user.
+  // Menu from design R01–R12. Proxy claims live inside ยื่นคำขอ; layout hides the back links by role.
   employee: {
     basePath: '/employee',
     subtitle: 'พนักงาน',
     sectionLabel: 'พื้นที่ของฉัน',
     profileHref: '/employee/profile',
-    items: () => [
+    // The number here is how many claims wait on the requester (sent back for revision), shown on "ติดตามสถานะ".
+    items: (todoCount) => [
       { id: 'home', label: 'ภาพรวมสวัสดิการของฉัน', icon: LayoutDashboard, href: '/employee' },
       { id: 'welfare', label: 'สิทธิ์สวัสดิการ', icon: Gift, href: '/employee/welfare' },
-      { id: 'withdraw', label: 'ยื่นคำขอสวัสดิการ', icon: FileText, href: '/employee/withdraw' },
-      { id: 'HeadEm', label: 'ยื่นคำขอสวัสดิการแทนพนักงาน', icon: UserPlus, href: '/employee/HeadEm' },
-      { id: 'status', label: 'ติดตามสถานะ', icon: ListChecks, href: '/employee/status' },
+      { id: 'withdraw', label: 'ยื่นคำขอ', icon: FilePlus2, href: '/employee/withdraw' },
+      { id: 'status', label: 'ติดตามสถานะ', icon: ListChecks, href: '/employee/status', badge: todoCount, badgeLabel: 'รอคุณแก้ไข' },
+      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/employee/notifications' },
       { id: 'organization', label: 'โครงสร้างองค์กร', icon: Network, href: '/employee/organization' },
       { id: 'back-hr', label: 'กลับไปหน้า HR', icon: ArrowLeft, href: '/hr' },
       { id: 'back-finance', label: 'กลับไปหน้าการเงิน', icon: ArrowLeft, href: '/payroll' },

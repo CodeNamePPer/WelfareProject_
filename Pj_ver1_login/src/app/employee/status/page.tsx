@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/get-session";
 import { listClaims } from "@/lib/claims/service";
 import { toBangkokDate } from "@/lib/claims/mappers";
 import { CLAIM_STATUS_LABEL, type ClaimRecord } from "@/lib/claims/types";
+import { APPROVED, RESERVED, baht, countedAmount, lastEventOf, payDateOf } from "@/lib/claims/requester";
 import StatusClient, { type ApprovalStep, type RequestStatus, type WelfareRequest } from "./StatusClient";
 
 const STATUS_MAP: Record<ClaimRecord["status"], RequestStatus> = {
@@ -44,7 +45,7 @@ function stepsOf(claim: ClaimRecord): ApprovalStep[] {
   const revision = claim.status === "needs_revision" ? find("revision_requested") : undefined;
 
   const steps: ApprovalStep[] = [
-    { title: "ส่งคำขอแล้ว", description: claim.submittedByName, date: submitted ? thaiDateTime(submitted.at) : "ยังไม่ได้ส่งคำขอ", state: state(Boolean(submitted), false), complete: Boolean(submitted), current: false },
+    { title: "ส่งคำขอแล้ว", description: claim.submittedByName, date: submitted ? `${submitted.kind === "resubmitted" ? "ส่งใหม่หลังแก้ไข " : ""}${thaiDateTime(submitted.at)}` : "ยังไม่ได้ส่งคำขอ", state: state(Boolean(submitted), false), complete: Boolean(submitted), current: false },
     {
       title: "ฝ่ายบุคคลตรวจสอบ",
       description: hr?.actorName ?? "ฝ่ายบุคคล",
@@ -62,22 +63,66 @@ function stepsOf(claim: ClaimRecord): ApprovalStep[] {
   return steps;
 }
 
+function hintOf(claim: ClaimRecord): string {
+  const payDate = payDateOf(claim);
+  switch (claim.status) {
+    case "draft":
+      return `บันทึก ${thaiDate(claim.createdAt)} · ยังไม่ส่ง ไม่กันวงเงิน`;
+    case "needs_revision":
+      return lastEventOf(claim, "revision_requested")?.note || "HR ส่งกลับให้แก้ไข";
+    case "paid":
+      return payDate ? `โอนเข้าบัญชี ${thaiDate(payDate)}` : "โอนเข้าบัญชีแล้ว";
+    case "rejected":
+      return lastEventOf(claim, "rejected")?.note || "ไม่อนุมัติ";
+    case "cancelled":
+      return "ยกเลิกแล้ว คืนวงเงินให้แล้ว";
+    case "awaiting_payment":
+      return payDate ? `กำหนดโอน ${thaiDate(payDate)}` : LAST_STEP[claim.status];
+    default:
+      return payDate ? `ถ้าอนุมัติทัน ได้รับ ${thaiDate(payDate)}` : LAST_STEP[claim.status];
+  }
+}
+
+/** การเงินบางรายการบันทึกค่าว่างเป็น "ไม่ระบุ" หรือ "-" จึงตัดออกก่อนแสดง */
+function accountOf(payment: NonNullable<ClaimRecord["payment"]>) {
+  const parts = [payment.bankCode, payment.accountMasked].map((part) => part?.trim()).filter((part) => part && part !== "-" && part !== "ไม่ระบุ");
+  return parts.length > 0 ? parts.join(" ") : "ไม่ระบุ";
+}
+
 function toRequest(claim: ClaimRecord): WelfareRequest {
   const at = claim.submittedAt ?? claim.createdAt;
   const receipt = claim.receipts[0];
+  const payDate = payDateOf(claim);
+  const counted = RESERVED.includes(claim.status) || APPROVED.includes(claim.status);
+  const facts: { label: string; value: string }[] = [
+    { label: "ผู้รับสิทธิ์", value: `${claim.employeeName} · ${claim.employeeCode}` },
+    { label: "ผู้ให้บริการ", value: claim.providerName || "—" },
+    { label: "วันที่เกิดค่าใช้จ่าย", value: claim.expenseDate ? thaiDate(`${claim.expenseDate}T00:00:00+07:00`) : "—" },
+    { label: "ยอดขอเบิก", value: baht(claim.amountRequested) },
+    { label: "ยอดอนุมัติ", value: claim.amountApproved !== null ? baht(claim.amountApproved) : "รอดำเนินการ" },
+    { label: "เลขที่ใบเสร็จ", value: receipt?.receiptNo || "—" },
+    { label: "วงเงินสิทธิ์นี้", value: claim.limit > 0 ? `${baht(claim.limit)} · เหลือ ${baht(Math.max(claim.limit - claim.used - (counted ? countedAmount(claim) : 0), 0))} หลังเบิก` : "—" },
+    ...(claim.payment ? [{ label: "บัญชีรับเงิน", value: accountOf(claim.payment) }] : []),
+    ...(claim.payment?.transferRef ? [{ label: "เลขอ้างอิงการโอน", value: claim.payment.transferRef }] : []),
+    ...Object.entries(claim.details).map(([label, value]) => ({ label, value })),
+    ...(claim.note ? [{ label: "หมายเหตุ", value: claim.note }] : []),
+  ];
   return {
     id: claim.claimNo,
     title: claim.benefitName,
-    submittedAt: thaiDate(at),
+    submittedAt: claim.submittedAt ? thaiDate(at) : "—",
     submittedTime: claim.submittedAt ? thaiDateTime(claim.submittedAt) : "ยังไม่ได้ส่ง",
     amount: claim.amountRequested,
     status: STATUS_MAP[claim.status],
+    dbStatus: claim.status,
     statusText: CLAIM_STATUS_LABEL[claim.status],
     year: String(Number(toBangkokDate(at).slice(0, 4)) + 543),
     description: Object.entries(claim.details).map(([label, value]) => `${label}: ${value}`).join(" · ") || claim.note || "-",
-    employeeLabel: `${claim.employeeName} · ${claim.employeeCode}`,
-    expenseDate: claim.expenseDate ? thaiDate(`${claim.expenseDate}T00:00:00+07:00`) : "-",
-    providerLine: [claim.providerName, receipt?.receiptNo ? `ใบเสร็จเลขที่ ${receipt.receiptNo}` : null].filter(Boolean).join(" · "),
+    kindLabel: claim.submittedByCode === claim.employeeCode ? "ยื่นเอง" : `ยื่นแทนโดย ${claim.submittedByName}`,
+    hint: hintOf(claim),
+    facts,
+    payNote: payDate && !["paid", "draft", "rejected", "cancelled"].includes(claim.status) ? `คาดว่าได้รับเงิน ${thaiDate(payDate)}` : null,
+    reserveNote: RESERVED.includes(claim.status) ? `กันวงเงินไว้แล้ว ${baht(claim.amountRequested)} · ถ้าไม่อนุมัติจะคืนวงเงินอัตโนมัติ` : null,
     attachments: claim.attachments.map((file) => ({ id: file.id, name: file.fileName })),
     steps: stepsOf(claim),
     lastStep: LAST_STEP[claim.status],

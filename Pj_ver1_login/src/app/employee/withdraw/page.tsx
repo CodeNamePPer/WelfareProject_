@@ -1,17 +1,28 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getMyProfile } from "@/lib/employee/profile";
-import { getClaim, getEmployeeBenefits } from "@/lib/claims/service";
+import { getSubordinates } from "@/lib/employee/subordinates";
+import type { EmployeeBenefit } from "@/lib/claims/types";
+import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
+import { currentRound, thaiDate } from "@/lib/claims/requester";
+import { DEFAULT_PAY_SETTINGS } from "@/features/payroll/lib/pay-settings";
 import { toFormValues } from "@/lib/claims/forms";
 import WithdrawClient, { type WithdrawInitial } from "./WithdrawClient";
 
-export default async function WithdrawPage({ searchParams }: { searchParams: Promise<{ claim?: string; benefit?: string }> }) {
+export default async function WithdrawPage({ searchParams }: { searchParams: Promise<{ claim?: string; benefit?: string; for?: string }> }) {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
 
-  const [profile, benefits, params] = await Promise.all([getMyProfile(session.sub), getEmployeeBenefits(session.sub), searchParams]);
+  const [profile, benefits, params, paySettings, subordinates] = await Promise.all([
+    getMyProfile(session.sub),
+    getEmployeeBenefits(session.sub),
+    searchParams,
+    getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
+    getSubordinates(session.sub),
+  ]);
+  const round = currentRound(paySettings);
   if (!profile || !benefits) {
     return <p className="text-13 text-status-rejected">โหลดข้อมูลพนักงานหรือสิทธิ์สวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   }
@@ -34,9 +45,18 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
     }
   }
 
+  // หัวหน้ายื่นแทนลูกน้องโดยตรงได้ (เดิมอยู่หน้า /employee/HeadEm) ยกเว้นตอนแก้ไขคำขอของตัวเอง
+  const team = initial ? [] : (subordinates ?? []);
+  const teamBenefits = await Promise.all(team.map((employee) => getEmployeeBenefits(employee.id)));
+  const benefitsByEmployee: Record<string, EmployeeBenefit[]> = Object.fromEntries(team.map((employee, index) => [employee.id, teamBenefits[index] ?? []]));
+
   return (
     <WithdrawClient
-      applicant={{ employeeId: profile.code, fullName: profile.name, department: profile.department ?? "—" }}
+      applicant={{ code: profile.code, fullName: profile.name, department: profile.department ?? "—", position: profile.position ?? "—", manager: profile.managerName ?? "—" }}
+      subordinates={team.map((employee) => ({ code: employee.id, fullName: employee.name, department: employee.department, position: employee.position, manager: profile.name }))}
+      benefitsByEmployee={benefitsByEmployee}
+      initialProxy={params.for === "proxy"}
+      expectedPay={{ date: thaiDate(round.payDate), note: `ยื่นวันนี้อยู่ในรอบที่ ${round.roundNo} ถ้า HR และการเงินอนุมัติทัน ไม่ทันจะเลื่อนไปรอบถัดไป` }}
       benefits={benefits}
       initial={initial}
       initialBenefitCode={params.benefit ?? null}

@@ -1,355 +1,179 @@
 ﻿'use client';
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Lock } from "lucide-react";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import type { MyProfile } from "@/lib/employee/profile";
+import { cx } from "@/lib/cx";
+import { Pill, Sheet, pill } from "@/features/requester/ui";
 
-type ChangeRequest = {
-  id: string;
-  field: string;
-  submittedAt: string;
-  status: "pending" | "approved" | "draft";
-  latestUpdate: string;
-};
+/** ตาราง employee ยังไม่ได้กรอกข้อมูลช่องนี้ */
+const EMPTY = "—";
 
-const initialRequests: ChangeRequest[] = [
-  {
-    id: "PC-2569-008",
-    field: "ที่อยู่ปัจจุบัน",
-    submittedAt: "12 ก.พ. 2569 · 10:15 น.",
-    status: "pending",
-    latestUpdate: "ฝ่ายบุคคลกำลังตรวจสอบเอกสาร",
-  },
-  {
-    id: "PC-2569-006",
-    field: "ผู้ติดต่อฉุกเฉิน",
-    submittedAt: "7 ก.พ. 2569 · 14:20 น.",
-    status: "approved",
-    latestUpdate: "บันทึกเมื่อ 8 ก.พ. 2569 · 09:42 น.",
-  },
-  {
-    id: "PC-2569-009",
-    field: "เบอร์โทรศัพท์",
-    submittedAt: "13 ก.พ. 2569 · 09:10 น.",
-    status: "draft",
-    latestUpdate: "ยังไม่ได้ส่งข้อมูล · กรอกต่อ →",
-  },
-];
+const TABS = [
+  { id: "personal", label: "ข้อมูลส่วนตัว" },
+  { id: "work", label: "การทำงาน" },
+  { id: "security", label: "ความปลอดภัย" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
 
-const statusLabels = {
-  pending: "รอตรวจสอบ",
-  approved: "อนุมัติและบันทึกแล้ว",
-  draft: "ฉบับร่าง",
-};
-
-const statusStyles = {
-  pending: "border border-amber-200 bg-amber-50 text-amber-800",
-  approved: "border border-status-approved-soft bg-status-approved-soft text-status-approved-ink",
-  draft: "border border-line bg-primary-50 text-ink-soft",
-};
-
-function ProfileField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/** ช่องที่ระบบกำหนด แก้ไขเองไม่ได้ */
+function LockedField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-      <dt className="text-11 font-medium uppercase tracking-[0.12em] text-muted">
-        {label}
-      </dt>
-      <dd className="mt-1 text-12 font-medium leading-5 text-ink">
-        {children}
-      </dd>
+    <div>
+      <p className="mb-1.5 text-13 font-medium text-muted">{label}</p>
+      <div className="relative">
+        <Lock className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+        <input
+          readOnly
+          aria-readonly="true"
+          aria-label={`${label} (แก้ไขไม่ได้)`}
+          value={value}
+          className="h-[42px] w-full cursor-not-allowed rounded-lg border border-line bg-slate-100 pr-3 pl-[34px] text-14 text-muted outline-none"
+        />
+      </div>
     </div>
   );
 }
 
-/** ตาราง employee ยังไม่มีคอลัมน์นี้ หรือยังไม่ได้กรอกข้อมูล */
-const EMPTY = "—";
+function Fact({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-12 text-muted">{label}</dt>
+      <dd className="break-words">{children}</dd>
+    </div>
+  );
+}
 
-export default function ProfileClient({ profile }: { profile: MyProfile }) {
-  const [requests, setRequests] = useState(initialRequests);
-  const [cancelRequestId, setCancelRequestId] = useState<string | null>(null);
-  const requestToCancel = requests.find((request) => request.id === cancelRequestId);
-
-  useEffect(() => {
-    if (!cancelRequestId) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setCancelRequestId(null);
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cancelRequestId]);
-
-  function cancelRequest() {
-    if (!cancelRequestId) return;
-
-    setRequests((current) =>
-      current.filter((request) => request.id !== cancelRequestId),
-    );
-    setCancelRequestId(null);
-  }
+export default function ProfileClient({ profile, roleLabel }: { profile: MyProfile; roleLabel: string }) {
+  const [tab, setTab] = useState<TabId>("personal");
 
   return (
-    <div className="mx-auto max-w-[1500px] px-1 pb-10 pt-2 text-13 text-ink">
-      <div className="rounded-[28px] border border-line bg-gradient-to-br from-slate-50 via-white to-sky-50/80 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.06)]">
-        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
-          <div>
-            <div className="mb-1 text-11 font-medium uppercase tracking-[0.14em] text-muted">
-              พนักงาน / โปรไฟล์ของฉัน
+    <>
+      <Sheet aria-label="โปรไฟล์" className="overflow-hidden">
+        <div className="h-24 bg-blue-900" />
+        <div className="flex flex-wrap items-end justify-between gap-4 px-6">
+          <div className="flex flex-wrap items-end gap-4">
+            <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
+              {profile.initials}
             </div>
-            <h1 className="text-22 font-semibold tracking-[-0.04em] text-ink">
-              โปรไฟล์ของฉัน
-            </h1>
-            <p className="mt-1 text-12 text-ink-soft">
-              ตรวจสอบข้อมูลส่วนตัวและติดตามคำขอเปลี่ยนแปลงข้อมูลของคุณ
-            </p>
-          </div>
-
-          <Link
-            href="/employee/profile/changeprofile"
-            className="inline-flex items-center justify-center rounded-xl bg-primary-600 px-4 py-2.5 text-12 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-          >
-            ยื่นคำขอเปลี่ยนข้อมูล
-          </Link>
-        </header>
-
-        <aside className="mt-4 flex items-start gap-3 rounded-2xl border border-primary-100 bg-primary-50/80 p-3.5">
-          <span className="mt-0.5 rounded-full bg-white p-1.5 text-primary-600 shadow-sm" aria-hidden="true">
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-            >
-              <rect x="5" y="10" width="14" height="11" rx="2" />
-              <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-            </svg>
-          </span>
-          <div>
-            <h2 className="text-12 font-semibold text-ink">
-              ฝ่ายบุคคลเท่านั้นที่แก้ไขข้อมูลจริงได้
-            </h2>
-            <p className="mt-1 text-11 leading-5 text-ink-soft">
-              คุณสามารถดูข้อมูลและยื่นคำขอเปลี่ยนข้อมูลได้
-              แต่ไม่สามารถแก้ไขข้อมูลในโปรไฟล์ได้โดยตรง
-            </p>
-          </div>
-        </aside>
-
-        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,0.92fr)]">
-          <section className="rounded-[24px] border border-line bg-white p-5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-14 font-semibold text-ink">ข้อมูลส่วนตัว</h2>
-              <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-10 font-medium uppercase tracking-[0.12em] text-ink-soft">
-                {profile.statusLabel}
-              </span>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-600 to-indigo-600 text-14 font-semibold text-white shadow-lg shadow-sky-200">
-                  {profile.initials}
-                </span>
-                <div>
-                  <p className="text-14 font-semibold text-ink">{profile.name}</p>
-                  <p className="mt-1 text-11 text-muted">
-                    {profile.code} · {profile.department ?? "ยังไม่ระบุหน่วยงาน"}
-                  </p>
-                </div>
-              </div>
-
-              <span className="rounded-full border border-line bg-surface px-2.5 py-1.5 text-10 font-medium text-ink-soft">
-                ดูข้อมูลเท่านั้น
-              </span>
-            </div>
-
-            <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <ProfileField label="วันเกิด">{EMPTY}</ProfileField>
-              <ProfileField label="ตำแหน่ง">{profile.position ?? EMPTY}</ProfileField>
-              <ProfileField label="วันที่เริ่มงาน">{profile.hireDate}</ProfileField>
-              <ProfileField label="หน่วยงาน">{profile.department ?? EMPTY}</ProfileField>
-              <ProfileField label="สถานภาพสมรส">{EMPTY}</ProfileField>
-              <ProfileField label="ชื่อบิดา">{EMPTY}</ProfileField>
-              <ProfileField label="ชื่อมารดา">{EMPTY}</ProfileField>
-              <ProfileField label="สัญชาติ">{EMPTY}</ProfileField>
-              <ProfileField label="เพศ">{EMPTY}</ProfileField>
-              <ProfileField label="ศาสนา">{EMPTY}</ProfileField>
-              <ProfileField label="อีเมล">{profile.email}</ProfileField>
-              <ProfileField label="เบอร์โทรศัพท์">{profile.phone ?? EMPTY}</ProfileField>
-              <div className="sm:col-span-2">
-                <ProfileField label="ที่อยู่ปัจจุบัน">{profile.address ?? EMPTY}</ProfileField>
-              </div>
-              <div className="sm:col-span-2">
-                <ProfileField label="ผู้ติดต่อฉุกเฉิน">{profile.emergencyContact ?? EMPTY}</ProfileField>
-              </div>
-            </dl>
-          </section>
-
-          <div className="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <section className="rounded-[24px] border border-line bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
-              <h2 className="text-14 font-semibold text-ink">การแก้ไขล่าสุด</h2>
-              {profile.lastEdit ? (
-                <>
-                  <dl className="mt-3 space-y-3">
-                    <ProfileField label="วันที่และเวลา">{profile.lastEdit.at} น.</ProfileField>
-                    <ProfileField label="ผู้แก้ไขข้อมูล">{profile.lastEdit.editorName ?? "ระบบ"}</ProfileField>
-                  </dl>
-                  {profile.lastEdit.editorPosition && (
-                    <div className="mt-3 border-t border-line pt-3">
-                      <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-10 font-medium uppercase tracking-[0.12em] text-ink-soft">
-                        {profile.lastEdit.editorPosition}
-                      </span>
-                    </div>
-                  )}
-                  {profile.lastEdit.reason && (
-                    <p className="mt-3 text-11 leading-5 text-muted">{profile.lastEdit.reason}</p>
-                  )}
-                </>
-              ) : (
-                <p className="mt-3 text-12 text-muted">ยังไม่มีประวัติการแก้ไขข้อมูล</p>
-              )}
-            </section>
-
-            <section className="rounded-[24px] border border-line bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
-              <h2 className="text-14 font-semibold text-ink">เมื่อข้อมูลไม่ถูกต้อง</h2>
-              <p className="mt-3 text-12 leading-6 text-ink-soft">
-                ยื่นคำขอพร้อมเหตุผลและหลักฐานให้ฝ่ายบุคคลตรวจสอบ
-                เมื่อข้อมูลได้รับการตรวจสอบและอนุมัติแล้ว ระบบจะอัปเดตให้
+            <div className="min-w-0 pb-1">
+              <h1 className="text-22 font-semibold">{profile.name}</h1>
+              <p className="text-14 text-ink-soft">{[profile.position, profile.department].filter(Boolean).join(" · ") || "ยังไม่ระบุตำแหน่ง"}</p>
+              <p className="text-12 text-muted">
+                {profile.code}
+                {profile.managerName ? ` · หัวหน้า: ${profile.managerName}` : ""}
               </p>
-              <a
-                href="mailto:hr@example.com"
-                className="mt-3 inline-block text-11 font-medium text-primary-600 underline-offset-4 transition hover:text-primary-700 hover:underline"
-              >
-                ติดต่อเพิ่มเติมกับฝ่ายทรัพยากรบุคคล
-              </a>
-            </section>
-          </div>
-        </div>
-
-        <section className="mt-5 rounded-[24px] border border-line bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-14 font-semibold text-ink">คำขอเปลี่ยนข้อมูลของฉัน</h2>
-            <span className="text-11 text-muted">
-              {requests.length} รายการ · รอตรวจสอบ {requests.filter((request) => request.status === "pending").length} ·
-              อนุมัติแล้ว {requests.filter((request) => request.status === "approved").length}
-            </span>
-          </div>
-
-          <div className="mt-3 overflow-hidden rounded-2xl border border-line">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] border-collapse text-left text-12">
-                <thead>
-                  <tr className="bg-primary-50 text-ink-soft">
-                    <th className="px-3 py-2.5 font-medium">เลขที่คำขอ</th>
-                    <th className="px-3 py-2.5 font-medium">ข้อมูลที่เปลี่ยน / วันที่ยื่นคำขอ</th>
-                    <th className="px-3 py-2.5 font-medium">สถานะ</th>
-                    <th className="px-3 py-2.5 font-medium">ความคืบหน้าล่าสุด</th>
-                    <th className="px-3 py-2.5 text-right font-medium">การจัดการ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((request, index) => (
-                    <tr
-                      key={request.id}
-                      className={index % 2 === 0 ? "bg-white" : "bg-surface/60"}
-                    >
-                      <td className="px-3 py-3 font-semibold text-ink">{request.id}</td>
-                      <td className="px-3 py-3">
-                        <p className="font-medium text-ink">{request.field}</p>
-                        <p className="mt-1 text-11 text-muted">{request.submittedAt}</p>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span
-                          className={`whitespace-nowrap rounded-full px-2.5 py-1 text-11 font-medium ${statusStyles[request.status]}`}
-                        >
-                          {statusLabels[request.status]}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-ink-soft">{request.latestUpdate}</td>
-                      <td className="px-3 py-3 text-right">
-                        {request.status === "pending" ? (
-                          <button
-                            type="button"
-                            onClick={() => setCancelRequestId(request.id)}
-                            className="whitespace-nowrap rounded-lg border border-line bg-white px-2.5 py-1.5 text-11 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                          >
-                            ยกเลิกคำขอ
-                          </button>
-                        ) : request.status === "draft" ? (
-                          <Link
-                            href="/employee/profile/changeprofile"
-                            className="whitespace-nowrap rounded-lg border border-line bg-white px-2.5 py-1.5 text-11 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                          >
-                            แก้ไขฉบับร่าง
-                          </Link>
-                        ) : (
-                          <span className="text-11 text-muted">ยกเลิกไม่ได้</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {requests.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-3 py-8 text-center text-muted">
-                        ไม่มีคำขอเปลี่ยนข้อมูล
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <p className="mt-1.5 flex flex-wrap gap-1.5">
+                <Pill tone="blue">{roleLabel}</Pill>
+                <Pill tone="green">{profile.statusLabel}</Pill>
+              </p>
             </div>
           </div>
-        </section>
+          <Link href="/employee/withdraw" className={cx(pill.primary, "mb-2")}>
+            ยื่นคำขอ
+          </Link>
+        </div>
+        <div role="tablist" aria-label="ส่วนของโปรไฟล์" className="mt-4 flex flex-wrap gap-1 border-t border-line px-4 text-14">
+          {TABS.map((item) => {
+            const selected = item.id === tab;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`profile-tab-${item.id}`}
+                aria-selected={selected}
+                aria-controls={`profile-panel-${item.id}`}
+                onClick={() => setTab(item.id)}
+                className={cx("border-b-2 px-2.5 py-3 transition-colors motion-reduce:transition-none", selected ? "border-primary-600 font-semibold text-ink" : "border-transparent text-muted hover:text-ink")}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      </Sheet>
+
+      <div role="tabpanel" id={`profile-panel-${tab}`} aria-labelledby={`profile-tab-${tab}`} className="flex flex-col gap-4">
+        {tab === "personal" ? (
+          <>
+            <Sheet className="flex flex-col gap-3.5 p-5">
+              <div>
+                <h2 className="text-16 font-semibold">ข้อมูลที่ระบบกำหนด</h2>
+                <p className="text-12 text-muted">แก้ไขไม่ได้ ติดต่อ HR ถ้าข้อมูลไม่ถูกต้อง</p>
+              </div>
+              <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                <LockedField label="ชื่อ-นามสกุล" value={profile.name} />
+                <LockedField label="รหัสพนักงาน" value={profile.code} />
+                <LockedField label="อีเมลเข้าสู่ระบบ" value={profile.email} />
+                <LockedField label="วันเริ่มงาน" value={profile.hireDate} />
+                <LockedField label="สถานะ" value={profile.statusLabel} />
+              </div>
+            </Sheet>
+
+            <Sheet className="flex flex-col gap-3.5 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-16 font-semibold">ข้อมูลติดต่อ</h2>
+                  <p className="text-12 text-muted">ส่งคำขอแล้ว HR ตรวจก่อนบันทึกจริง</p>
+                </div>
+                <Link href="/employee/profile/changeprofile" className={pill.outline}>
+                  ส่งคำขอแก้ไขข้อมูล
+                </Link>
+              </div>
+              <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
+                <Fact label="โทรศัพท์">{profile.phone ?? EMPTY}</Fact>
+                <Fact label="ผู้ติดต่อฉุกเฉิน">{profile.emergencyContact ?? EMPTY}</Fact>
+                <div className="sm:col-span-2">
+                  <Fact label="ที่อยู่">{profile.address ?? EMPTY}</Fact>
+                </div>
+              </dl>
+            </Sheet>
+
+            <Sheet className="p-5">
+              <h2 className="mb-2 text-16 font-semibold">การแก้ไขล่าสุด</h2>
+              {profile.lastEdit ? (
+                <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-3">
+                  <Fact label="วันที่และเวลา">{profile.lastEdit.at} น.</Fact>
+                  <Fact label="ผู้แก้ไขข้อมูล">
+                    {profile.lastEdit.editorName ?? "ระบบ"}
+                    {profile.lastEdit.editorPosition ? ` · ${profile.lastEdit.editorPosition}` : ""}
+                  </Fact>
+                  <Fact label="เหตุผล">{profile.lastEdit.reason ?? EMPTY}</Fact>
+                </dl>
+              ) : (
+                <p className="text-13 text-muted">ยังไม่มีประวัติการแก้ไขข้อมูล</p>
+              )}
+            </Sheet>
+          </>
+        ) : null}
+
+        {tab === "work" ? (
+          <Sheet className="p-5">
+            <h2 className="mb-3 text-16 font-semibold">การทำงาน</h2>
+            <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">
+              <Fact label="แผนก">{profile.department ?? EMPTY}</Fact>
+              <Fact label="ตำแหน่ง">{profile.position ?? EMPTY}</Fact>
+              <Fact label="หัวหน้าโดยตรง">{profile.managerName ?? EMPTY}</Fact>
+              <Fact label="วันเริ่มงาน">{profile.hireDate}</Fact>
+              <Fact label="สถานะ">{profile.statusLabel}</Fact>
+              <Fact label="บทบาทในระบบ">{roleLabel}</Fact>
+            </dl>
+            <p className="mt-4 border-t border-slate-100 pt-3 text-12 text-muted">บทบาทกำหนดโดย Admin · หัวหน้าโดยตรงกำหนดจากโครงสร้างองค์กร</p>
+          </Sheet>
+        ) : null}
+
+        {tab === "security" ? (
+          <Sheet className="p-5">
+            <h2 className="mb-3 text-16 font-semibold">เปลี่ยนรหัสผ่าน</h2>
+            <div className="max-w-md">
+              <ChangePasswordForm employeeId={profile.code} loginName={profile.email} />
+            </div>
+          </Sheet>
+        ) : null}
       </div>
-
-      {requestToCancel && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-primary-600/40 p-4"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setCancelRequestId(null);
-          }}
-        >
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            aria-labelledby="cancel-request-title"
-            aria-describedby="cancel-request-description"
-            className="w-full max-w-md rounded-2xl border border-line bg-white p-5 shadow-[0_26px_70px_rgba(15,23,42,0.18)]"
-          >
-            <h2 id="cancel-request-title" className="text-14 font-semibold text-ink">
-              ยืนยันการยกเลิกคำขอ
-            </h2>
-            <p id="cancel-request-description" className="mt-2 text-13 leading-6 text-ink-soft">
-              ต้องการยกเลิกคำขอ {requestToCancel.id} ({requestToCancel.field})
-              ใช่หรือไม่? เมื่อยืนยันแล้ว คำขอนี้จะถูกนำออกจากรายการ
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setCancelRequestId(null)}
-                className="rounded-lg border border-line bg-white px-3 py-2 text-12 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              >
-                กลับ
-              </button>
-              <button
-                type="button"
-                onClick={cancelRequest}
-                className="rounded-lg bg-primary-600 px-3 py-2 text-12 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              >
-                ยืนยันการยกเลิก
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

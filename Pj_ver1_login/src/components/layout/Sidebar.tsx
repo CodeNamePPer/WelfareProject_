@@ -103,7 +103,7 @@ export function Sidebar({
         </p>
 
         <nav aria-label="เมนูหลัก" className="flex flex-col gap-1">
-          {items.map(({ id, label, icon: Icon, badge, href, switchesToRequester }) => {
+          {items.map(({ id, label, icon: Icon, badge, badgeLabel, href, switchesToRequester }) => {
             const active = id === activeId;
             return (
               <NavLink
@@ -151,7 +151,7 @@ export function Sidebar({
                       hideWhenCollapsed,
                     )}
                   >
-                    <span className="sr-only">ยังไม่อ่าน </span>
+                    <span className="sr-only">{badgeLabel ?? 'ยังไม่อ่าน'} </span>
                     {badge}
                   </span>
                 ) : null}

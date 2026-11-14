@@ -2,16 +2,14 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { FilterChips } from '@/components/ui/FilterChips';
-import { SearchInput } from '@/components/ui/SearchInput';
-import { Tag } from '@/components/ui/Tag';
 import type { EmployeeBenefit } from '@/lib/claims/types';
+import { baht } from '@/lib/claims/requester';
+import { cx } from '@/lib/cx';
+import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
 
 const ALL = 'ทั้งหมด';
-const number = new Intl.NumberFormat('th-TH');
 
-export default function WelfareClient({ benefits }: { benefits: EmployeeBenefit[] }) {
+export default function WelfareClient({ benefits, roleNote }: { benefits: EmployeeBenefit[]; roleNote: string }) {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState(ALL);
 
@@ -22,30 +20,40 @@ export default function WelfareClient({ benefits }: { benefits: EmployeeBenefit[
     // จำนวนบนแต่ละหมวดนับตามคำค้นปัจจุบัน จะได้รู้ว่าผลค้นหาอยู่หมวดไหน
     const searched = benefits.filter(matchesQuery);
     const shown = searched.filter((benefit) => category === ALL || benefit.category === category);
+    const chips = [{ id: ALL, count: searched.length }, ...categories.map((name) => ({ id: name, count: searched.filter((benefit) => benefit.category === name).length }))];
 
     return (
-        <div className="mx-auto max-w-[1280px] space-y-4 px-1 py-3 text-ink">
-            <div>
-                <h1 className="text-22 font-semibold">สิทธิ์สวัสดิการ</h1>
-                <p className="mt-1 text-12 text-muted">
-                    สิทธิ์ที่คุณใช้ได้ {benefits.length} รายการ ประจำปี {new Date().getFullYear() + 543} เปิดดูรายละเอียดเพื่อตรวจเงื่อนไขและหลักฐานก่อนยื่นเบิก
-                </p>
+        <>
+            <PageHead title="สิทธิ์สวัสดิการ" description={`สวัสดิการที่คุณมีสิทธิ์ ${benefits.length} รายการ ปีงบ ${new Date().getFullYear() + 543}${roleNote ? ` ${roleNote}` : ''}`} />
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div role="group" aria-label="กรองสวัสดิการ" className="flex flex-wrap gap-1.5">
+                    {chips.map((chip) => {
+                        const active = chip.id === category;
+                        return (
+                            <button
+                                key={chip.id}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => setCategory(chip.id)}
+                                className={cx(
+                                    'h-8 rounded-full px-3.5 text-13 transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1',
+                                    active ? 'bg-ink text-white' : 'border border-slate-300 bg-white text-ink-soft hover:bg-surface',
+                                )}
+                            >
+                                {chip.id} <span className="tabular-nums">{chip.count}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+                <label className="w-full sm:w-[260px]">
+                    <span className="sr-only">ค้นหาสวัสดิการ</span>
+                    <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาสวัสดิการ" className={cx(inputClass, '!h-9')} />
+                </label>
             </div>
 
-            <SearchInput label="ค้นหาสวัสดิการ" placeholder="ค้นหาชื่อสวัสดิการ หรือหมวด" value={query} onChange={setQuery} className="md:max-w-[480px]" />
-
-            <FilterChips
-                label="กรองตามหมวด"
-                value={category}
-                onChange={setCategory}
-                options={[
-                    { id: ALL, label: ALL, count: searched.length },
-                    ...categories.map((name) => ({ id: name, label: name, count: searched.filter((benefit) => benefit.category === name).length })),
-                ]}
-            />
-
             {shown.length === 0 ? (
-                <div className="rounded-lg border border-line bg-white px-4 py-10 text-center text-13 text-muted">
+                <Sheet className="px-4 py-10 text-center text-13 text-muted">
                     <p>{benefits.length === 0 ? 'ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้ในขณะนี้' : 'ไม่พบสวัสดิการที่ตรงกับการค้นหา'}</p>
                     {benefits.length > 0 ? (
                         <button
@@ -54,48 +62,44 @@ export default function WelfareClient({ benefits }: { benefits: EmployeeBenefit[
                                 setQuery('');
                                 setCategory(ALL);
                             }}
-                            className="mt-2 text-primary-700 underline-offset-4 hover:underline"
+                            className="mt-2 text-primary-600 underline-offset-4 hover:underline"
                         >
                             ล้างการค้นหา
                         </button>
                     ) : null}
-                </div>
+                </Sheet>
             ) : (
-                <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {shown.map((benefit) => (
-                        <li key={benefit.code} className="flex flex-col rounded-lg border border-line bg-white p-4">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-12 text-muted">{benefit.category}</p>
-                                    <h2 className="mt-1 text-15 font-semibold text-ink">{benefit.name}</h2>
+                <ul aria-label="รายการสวัสดิการ" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {shown.map((benefit) => {
+                        const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
+                        return (
+                            <li key={benefit.code} className="flex flex-col overflow-hidden rounded-lg border border-line bg-white">
+                                <BenefitThumb category={benefit.category} className="h-[140px]" />
+                                <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
+                                    <p className="text-12 text-muted">
+                                        {benefit.code} · {benefit.category}
+                                    </p>
+                                    <h2 className="text-16 font-semibold">{benefit.name}</h2>
+                                    {benefit.description ? <p className="text-13 text-ink-soft">{benefit.description}</p> : null}
+                                    <div className="mt-auto flex justify-between gap-3 pt-1.5 text-12 text-muted">
+                                        <span>{benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : benefit.maxClaimsNote || 'ไม่จำกัดครั้ง'}</span>
+                                        <span className={cx('font-semibold tabular-nums', outOfClaims ? 'text-status-pending-ink' : 'text-ink')}>
+                                            {outOfClaims ? 'ครบจำนวนครั้งแล้ว' : `คงเหลือ ${baht(benefit.remaining)}`}
+                                        </span>
+                                    </div>
+                                    <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
+                                    <p className="text-12 text-muted">
+                                        วงเงิน {baht(benefit.limit)} ต่อ{benefit.budgetLabel}
+                                    </p>
+                                    <Link href={`/employee/welfare/${encodeURIComponent(benefit.code)}`} aria-label={`ดูรายละเอียด ${benefit.name}`} className={cx(pill.outline, 'mt-1.5')}>
+                                        ดูรายละเอียด
+                                    </Link>
                                 </div>
-                                <Tag tone={benefit.remaining > 0 ? 'success' : 'neutral'}>{benefit.remaining > 0 ? 'ใช้สิทธิ์ได้' : 'ใช้สิทธิ์ครบแล้ว'}</Tag>
-                            </div>
-                            {benefit.description ? <p className="mt-2 text-13 leading-5 text-muted">{benefit.description}</p> : null}
-
-                            <dl className="mt-auto grid grid-cols-2 gap-3 pt-4 text-13">
-                                <div>
-                                    <dt className="text-12 text-muted">วงเงินต่อ{benefit.budgetLabel}</dt>
-                                    <dd className="mt-1 font-semibold tabular-nums">{number.format(benefit.limit)} บาท</dd>
-                                </div>
-                                <div className="text-right">
-                                    <dt className="text-12 text-muted">คงเหลือ</dt>
-                                    <dd className="mt-1 font-semibold tabular-nums text-primary-700">{number.format(benefit.remaining)} บาท</dd>
-                                </div>
-                            </dl>
-
-                            <Link
-                                href={`/employee/welfare/${encodeURIComponent(benefit.code)}`}
-                                aria-label={`ดูรายละเอียด ${benefit.name}`}
-                                className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary-50 text-13 font-medium text-primary-700 transition-colors hover:bg-primary-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                            >
-                                ดูรายละเอียด
-                                <ArrowRight className="size-3.5" aria-hidden="true" />
-                            </Link>
-                        </li>
-                    ))}
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
-        </div>
+        </>
     );
 }
