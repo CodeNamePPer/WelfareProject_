@@ -9,7 +9,9 @@ import {
   Gift,
   History,
   LayoutDashboard,
+  Eye,
   ListChecks,
+  Stamp,
   Network,
   UserCog,
   Users,
@@ -28,7 +30,7 @@ export interface NavItem {
   switchesToRequester?: boolean;
 }
 
-export type NavSection = 'admin' | 'hr' | 'employee' | 'finance';
+export type NavSection = 'admin' | 'hr' | 'hr_head' | 'employee' | 'finance';
 
 const REQUEST_ITEM: NavItem = {
   id: 'requests',
@@ -72,13 +74,32 @@ export const NAV: Record<NavSection, SectionConfig> = {
     basePath: '/hr',
     subtitle: 'HR',
     sectionLabel: 'HR',
+    // โปรไฟล์ของ HR (ดีไซน์ P01 5 แท็บ)
+    profileHref: '/hr/profile',
     items: (notificationCount) => [
-      { id: 'home', label: 'หน้าแรก', icon: LayoutDashboard, href: '/hr/home' },
-      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, badge: notificationCount },
+      // ตัวเลขของ HR คือคำขอที่รอ HR ตรวจ (ดีไซน์ H01–H08)
+      { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
+      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/hr/notifications' },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
-      { id: 'logs', label: 'ประวัติการแก้ไข', icon: History },
+      { id: 'logs', label: 'ประวัติการแก้ไข', icon: History, href: '/hr/logs' },
+      REQUEST_ITEM,
+    ],
+  },
+  // หัวหน้า HR (ดีไซน์ HH1–HH4) ใช้เส้นทาง /hr เดียวกัน · หัวหน้า HR = หัวหน้าฝ่ายทรัพยากรบุคคล (lib/hr/hrHead.ts)
+  hr_head: {
+    basePath: '/hr',
+    subtitle: 'หัวหน้า HR',
+    sectionLabel: 'HR',
+    profileHref: '/hr/profile',
+    items: (notificationCount) => [
+      { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
+      { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp, href: '/hr/proposals', badgeLabel: 'รออนุมัติ' },
+      { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText, href: '/hr/hr-claims', badgeLabel: 'รอตรวจ' },
+      { id: 'visibility', label: 'การแสดงสวัสดิการ', icon: Eye },
+      { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
+      { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       REQUEST_ITEM,
     ],
   },

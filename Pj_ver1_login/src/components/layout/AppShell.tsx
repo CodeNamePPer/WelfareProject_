@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
@@ -16,11 +16,17 @@ interface AppShellProps {
   /** Menu ids this user should not see (Style Guide: hide, don't disable). */
   hiddenNavIds?: string[];
   notificationCount: number;
+  /** ตัวเลขงานค้างของเมนูอื่นนอกจากเมนูแรก ตาม id ของเมนู (เช่น หัวหน้า HR: proposals) */
+  badges?: Record<string, number>;
   user: SidebarUser;
   children: ReactNode;
 }
 
-export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, user, children }: AppShellProps) {
+const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head'];
+// HR และหัวหน้า HR: เนื้อหาคอลัมน์เดียว กว้างสุด 1140px จัดกลาง (สเปกรีดีไซน์ HR)
+const HR_COLUMN: NavSection[] = ['hr', 'hr_head'];
+
+export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, badges, user, children }: AppShellProps) {
   const pathname = usePathname();
   const { notifyPending } = useToast();
   // 768-1023px: collapsed by default (Style Guide). Below 768px the sidebar is a drawer.
@@ -32,12 +38,17 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, u
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen">
+    // ส่วนที่สร้างจากดีไซน์ "แบบ C" (ผู้ส่งคำขอและ HR): ระยะห่างเท่าดีไซน์ (ดู tailwind.config.ts) และพื้นหลัง #F3F4F6
+    <div
+      className={cx('min-h-screen', DESIGN_C.includes(section) && 'bg-[#F3F4F6]')}
+      style={DESIGN_C.includes(section) ? ({ '--sp': 'calc(1rem * 16 / 14)' } as CSSProperties) : undefined}
+    >
       <Sidebar
         section={section}
         hiddenNavIds={hiddenNavIds}
         activeId={activeNavId(section, pathname)}
         notificationCount={notificationCount}
+        badges={badges}
         user={user}
         collapsed={collapsed}
         mobileOpen={mobileOpen}
@@ -70,8 +81,10 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, u
             content takes that space instead of leaving wider empty gutters on both sides. */}
         <main
           className={cx(
-            'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
-            collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
+            'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8',
+            // ดีไซน์แบบ C เว้นขอบบน 24px ล่าง 40px ส่วน Admin คง 32px เดิม
+            DESIGN_C.includes(section) ? 'lg:pb-10' : 'lg:py-8',
+            HR_COLUMN.includes(section) ? 'max-w-[1140px]' : collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
           )}
         >
           {children}

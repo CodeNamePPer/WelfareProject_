@@ -7146,3 +7146,76 @@
   list-style: decimal;
   line-height: 1.8;
 }
+
+
+/* -----------------------------------------------------------------------------
+   H10 เพิ่มพนักงาน: ใช้ค่าดีไซน์เดียวกับชุด component ของ HR (features/hr/ui)
+   การ์ดขอบ #E2E8F0 มุม 8px ไม่มีเงา · ช่องกรอกสูง 42px ขอบ #CBD5E1 · ปุ่มสูง 38px มุม 999px
+   จำกัดเฉพาะหน้าเพิ่มพนักงาน ไม่กระทบหน้า HR อื่นที่ยังใช้ class เดิม
+   ----------------------------------------------------------------------------- */
+.hr-app .employee-add-page-content {
+  padding-top: 0;
+}
+
+.hr-app .employee-add-page-content .employee-add-header {
+  margin-bottom: 16px;
+}
+
+.hr-app .employee-add-page-content .employee-profile-card {
+  border-color: #e2e8f0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.hr-app .employee-add-page-content .profile-field > span,
+.hr-app .employee-add-page-content .profile-field > legend {
+  color: #33415c;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field input:not([type="radio"]):not([type="checkbox"]),
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field select {
+  height: 42px;
+  min-height: 42px;
+  border-color: #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.hr-app .employee-add-page-content .employee-add-field-grid .profile-field textarea {
+  border-color: #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.hr-app .employee-add-page-content .profile-field input:focus,
+.hr-app .employee-add-page-content .profile-field select:focus,
+.hr-app .employee-add-page-content .profile-field textarea:focus {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 1px #1d4ed8;
+}
+
+.hr-app .employee-add-page-content .button {
+  height: 38px;
+  min-height: 38px;
+  border-radius: 999px;
+  padding: 0 18px;
+  font-weight: 500;
+}
+
+.hr-app .employee-add-page-content .button-primary {
+  background: #1d4ed8;
+}
+
+.hr-app .employee-add-page-content .button-primary:hover {
+  background: #1e40af;
+}
+
+.hr-app .employee-add-page-content .button-secondary {
+  border-color: #1d4ed8;
+  color: #1d4ed8;
+}
+
+.hr-app .employee-add-page-content .button-secondary:hover {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}

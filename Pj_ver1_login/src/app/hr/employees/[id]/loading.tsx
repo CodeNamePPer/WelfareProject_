@@ -1,62 +1,45 @@
 import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
-import { FactsSkeleton, SkeletonLines, SkeletonTable, type SkeletonColumn } from "../../HrSkeletons";
+import { Card } from "@/features/hr/ui";
 
-const ENTITLEMENT_COLUMNS: SkeletonColumn[] = [
-  { label: "สวัสดิการ", cell: <SkeletonLines main="w-36" meta="w-20" /> },
-  { label: "วงเงิน", className: "queue-num", cell: <SkeletonLines main="w-20" meta="w-16" end /> },
-  { label: "จำนวนครั้ง", cell: <Skeleton className="h-4 w-24" /> },
-  { label: "ใช้ไปแล้ว", className: "queue-num", cell: <Skeleton className="ml-auto h-4 w-20" /> },
-  { label: "สิทธิ์", cell: <Skeleton className="h-6 w-20 rounded-full" /> },
-];
-
-const REQUEST_COLUMNS: SkeletonColumn[] = [
-  { label: "คำขอ", cell: <SkeletonLines main="w-36" meta="w-28" /> },
-  { label: "ยอดเบิก", className: "queue-num", cell: <Skeleton className="ml-auto h-4 w-20" /> },
-  { label: "สถานะ", cell: <Skeleton className="h-6 w-24 rounded-full" /> },
-  { label: "วันที่", cell: <Skeleton className="h-4 w-24" /> },
-];
-
-function SheetHead({ title, meta }: { title: string; meta: string }) {
-  return (
-    <div className="profile-sheet-head">
-      <h2>{title}</h2>
-      <Skeleton className={`h-4 max-w-full ${meta}`} />
-    </div>
-  );
-}
-
-// โครงโปรไฟล์พนักงาน ชื่อและรหัสยังไม่รู้จนกว่าข้อมูลจะมา
+// โครงโปรไฟล์พนักงาน (H09) ระหว่างรอข้อมูล
 export default function EmployeeProfileLoading() {
   return (
-    <SkeletonScreen className="page-content queue-page profile-page">
-      <Skeleton className="h-4 w-44" />
-
-      <header className="queue-heading">
-        <Skeleton className="h-8 w-64 max-w-full" />
-        <ul className="queue-summary">
-          <li><Skeleton className="inline-block h-4 w-16 align-middle" /></li>
-          <li><Skeleton className="inline-block h-6 w-20 rounded-full align-middle" /></li>
-        </ul>
-      </header>
-
-      <section className="queue-sheet profile-sheet">
-        <h2>ข้อมูลการทำงาน</h2>
-        <FactsSkeleton count={7} />
-      </section>
-
-      <section className="queue-sheet">
-        <SheetHead title="สิทธิสวัสดิการ" meta="w-96" />
-        <div className="queue-table-scroll">
-          <SkeletonTable className="queue-table" columns={ENTITLEMENT_COLUMNS} rows={5} />
+    <SkeletonScreen className="flex w-full flex-col gap-4 text-14 leading-[1.55] text-ink">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-3 w-48" />
+        <Skeleton className="h-7 w-56" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="flex flex-wrap items-start gap-4">
+        <Card className="min-w-0 flex-[1_1_280px] overflow-hidden">
+          <div className="h-14 bg-[#E6EBF3]" />
+          <div className="flex flex-col gap-2 px-[18px] pt-3 pb-4">
+            <Skeleton className="size-16 rounded-full" />
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-32" />
+            <div className="mt-3 grid grid-cols-2 gap-2.5 border-t border-line pt-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <Skeleton key={index} className="h-9 w-24" />
+              ))}
+            </div>
+          </div>
+        </Card>
+        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+          {[5, 4].map((rows, card) => (
+            <Card key={card}>
+              <div className="px-5 pt-3.5 pb-2">
+                <Skeleton className="h-5 w-44" />
+              </div>
+              {Array.from({ length: rows }).map((_, index) => (
+                <div key={index} className="flex items-center justify-between gap-3 border-t border-[#F1F5F9] px-5 py-3">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </Card>
+          ))}
         </div>
-      </section>
-
-      <section className="queue-sheet">
-        <SheetHead title="คำขอสวัสดิการ" meta="w-48" />
-        <div className="queue-table-scroll">
-          <SkeletonTable className="queue-table" columns={REQUEST_COLUMNS} rows={4} />
-        </div>
-      </section>
+      </div>
     </SkeletonScreen>
   );
 }

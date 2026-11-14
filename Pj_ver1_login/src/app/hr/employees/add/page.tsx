@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { PageHeader, ReadOnlyInput } from "@/features/hr/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
@@ -405,10 +405,13 @@ export default function AddEmployeePage() {
     <div className="app-shell">
       <div className="app-main employee-add-main">
         <div className="page-content employee-add-content employee-add-page-content">
-          <Breadcrumb className="breadcrumbs" items={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "เพิ่มพนักงานรายบุคคล" }]} />
-          <div className="employee-add-heading">
-            <h1>เพิ่มพนักงานรายบุคคล</h1>
-            <p>กรอกข้อมูลพนักงานเพื่อกำหนดสิทธิ์และคำนวณสวัสดิการ</p>
+          {/* หัวหน้าแบบเดียวกับหน้า HR อื่น (ดีไซน์ H10) */}
+          <div className="employee-add-header">
+            <PageHeader
+              crumbs={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "เพิ่มพนักงาน" }]}
+              title="เพิ่มพนักงาน"
+              description="กรอกข้อมูลพนักงานเพื่อกำหนดสิทธิ์และคำนวณสวัสดิการ"
+            />
           </div>
 
           {restored && (
@@ -453,11 +456,8 @@ export default function AddEmployeePage() {
 
                 {step === 0 && (
                   <div className="employee-add-field-grid employee-add-work-grid">
-                    <label className="profile-field">
-                      <span>รหัสพนักงาน</span>
-                      <input value="กำหนดอัตโนมัติ" readOnly aria-describedby="employee-code-hint" />
-                      <small id="employee-code-hint">ระบบจะสร้างรหัสเมื่อบันทึก</small>
-                    </label>
+                    {/* ช่องที่ระบบกำหนด: สีเทา มีแม่กุญแจ แก้ไขไม่ได้ */}
+                    <ReadOnlyInput label="รหัสพนักงาน" value="กำหนดอัตโนมัติ" hint="ระบบจะสร้างรหัสเมื่อบันทึก" />
                     <label className={fieldClass("startDate")}>
                       <span>วันเริ่มงาน</span>
                       <input required type="date" value={form.startDate} onChange={(event) => updateField("startDate", event.target.value)} {...invalidProps("startDate")} />

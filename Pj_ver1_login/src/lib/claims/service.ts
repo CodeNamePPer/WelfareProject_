@@ -196,6 +196,20 @@ export async function countClaimsToRevise(employeeCode: string): Promise<number>
   return count ?? 0;
 }
 
+/** จำนวนคำขอที่รอ HR ตรวจ (ยื่นใหม่หรือการเงินส่งกลับ) ใช้กับตัวเลขบนเมนู HR โหลดไม่ได้คืน 0 */
+export async function countClaimsForHr(): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("welfare_claim")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["pending_hr", "finance_returned"])
+    .is("deleted_at", null);
+  if (error) {
+    console.error("[claims] count HR queue failed", error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 /** ผู้ที่เข้าระบบดูคำขอนี้ได้หรือไม่ ตามตารางสิทธิ์ในเอกสารออกแบบ */
 export function canViewClaim(claim: ClaimRecord, actor: ClaimActor) {
   if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) return true;

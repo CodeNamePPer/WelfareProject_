@@ -18,6 +18,7 @@ interface SidebarProps {
   hiddenNavIds?: string[];
   activeId: string;
   notificationCount: number;
+  badges?: Record<string, number>;
   user: SidebarUser;
   collapsed: boolean;
   mobileOpen: boolean;
@@ -31,6 +32,7 @@ export function Sidebar({
   hiddenNavIds,
   activeId,
   notificationCount,
+  badges,
   user,
   collapsed,
   mobileOpen,
@@ -39,7 +41,10 @@ export function Sidebar({
   onNavigate,
 }: SidebarProps) {
   const config = NAV[section];
-  const items = config.items(notificationCount).filter((item) => !hiddenNavIds?.includes(item.id));
+  const items = config
+    .items(notificationCount)
+    .filter((item) => !hiddenNavIds?.includes(item.id))
+    .map((item) => (badges?.[item.id] !== undefined ? { ...item, badge: badges[item.id] } : item));
 
   const hideWhenCollapsed = collapsed ? 'md:hidden' : '';
   const profileActive = activeId === 'profile';
