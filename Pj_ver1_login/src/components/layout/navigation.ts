@@ -74,8 +74,8 @@ export const NAV: Record<NavSection, SectionConfig> = {
     basePath: '/hr',
     subtitle: 'HR',
     sectionLabel: 'HR',
-    // หน้าโปรไฟล์ของ HR (P01 5 แท็บ) ยังไม่มี ใช้หน้าโปรไฟล์ของฉันที่มีอยู่ไปก่อน เหมือนเมนูการเงิน (ข้อ 10 จะเปลี่ยนเป็น /hr/profile)
-    profileHref: '/employee/profile',
+    // โปรไฟล์ของ HR (ดีไซน์ P01 5 แท็บ)
+    profileHref: '/hr/profile',
     items: (notificationCount) => [
       // ตัวเลขของ HR คือคำขอที่รอ HR ตรวจ (ดีไซน์ H01–H08)
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
@@ -92,7 +92,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
     basePath: '/hr',
     subtitle: 'หัวหน้า HR',
     sectionLabel: 'HR',
-    profileHref: '/employee/profile',
+    profileHref: '/hr/profile',
     items: (notificationCount) => [
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
       { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp, href: '/hr/proposals', badgeLabel: 'รออนุมัติ' },
