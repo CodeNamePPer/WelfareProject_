@@ -3,13 +3,14 @@ import { getSession } from "@/lib/auth/get-session";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
 import { LimitInputError, getEmployeeLimits, saveEmployeeLimit } from "@/lib/hr/employeeLimits";
+import { isHrHead } from "@/lib/hr/hrHead";
 
 export const runtime = "nodejs";
 
-// ปรับวงเงินรายคน (ดีไซน์ H09): เฉพาะ HR และบันทึก Log ทุกครั้ง
+// ปรับวงเงินรายคน (ดีไซน์ H09): เฉพาะหัวหน้า HR (หัวหน้าฝ่ายทรัพยากรบุคคล) และบันทึก Log ทุกครั้ง
 export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "HR") return NextResponse.json({ error: "ปรับวงเงินรายคนได้เฉพาะ HR" }, { status: 403 });
+  if (!session || !(await isHrHead(session))) return NextResponse.json({ error: "ปรับวงเงินรายคนได้เฉพาะหัวหน้า HR" }, { status: 403 });
 
   let body: Record<string, unknown>;
   try {

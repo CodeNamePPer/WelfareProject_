@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getHrEmployees } from "@/lib/hr/employees";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { getEmployeeLimits } from "@/lib/hr/employeeLimits";
+import { getHrHeadCode } from "@/lib/hr/hrHead";
 import { getSession } from "@/lib/auth/get-session";
 import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
 import { bangkokToday, thaiDate } from "@/lib/claims/requester";
@@ -53,6 +54,9 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
     getEmployeeLimits(code).catch(() => null),
     getSession(),
   ]);
+  // ปรับวงเงินรายคนได้เฉพาะหัวหน้า HR คนอื่นเห็นตารางอย่างเดียว
+  const hrHead = await getHrHeadCode();
+  const canAdjust = session?.role === "HR" && hrHead !== null && session.sub === hrHead;
   const today = bangkokToday();
   const year = today.slice(0, 4);
   const thaiYear = Number(year) + 543;
@@ -119,7 +123,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
                 สิทธิ์และวงเงินรายคน
               </h2>
               <span className="text-12 text-muted">
-                ค่าเริ่มต้นตามระดับ{employee.jobLevel ? ` ${employee.jobLevel}` : ""} · ปรับรายคนได้ บันทึก Log
+                ค่าเริ่มต้นตามระดับ{employee.jobLevel ? ` ${employee.jobLevel}` : ""} · {canAdjust ? "ปรับรายคนได้ บันทึก Log" : "ปรับรายคนได้เฉพาะหัวหน้า HR"}
               </span>
             </div>
             {employee.status !== "ACTIVE" ? (
@@ -129,7 +133,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
             ) : benefits.length === 0 ? (
               <EmptyState>ยังไม่มีสวัสดิการที่มีสิทธิ์</EmptyState>
             ) : (
-              <LimitTable employeeCode={employee.code} rows={limitRows} canAdjust={session?.role === "HR"} />
+              <LimitTable employeeCode={employee.code} rows={limitRows} canAdjust={canAdjust} />
             )}
           </Card>
 
