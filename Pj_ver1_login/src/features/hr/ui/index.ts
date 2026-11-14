@@ -10,3 +10,4 @@ export { Avatar } from './Avatar';
 export { RequesterCompact, RequesterFull, type RequesterSummary, type RequesterDetail } from './RequesterCard';
 export { StatTile, StatRow } from './StatTile';
 export { FilterPill } from './FilterPill';
+export { BenefitPreview } from './BenefitPreview';

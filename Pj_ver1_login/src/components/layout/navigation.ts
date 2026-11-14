@@ -87,7 +87,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       REQUEST_ITEM,
     ],
   },
-  // หัวหน้า HR (ดีไซน์ HH1–HH4) ใช้เส้นทาง /hr เดียวกัน ยังไม่ผูกกับบทบาทจนกว่าจะมีบทบาท HR_HEAD (ข้อ 9)
+  // หัวหน้า HR (ดีไซน์ HH1–HH4) ใช้เส้นทาง /hr เดียวกัน · หัวหน้า HR = หัวหน้าฝ่ายทรัพยากรบุคคล (lib/hr/hrHead.ts)
   hr_head: {
     basePath: '/hr',
     subtitle: 'หัวหน้า HR',
@@ -95,7 +95,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
     profileHref: '/employee/profile',
     items: (notificationCount) => [
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
-      { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp },
+      { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp, href: '/hr/proposals', badgeLabel: 'รออนุมัติ' },
       { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText },
       { id: 'visibility', label: 'การแสดงสวัสดิการ', icon: Eye },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },

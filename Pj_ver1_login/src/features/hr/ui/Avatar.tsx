@@ -3,7 +3,7 @@ import { initialsOf } from '@/features/hr/queue';
 
 // รูปย่อพนักงาน: มีรูปใช้รูป ไม่มีใช้อักษรย่อ (ฐานข้อมูลยังไม่มีรูปพนักงาน)
 const sizeClass = { sm: 'size-8 text-12', md: 'size-10 text-13', lg: 'size-16 text-[20px]' } as const;
-const toneClass = { mist: 'bg-mist text-ink-soft', blue: 'bg-[#DBEAFE] text-[#1E40AF]' } as const;
+const toneClass = { mist: 'bg-mist text-ink-soft', blue: 'bg-[#DBEAFE] text-[#1E40AF]', orange: 'bg-[#FFEDD5] text-[#9A3412]' } as const;
 
 export function Avatar({ name, src, size = 'md', tone = 'mist', className }: { name: string; src?: string | null; size?: keyof typeof sizeClass; tone?: keyof typeof toneClass; className?: string }) {
   if (src) {

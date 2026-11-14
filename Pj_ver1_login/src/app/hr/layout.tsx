@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { countClaimsForHr } from "@/lib/claims/service";
+import { isHrHead } from "@/lib/hr/hrHead";
+import { countPendingProposals } from "@/lib/hr/proposals";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -25,12 +27,19 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
     redirect("/access-denied?reason=role");
   }
 
-  const waiting = await countClaimsForHr();
+  const [waiting, head] = await Promise.all([countClaimsForHr(), isHrHead(session)]);
+  // หัวหน้า HR เห็นเมนูของหัวหน้า HR พร้อมจำนวนข้อเสนอที่รออนุมัติ
+  const proposals = head ? await countPendingProposals() : 0;
 
   return (
     <ToastProvider>
       <NavigationProgress />
-      <AppShell section="hr" notificationCount={waiting} user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}>
+      <AppShell
+        section={head ? "hr_head" : "hr"}
+        notificationCount={waiting}
+        badges={head ? { proposals } : undefined}
+        user={{ name: session.name, roleLabel: head ? "หัวหน้าฝ่ายบุคคล" : (ROLE_LABELS[session.role] ?? session.role) }}
+      >
         <div className="hr-app">{children}</div>
       </AppShell>
     </ToastProvider>

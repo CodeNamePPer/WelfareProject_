@@ -16,6 +16,8 @@ interface AppShellProps {
   /** Menu ids this user should not see (Style Guide: hide, don't disable). */
   hiddenNavIds?: string[];
   notificationCount: number;
+  /** ตัวเลขงานค้างของเมนูอื่นนอกจากเมนูแรก ตาม id ของเมนู (เช่น หัวหน้า HR: proposals) */
+  badges?: Record<string, number>;
   user: SidebarUser;
   children: ReactNode;
 }
@@ -24,7 +26,7 @@ const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head'];
 // HR และหัวหน้า HR: เนื้อหาคอลัมน์เดียว กว้างสุด 1140px จัดกลาง (สเปกรีดีไซน์ HR)
 const HR_COLUMN: NavSection[] = ['hr', 'hr_head'];
 
-export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, user, children }: AppShellProps) {
+export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, badges, user, children }: AppShellProps) {
   const pathname = usePathname();
   const { notifyPending } = useToast();
   // 768-1023px: collapsed by default (Style Guide). Below 768px the sidebar is a drawer.
@@ -46,6 +48,7 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, u
         hiddenNavIds={hiddenNavIds}
         activeId={activeNavId(section, pathname)}
         notificationCount={notificationCount}
+        badges={badges}
         user={user}
         collapsed={collapsed}
         mobileOpen={mobileOpen}

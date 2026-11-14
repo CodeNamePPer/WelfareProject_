@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
-import { useToast } from '@/components/ui/Toast';
 import { BenefitThumb } from '@/features/requester/ui';
 import type { ProposalStatus, ProposalSummary } from '@/lib/hr/proposals';
-import { Badge, Button, Card, EmptyState, PageHeader, Tabs, type BadgeTone } from '@/features/hr/ui';
+import { Badge, ButtonLink, Card, EmptyState, PageHeader, Tabs, type BadgeTone } from '@/features/hr/ui';
 
 export type BenefitRow = { code: string; name: string; category: string; amount: number; claims: string; active: boolean };
 
@@ -26,8 +25,7 @@ const PROPOSAL_BADGE: Record<ProposalStatus, { label: string; tone: BadgeTone }>
 };
 const ROLE_LABEL = { HR: 'HR', SUPER_ADMIN: 'Admin' } as const;
 
-export function BenefitsClient({ rows, proposals }: { rows: BenefitRow[]; proposals: ProposalSummary[] | null }) {
-  const { notifyPending } = useToast();
+export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]; proposals: ProposalSummary[] | null; isHead: boolean }) {
   const [tab, setTab] = useState<Tab>('active');
   const active = rows.filter((row) => row.active).length;
   const shown = rows.filter((row) => tab === 'all' || (tab === 'active' ? row.active : !row.active));
@@ -36,9 +34,12 @@ export function BenefitsClient({ rows, proposals }: { rows: BenefitRow[]; propos
     <>
       <PageHeader
         title="จัดการสวัสดิการ"
-        description="ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง"
-        // ฟอร์มเสนอ 4 ขั้น (H04) อยู่ในข้อ 6
-        actions={<Button onClick={() => notifyPending('เสนอสวัสดิการใหม่')}>เสนอสวัสดิการใหม่</Button>}
+        description={
+          isHead
+            ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้างสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
+            : 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง'
+        }
+        actions={<ButtonLink href="/hr/benefits/propose">{isHead ? 'สร้างสวัสดิการใหม่' : 'เสนอสวัสดิการใหม่'}</ButtonLink>}
       />
 
       <Card aria-labelledby="my-proposals">
@@ -54,7 +55,11 @@ export function BenefitsClient({ rows, proposals }: { rows: BenefitRow[]; propos
           <EmptyState>ยังไม่มีข้อเสนอที่รอหัวหน้า HR</EmptyState>
         ) : (
           proposals.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 border-t border-[#F1F5F9] px-5 py-3">
+            <Link
+              key={item.id}
+              href={isHead && item.status === 'pending' ? `/hr/proposals/${item.id}` : `/hr/benefits/proposals/${item.id}`}
+              className="flex items-center justify-between gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline hover:bg-surface"
+            >
               <span className="min-w-0">
                 <span className="block font-medium">
                   {item.name}
@@ -65,7 +70,7 @@ export function BenefitsClient({ rows, proposals }: { rows: BenefitRow[]; propos
                 </span>
               </span>
               <Badge tone={PROPOSAL_BADGE[item.status].tone}>{PROPOSAL_BADGE[item.status].label}</Badge>
-            </div>
+            </Link>
           ))
         )}
       </Card>
