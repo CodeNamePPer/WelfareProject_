@@ -8,7 +8,25 @@ export interface Employee {
 }
 
 /** submitted → hr-approved → finance-approved → paid; rejected can happen at the HR or finance step. */
-export type ClaimEventKind = 'submitted' | 'hr-approved' | 'finance-approved' | 'rejected' | 'paid';
+export type ClaimEventKind =
+  | 'submitted'
+  | 'resubmitted'
+  | 'revision-requested'
+  | 'amount-adjusted'
+  | 'hr-approved'
+  | 'finance-approved'
+  | 'rejected'
+  | 'returned'
+  | 'cancelled'
+  | 'paid'
+  | 'pay-date-changed'
+  | 'payment-failed'
+  | 'payment-reversed'
+  | 'receipt-submitted'
+  | 'receipt-approved'
+  | 'receipt-returned'
+  | 'advance-cancelled'
+  | 'refund-received';
 
 export interface ClaimEvent {
   kind: ClaimEventKind;
@@ -18,6 +36,25 @@ export interface ClaimEvent {
   by?: string;
   /** เหตุผลปฏิเสธ / หมายเหตุการปรับยอด / รอบจ่าย */
   note?: string;
+}
+
+export interface ClaimAttachmentItem {
+  id: string;
+  name: string;
+  docKind?: string;
+  isRestricted?: boolean;
+  src?: string;
+}
+
+export interface ClaimAdvanceSummary {
+  status: string;
+  statusLabel: string;
+  advanceAmount: number;
+  receiptDueDate: string;
+  receiptAmount: number | null;
+  settlement: string | null;
+  extraAmountApproved: number | null;
+  refundAmount: number | null;
 }
 
 export interface Claim {
@@ -41,8 +78,21 @@ export interface Claim {
   annualLimit: number | null;
   /** หมายเหตุจากผู้เบิก */
   note?: string;
+  /** ข้อมูลการยื่นแทน (HR ยื่นแทนพนักงาน) */
+  submittedByName?: string | null;
+  proxyReason?: string | null;
+  /** ผู้รับผลประโยชน์ & ประกัน */
+  beneficiaryRelation?: string | null;
+  beneficiaryName?: string | null;
+  totalCost?: number | null;
+  insurancePaid?: number | null;
+  insurerName?: string | null;
+  /** ข้อมูลเบิกล่วงหน้า (ถ้ามี) */
+  advance?: ClaimAdvanceSummary | null;
   /** ชื่อไฟล์เอกสารแนบ */
   attachments: string[];
+  /** รายละเอียดเอกสารแนบสำหรับเปิดดู */
+  attachmentItems?: ClaimAttachmentItem[];
   /** เรียงจากเก่าไปใหม่ – รายการแรกคือการยื่นเสมอ */
   timeline: ClaimEvent[];
 }
@@ -149,9 +199,25 @@ export interface AdminAlert {
 export type WelfareStatus = 'active' | 'inactive';
 export type BudgetType = 'รายปี' | 'รายเดือน' | 'ต่อครั้ง';
 
-export interface WelfareItem {
+export interface WelfareLevelLimit {
+  levelId: string;
   code: string;
   name: string;
+  amount: number;
+}
+
+export interface WelfareItem {
+  id?: string;
+  code: string;
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  detail?: string | null;
+  imagePath?: string | null;
+  allowFamily?: boolean;
+  allowInsurance?: boolean;
+  allowAdvance?: boolean;
+  levelLimits?: WelfareLevelLimit[];
   /** ISO date, YYYY-MM-DD */
   updatedAt: string;
   owner: string;

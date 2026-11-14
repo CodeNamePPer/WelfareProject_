@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ตรวจใบเสร็จเบิกล่วงหน้า</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F3F4F6}
+a{color:#1D4ED8;text-decoration:none}a:hover{color:#1E40AF;text-decoration:underline}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; color: #18253F; background: #F3F4F6; min-height: 1280px; font-size: 14px; line-height: 1.55; display: flex; flex-wrap: wrap">
+  <aside aria-label="เมนูด้านซ้าย" style="flex: 0 0 260px; box-sizing: border-box; background: #FFFFFF; border-right: 1px solid #E2E8F0; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; min-height: 1280px">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 20px">
+      <button type="button" aria-label="ย่อเมนู" style="width: 36px; height: 36px; border: 0; background: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #18253F"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div style="line-height: 1.3"><div style="font-size: 15px; font-weight: 600">ระบบพนักงานและสวัสดิการ</div><div style="font-size: 11px; color: #5B6B82">HR</div></div>
+    </div>
+    <div style="padding: 0 12px 6px; font-size: 11px; font-weight: 600; color: #5B6B82">HR</div>
+    <nav aria-label="เมนูหลัก" style="display: flex; flex-direction: column; gap: 4px"><a href="H01_HrQueue.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; background: #DBEAFE; color: #1E40AF"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>หน้าแรก · คิวคำขอ<span style="margin-left: auto; border-radius: 9px; background: #1D4ED8; color: #FFFFFF; padding: 0 7px; font-size: 11px; font-weight: 500">4</span></a><a href="H07_HrNotifications.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>แจ้งเตือน<span style="margin-left: auto; border-radius: 9px; background: #1D4ED8; color: #FFFFFF; padding: 0 7px; font-size: 11px; font-weight: 500">2</span></a><a href="H03_HrBenefits.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 1 1 4.5-1.5V8M16.5 8A2.5 2.5 0 1 0 12 6.5"/></svg>จัดการสวัสดิการ</a><a href="H05_HrEmployees.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>จัดการพนักงานและสิทธิ์</a><a href="H06_HrReports.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>รายงานและสถิติ</a><a href="H08_HrLog.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></svg>ประวัติการแก้ไข</a><a href="R04_ClaimForm.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 10px 12px; font-size: 13px; font-weight: 600; text-decoration: none; color: #18253F"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18253F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15h6"/></svg>ยื่นคำขอสวัสดิการ</a></nav>
+    <div style="flex: 1"></div>
+    <div style="border-top: 1px solid #E2E8F0; padding-top: 12px; display: flex; flex-direction: column; gap: 4px">
+      <a href="P01_ProfileHr.dc.html" style="display: flex; align-items: center; gap: 10px; border-radius: 6px; padding: 8px; color: #18253F; text-decoration: none"><span style="width: 32px; height: 32px; border-radius: 50%; background: #EFF6FF; color: #1E40AF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px">ก</span><span style="line-height: 1.3; flex: 1"><span style="display: block; font-size: 13px; font-weight: 600">กมลวรรณ แก้วมณี</span><span style="display: block; font-size: 11px; color: #5B6B82">ฝ่ายบุคคล (HR)</span></span><span aria-hidden="true" style="color: #5B6B82">›</span></a>
+      <button type="button" style="display: flex; align-items: center; gap: 10px; border: 0; background: none; border-radius: 6px; padding: 10px 12px; font-size: 13px; color: #5B6B82; text-align: left"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>ออกจากระบบ</button>
+    </div>
+  </aside>
+  <div style="flex: 999 1 560px; min-width: 0">
+  <main style="max-width: 1140px; margin: 0 auto; padding: 24px 32px 40px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+      <div><nav aria-label="เส้นทาง" style="font-size: 12px; color: #5B6B82; display: flex; gap: 6px; margin-bottom: 4px"><a href="H01_HrQueue.dc.html" style="color: #5B6B82">คิวคำขอ</a><span aria-hidden="true">/</span><span style="color: #18253F">CLM-2569-0012</span></nav><h1 style="margin: 0; font-size: 22px; font-weight: 600">ตรวจใบเสร็จเบิกล่วงหน้า CLM-2569-0012</h1><p style="margin: 2px 0 0; color: #5B6B82; font-size: 13px">ทุนอบรมหลักสูตรภายนอก · แนบใบเสร็จ 5 ธ.ค. 2569 (ก่อนครบกำหนด 10 ธ.ค.)</p></div>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap"><span style="display: inline-block; background: #FEF3C7; color: #92400E; border-radius: 999px; padding: 1px 10px; font-size: 12px; font-weight: 500; white-space: nowrap">รอ HR ตรวจใบเสร็จ</span></div>
+    </div>
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start">
+      <div style="flex: 1 1 280px"><section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden">
+        <div style="height: 56px; background: #1E3A8A"></div>
+        <div style="padding: 0 18px 16px">
+          <div style="margin-top: -32px; border: 3px solid #FFFFFF; border-radius: 50%; width: 64px"><span style="width: 64px; height: 64px; border-radius: 50%; background: #DBEAFE; color: #1E40AF; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 20px; flex: 0 0 64px">อป</span></div>
+          <div style="font-size: 17px; font-weight: 600; margin-top: 6px">อนุชา ประเสริฐศรี</div>
+          <div style="font-size: 13px; color: #33415C">ผู้จัดการฝ่ายไอที</div>
+          <div style="font-size: 12px; color: #5B6B82">E00014 · ฝ่ายเทคโนโลยีสารสนเทศ</div>
+          <div style="margin-top: 6px"></div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E2E8F0">
+            <div><div style="font-size: 12px; color: #5B6B82">ระดับ</div><div style="font-size: 14px">L3 ผู้จัดการ</div></div><div><div style="font-size: 12px; color: #5B6B82">อายุงาน</div><div style="font-size: 14px">8 ปี 7 เดือน</div></div><div><div style="font-size: 12px; color: #5B6B82">หัวหน้า</div><div style="font-size: 14px">ธนากร ศรีสุข</div></div><div><div style="font-size: 12px; color: #5B6B82">สถานะ</div><div style="font-size: 14px">ทำงานอยู่</div></div>
+            <div><div style="font-size: 12px; color: #5B6B82">เบิกปีนี้</div><div style="font-size: 14px">5/30 ครั้ง</div></div><div><div style="font-size: 12px; color: #5B6B82">วงเงินใช้ได้</div><div style="font-size: 14px">฿63,600</div></div>
+          </div>
+          <a href="#" style="display: block; margin-top: 12px; font-size: 13px">ดูโปรไฟล์และประวัติการเบิกทั้งหมด ›</a>
+        </div>
+      </section></div>
+      <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px">
+          <h2 style="margin: 0 0 6px; font-size: 16px; font-weight: 600">สรุปยอด</h2>
+          <div style="display: flex; justify-content: space-between"><span style="color: #5B6B82">ยอดตามใบเสร็จ</span><span>฿21,800.00</span></div>
+          <div style="display: flex; justify-content: space-between"><span style="color: #5B6B82">จ่ายล่วงหน้าแล้ว (10 พ.ย.)</span><span>− ฿15,000.00</span></div>
+          <div style="display: flex; justify-content: space-between"><span style="color: #5B6B82">วงเงินคงเหลือสิทธิ์นี้</span><span>฿5,000.00</span></div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid #E2E8F0; padding-top: 8px; font-weight: 600"><span>จ่ายเพิ่มได้ (ไม่เกินวงเงิน)</span><span style="color: #1E40AF">฿5,000.00</span></div>
+          <div style="font-size: 12px; color: #9A3412">อีก ฿1,800 เกินวงเงิน ผู้ขอรับผิดชอบเอง</div>
+        </section>
+        <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px">
+          <h2 style="margin: 0 0 12px; font-size: 16px; font-weight: 600">ใบเสร็จและใบประกาศนียบัตร</h2>
+          <div style="background: #EEF1F5; border-radius: 8px; padding: 20px; height: 300px; box-sizing: border-box; overflow: auto"><div role="img" aria-label="ตัวอย่างใบเสร็จ" style="max-width: 460px; margin: 0 auto; background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,.15); padding: 28px 32px; font-size: 12px; line-height: 1.6"><b style="font-size: 14px">บริษัท คลาวด์ เทรนนิ่ง จำกัด</b><div>ใบเสร็จ INV-2569-4471 · 5 ธ.ค. 2569</div><div style="margin: 10px 0 6px">ได้รับเงินจาก นายอนุชา ประเสริฐศรี</div><div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #CBD5E1; padding: 4px 0"><span>AWS Solutions Architect Associate</span><span>18,500.00</span></div><div style="display: flex; justify-content: space-between; border-bottom: 1px dotted #CBD5E1; padding: 4px 0"><span>ค่าสอบใบรับรอง</span><span>3,300.00</span></div><div style="display: flex; justify-content: space-between; padding-top: 6px; font-weight: 700"><span>รวม</span><span>21,800.00</span></div></div></div>
+        </section>
+        <section style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px"><div><label style="display: block; font-size: 13px; font-weight: 500; color: #33415C; margin-bottom: 6px">ยอดจ่ายเพิ่มที่อนุมัติ (บาท) <span style="color: #B3261E">*</span></label><input value="5,000.00" style="width: 100%; box-sizing: border-box; height: 42px; border: 1px solid #CBD5E1; border-radius: 8px; padding: 0 12px; font-family: inherit; font-size: 14px; color: #18253F; background: #FFFFFF; text-align: right"></div><div><label style="display: block; font-size: 13px; font-weight: 500; color: #33415C; margin-bottom: 6px">เหตุผลเมื่อปรับยอด</label><input value="" style="width: 100%; box-sizing: border-box; height: 42px; border: 1px solid #CBD5E1; border-radius: 8px; padding: 0 12px; font-family: inherit; font-size: 14px; color: #18253F; background: #FFFFFF"></div></div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap"><button type="button" style="height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 18px; background: #1D4ED8; color: #FFFFFF; border: 0; border-radius: 999px; font-weight: 500; font-size: 13px; text-decoration: none">ใบเสร็จถูกต้อง ส่งการเงิน</button><button type="button" style="height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 18px; background: #FFFFFF; color: #1D4ED8; border: 1px solid #1D4ED8; border-radius: 999px; font-weight: 500; font-size: 13px; text-decoration: none; color: #9A3412; border-color: #EA580C">ส่งกลับให้แนบใหม่</button></div>
+          <p style="margin: 0; font-size: 12px; color: #5B6B82">ส่งกลับแล้ว ผู้ขอยังต้องแนบใหม่ภายใน 10 ธ.ค. เกินกำหนดระบบยกเลิกรายการ</p>
+        </section>
+      </div>
+    </div>
+  </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1280}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -34,6 +34,23 @@ function relativeTime(iso: string, now = new Date()): { time: string; daysAgo: n
   return { time: `${Math.floor(minutes / 60)} ชั่วโมงที่แล้ว`, daysAgo };
 }
 
+interface ProposalAlertRow {
+  id: string;
+  proposal_no: string;
+  name_th: string | null;
+  status: "needs_info" | "approved" | "rejected";
+  decision_note: string | null;
+  decided_at: string | null;
+  updated_at: string;
+  benefit: { name_th: string } | null;
+}
+
+const PROPOSAL_ALERT_TITLE: Record<ProposalAlertRow["status"], string> = {
+  needs_info: "หัวหน้า HR ขอข้อมูลข้อเสนอสวัสดิการเพิ่มเติม",
+  approved: "หัวหน้า HR อนุมัติข้อเสนอสวัสดิการแล้ว",
+  rejected: "หัวหน้า HR ไม่อนุมัติข้อเสนอสวัสดิการ",
+};
+
 /**
  * แหล่งข้อมูลแจ้งเตือนของ Admin เพียงที่เดียว – sidebar, การ์ดสรุป, แผงแจ้งเตือนบนหน้าแรก และหน้าแจ้งเตือน
  * อ่านจากที่นี่ทั้งหมด ตัวเลขจึงตรงกันทุกหน้า (cache: layout กับหน้าเดียวกันอ่านฐานข้อมูลครั้งเดียว)
@@ -41,15 +58,27 @@ function relativeTime(iso: string, now = new Date()): { time: string; daysAgo: n
  */
 export const getAdminAlerts = cache(async (viewerId: string): Promise<AdminAlert[]> => {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("admin_notifications")
-      .select("id, category, title, description, actionable, resolved_at, created_at, admin_notification_reads(employee_id)")
-      .eq("admin_notification_reads.employee_id", viewerId)
-      .order("created_at", { ascending: false })
-      .limit(LIMIT);
+    const since30d = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const [{ data, error }, proposalsRes] = await Promise.all([
+      supabaseAdmin
+        .from("admin_notifications")
+        .select("id, category, title, description, actionable, resolved_at, created_at, admin_notification_reads(employee_id)")
+        .eq("admin_notification_reads.employee_id", viewerId)
+        .order("created_at", { ascending: false })
+        .limit(LIMIT),
+      supabaseAdmin
+        .from("welfare_benefit_proposal")
+        .select("id, proposal_no, name_th, status, decision_note, decided_at, updated_at, benefit:benefit_id(name_th)")
+        .eq("proposer_role", "SUPER_ADMIN")
+        .in("status", ["needs_info", "approved", "rejected"])
+        .is("deleted_at", null)
+        .gte("updated_at", since30d)
+        .order("updated_at", { ascending: false })
+        .returns<ProposalAlertRow[]>(),
+    ]);
     if (error) throw error;
 
-    return (data as NotificationRow[]).map((row) => ({
+    const baseAlerts: (AdminAlert & { sortIso: string })[] = (data as NotificationRow[]).map((row) => ({
       id: String(row.id),
       category: row.category,
       title: row.title,
@@ -57,7 +86,27 @@ export const getAdminAlerts = cache(async (viewerId: string): Promise<AdminAlert
       ...relativeTime(row.created_at),
       unread: row.admin_notification_reads.length === 0,
       actionable: row.actionable && !row.resolved_at,
+      sortIso: row.created_at,
     }));
+
+    const proposalAlerts: (AdminAlert & { sortIso: string })[] = (proposalsRes.data ?? []).map((row) => {
+      const iso = row.decided_at ?? row.updated_at;
+      const benefitName = row.name_th ?? row.benefit?.name_th ?? row.proposal_no;
+      return {
+        id: `prop-${row.id}`,
+        category: "welfare",
+        title: `${PROPOSAL_ALERT_TITLE[row.status]}: ${benefitName}`,
+        description: `ข้อเสนอ ${row.proposal_no}${row.decision_note ? ` · ${row.decision_note}` : ""}`,
+        ...relativeTime(iso),
+        unread: row.status === "needs_info",
+        actionable: row.status === "needs_info",
+        sortIso: iso,
+      };
+    });
+
+    return [...baseAlerts, ...proposalAlerts]
+      .sort((a, b) => b.sortIso.localeCompare(a.sortIso))
+      .map(({ sortIso: _sortIso, ...alert }) => alert);
   } catch (err) {
     // อ่านแจ้งเตือนไม่ได้ต้องไม่ทำให้หน้า Admin ทั้งหมดล้ม
     // PostgrestError ไม่ใช่ Error จึงพิมพ์ code/message เอง (ไม่งั้นขึ้นแค่ {})

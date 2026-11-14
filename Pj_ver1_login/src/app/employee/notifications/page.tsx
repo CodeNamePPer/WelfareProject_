@@ -26,6 +26,11 @@ const VISUAL: Record<ClaimEventKind, Visual> = {
   paid: { title: "โอนเงินแล้ว", icon: Banknote, tone: "bg-primary-100 text-primary-700" },
   payment_failed: { title: "โอนเงินไม่สำเร็จ", icon: CircleX, tone: "bg-status-rejected-soft text-status-rejected-ink" },
   payment_reversed: { title: "กลับรายการโอนเงิน", icon: CircleAlert, tone: "bg-status-rejected-soft text-status-rejected-ink" },
+  receipt_submitted: { title: "แนบใบเสร็จจริงแล้ว", icon: FileText, tone: "bg-status-pending-soft text-status-pending-ink" },
+  receipt_approved: { title: "ตรวจใบเสร็จจริงผ่านแล้ว", icon: CircleCheck, tone: "bg-status-approved-soft text-status-approved-ink" },
+  receipt_returned: { title: "HR ส่งใบเสร็จจริงกลับให้แก้ไข", icon: PencilLine, tone: "bg-orange-100 text-orange-800" },
+  advance_cancelled: { title: "ยกเลิกเบิกล่วงหน้าแล้ว", icon: CircleX, tone: "bg-slate-100 text-slate-600" },
+  refund_received: { title: "รับเงินคืนส่วนต่างแล้ว", icon: CircleCheck, tone: "bg-status-approved-soft text-status-approved-ink" },
 };
 
 const GROUPS = ["วันนี้", "สัปดาห์นี้", "ก่อนหน้านี้"] as const;

@@ -12,7 +12,9 @@ const MAX_BYTES = 5 * 1024 * 1024;
 // อัปโหลดรูปประกอบสวัสดิการ (ขั้น 1 ของฟอร์มเสนอ) คืน path ที่เก็บ และลิงก์ชั่วคราวไว้แสดงพรีวิว
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "HR") return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  if (!session || (session.role !== "HR" && session.role !== "SUPER_ADMIN")) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  }
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

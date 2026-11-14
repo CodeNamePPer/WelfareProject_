@@ -33,16 +33,27 @@ const APPROVED: ClaimDbStatus[] = ["awaiting_payment", "paid"];
 const FINANCE_VISIBLE: ClaimDbStatus[] = ["pending_finance", "finance_returned", "awaiting_payment", "paid", "rejected"];
 
 const SELECT = `id, claim_no, status, amount_requested, amount_approved, expense_date, submitted_at, created_at, provider_name, note, details, pay_date_override, approval_no, accounting_ref, employee_id,
-  benefit_id,
+  benefit_id, proxy_reason, beneficiary_relation, beneficiary_name, total_cost, insurance_paid, insurer_name,
   owner:employee_id(employee_code, title_th, first_name_th, last_name_th, department:department_id(name_th)),
   submitter:submitted_by(employee_code, title_th, first_name_th, last_name_th),
   benefit:benefit_id(code, name_th, budget_type, form_type),
   benefit_limit:benefit_limit_id(amount),
   pay_round:pay_round_id(pay_date),
+  advance:welfare_claim_advance(status, advance_amount, receipt_due_date, receipt_amount, settlement, extra_amount_approved, refund_amount),
   receipts:welfare_claim_receipt(receipt_no, receipt_date, issuer_name, amount),
-  attachments:welfare_claim_attachment(id, file_name, mime_type, size_bytes, deleted_at),
+  attachments:welfare_claim_attachment(id, file_name, mime_type, size_bytes, doc_kind, is_restricted, deleted_at),
   events:welfare_claim_event(id, kind, created_at, note, actor_role, actor:actor_employee_id(employee_code, title_th, first_name_th, last_name_th)),
   payments:welfare_claim_payment(status, transfer_ref, paid_at, bank_code, account_no_masked, preparer:prepared_by(title_th, first_name_th, last_name_th))`;
+
+interface AdvanceRow {
+  status: string;
+  advance_amount: number | string;
+  receipt_due_date: string;
+  receipt_amount: number | string | null;
+  settlement: string | null;
+  extra_amount_approved: number | string | null;
+  refund_amount: number | string | null;
+}
 
 interface ClaimRow {
   id: string;
@@ -61,13 +72,20 @@ interface ClaimRow {
   accounting_ref: string | null;
   employee_id: string;
   benefit_id: string;
+  proxy_reason: string | null;
+  beneficiary_relation: string | null;
+  beneficiary_name: string | null;
+  total_cost: number | string | null;
+  insurance_paid: number | string | null;
+  insurer_name: string | null;
   owner: NameParts & { employee_code: string; department: { name_th: string } | null };
   submitter: NameParts & { employee_code: string };
   benefit: { code: string; name_th: string; budget_type: BudgetKind; form_type: string | null };
   benefit_limit: { amount: number | string } | null;
   pay_round: { pay_date: string } | null;
+  advance: AdvanceRow | AdvanceRow[] | null;
   receipts: { receipt_no: string | null; receipt_date: string | null; issuer_name: string | null; amount: number | string | null }[];
-  attachments: { id: string; file_name: string; mime_type: string; size_bytes: number; deleted_at: string | null }[];
+  attachments: { id: string; file_name: string; mime_type: string; size_bytes: number; doc_kind: string | null; is_restricted: boolean | null; deleted_at: string | null }[];
   events: { id: number; kind: ClaimEventKind; created_at: string; note: string | null; actor_role: string | null; actor: (NameParts & { employee_code: string }) | null }[];
   payments: { status: string; transfer_ref: string | null; paid_at: string | null; bank_code: string; account_no_masked: string; preparer: NameParts | null }[];
 }
@@ -111,6 +129,7 @@ function toRecord(row: ClaimRow, usage: UsageRow[]): ClaimRecord {
     : 0;
   const events = [...row.events].sort((a, b) => a.id - b.id);
   const payment = row.payments.find((p) => p.status === "transferred") ?? row.payments[row.payments.length - 1] ?? null;
+  const advRow = Array.isArray(row.advance) ? (row.advance[0] ?? null) : row.advance;
   return {
     id: row.id,
     claimNo: row.claim_no,
@@ -120,6 +139,23 @@ function toRecord(row: ClaimRow, usage: UsageRow[]): ClaimRecord {
     department: row.owner.department?.name_th ?? null,
     submittedByCode: row.submitter.employee_code,
     submittedByName: nameOf(row.submitter),
+    proxyReason: row.proxy_reason,
+    beneficiaryRelation: row.beneficiary_relation,
+    beneficiaryName: row.beneficiary_name,
+    totalCost: row.total_cost === null ? null : Number(row.total_cost),
+    insurancePaid: row.insurance_paid === null ? null : Number(row.insurance_paid),
+    insurerName: row.insurer_name,
+    advance: advRow
+      ? {
+          status: advRow.status,
+          advanceAmount: Number(advRow.advance_amount),
+          receiptDueDate: advRow.receipt_due_date,
+          receiptAmount: advRow.receipt_amount === null ? null : Number(advRow.receipt_amount),
+          settlement: advRow.settlement,
+          extraAmountApproved: advRow.extra_amount_approved === null ? null : Number(advRow.extra_amount_approved),
+          refundAmount: advRow.refund_amount === null ? null : Number(advRow.refund_amount),
+        }
+      : null,
     benefitCode: row.benefit.code,
     benefitName: row.benefit.name_th,
     budgetType: row.benefit.budget_type,
@@ -139,7 +175,16 @@ function toRecord(row: ClaimRow, usage: UsageRow[]): ClaimRecord {
     approvalNo: row.approval_no,
     accountingRef: row.accounting_ref,
     receipts: row.receipts.map((r) => ({ receiptNo: r.receipt_no, receiptDate: r.receipt_date, issuerName: r.issuer_name, amount: r.amount === null ? null : Number(r.amount) })),
-    attachments: row.attachments.filter((a) => !a.deleted_at).map((a) => ({ id: a.id, fileName: a.file_name, mimeType: a.mime_type, sizeBytes: a.size_bytes })),
+    attachments: row.attachments
+      .filter((a) => !a.deleted_at)
+      .map((a) => ({
+        id: a.id,
+        fileName: a.file_name,
+        mimeType: a.mime_type,
+        sizeBytes: a.size_bytes,
+        docKind: a.doc_kind,
+        isRestricted: Boolean(a.is_restricted || a.doc_kind === "medical_certificate"),
+      })),
     events: events.map((e) => ({ kind: e.kind, at: e.created_at, actorCode: e.actor?.employee_code ?? null, actorName: e.actor ? nameOf(e.actor) : null, actorRole: e.actor_role, note: e.note })),
     payment: payment
       ? { transferRef: payment.transfer_ref, paidAt: payment.paid_at, bankCode: payment.bank_code, accountMasked: payment.account_no_masked, preparedByName: payment.preparer ? nameOf(payment.preparer) : null }
@@ -613,15 +658,19 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
 export async function getAttachmentUrl(attachmentId: string, actor: ClaimActor): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("welfare_claim_attachment")
-    .select("storage_path, claim:claim_id(claim_no)")
+    .select("storage_path, is_restricted, doc_kind, claim:claim_id(claim_no)")
     .eq("id", attachmentId)
     .is("deleted_at", null)
     .maybeSingle()
-    .returns<{ storage_path: string; claim: { claim_no: string } } | null>();
+    .returns<{ storage_path: string; is_restricted: boolean | null; doc_kind: string | null; claim: { claim_no: string } } | null>();
   if (error) throw error;
   if (!data) return null;
   const claim = await getClaim(data.claim.claim_no);
   if (!claim || !canViewClaim(claim, actor)) return null;
+  const isRestricted = Boolean(data.is_restricted || data.doc_kind === "medical_certificate");
+  if (isRestricted && actor.role !== "HR" && claim.employeeCode !== actor.sub && claim.submittedByCode !== actor.sub) {
+    return null;
+  }
   const signed = await supabaseAdmin.storage.from("welfare-claim-docs").createSignedUrl(data.storage_path, 60);
   if (signed.error) throw signed.error;
   return signed.data.signedUrl;

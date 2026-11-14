@@ -4,16 +4,22 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { CircleCheck, Copy, FileDown, KeyRound, Pencil, TriangleAlert } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { Button } from "@/components/ui/Button";
+import { Button as AdminButton } from "@/components/ui/Button";
 import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
-import { FilterChips } from "@/components/ui/FilterChips";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Pagination, paginate } from "@/components/ui/Pagination";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Select } from "@/components/ui/Select";
 import { Tag } from "@/components/ui/Tag";
-import { table } from "@/components/ui/table";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  FilterPill,
+  PageHeader,
+  RequesterCompact,
+  RequesterFull,
+  Tabs,
+  fieldClass,
+} from "@/features/hr/ui";
 import { downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
@@ -22,7 +28,7 @@ import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 import { employmentStatusLabel } from "@/lib/employmentStatus";
 
-type User = {
+export type User = {
   employeeId: string; // Primary Key
   email: string; // ชื่อล็อกอิน
   name: string;
@@ -31,13 +37,15 @@ type User = {
   lastLoginAt?: string;
   updatedAt?: string;
   hasAccount: boolean;
+  lockedUntil?: string | null;
+  failedAttempts?: number;
   profile: EmployeeProfile;
 };
 
-type Filter = "all" | "ACTIVE" | "RESIGNED";
+type Tab = "active" | "left" | "all";
 
-const PAGE_SIZE = 20;
-
+// คอลัมน์เดียวกับ HR (/hr/employees — ดีไซน์ H05)
+const COLS = "grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1.2fr)_130px_110px]";
 
 const CSV_COLUMNS = [
   "รหัสพนักงาน",
@@ -61,15 +69,29 @@ const roleLabel = (role: string) => ROLE_LABELS[role as Role] ?? role;
 const statusLabel = employmentStatusLabel;
 
 function RoleTag({ user }: { user: Pick<User, "role" | "hasAccount"> }) {
-  if (!user.hasAccount) return <Tag tone="neutral">{NO_ACCOUNT}</Tag>;
-  return <Tag tone={user.role === "SUPER_ADMIN" ? "info" : "outline"}>{roleLabel(user.role)}</Tag>;
+  if (!user.hasAccount) return <Badge tone="neutral">{NO_ACCOUNT}</Badge>;
+  return <Badge tone={user.role === "SUPER_ADMIN" ? "review" : "neutral"}>{roleLabel(user.role)}</Badge>;
+}
+
+/** อายุงาน เช่น "8 ปี 7 เดือน" นับถึงวันนี้หรือวันที่พ้นสภาพ (ชุดเดียวกับ HR /hr/employees/[id]) */
+function tenureOf(hireIso: string | null, endIso: string | null) {
+  if (!hireIso) return "—";
+  const start = new Date(`${hireIso}T00:00:00+07:00`);
+  const end = endIso ? new Date(`${endIso}T00:00:00+07:00`) : new Date();
+  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  if (end.getDate() < start.getDate()) months -= 1;
+  if (months < 1) return "ไม่ถึง 1 เดือน";
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : ""].filter(Boolean).join(" ");
 }
 
 const joinParts = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ") || null;
 const addressLabel = (p: EmployeeProfile) =>
   [p.addressLine, p.subdistrict, p.district, p.province, p.postalCode].filter(Boolean).join(" ") || null;
+const unique = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
 
-// กดแถวแล้วเข้าหน้ารายละเอียด (?user=รหัสพนักงาน) ส่วนรายการยังอยู่เบื้องหลังเพื่อคงตัวกรองไว้
+// หน้าตั้งค่าผู้ใช้งานระบบ ปรับใช้ดีไซน์เดียวกับ HR (/hr/employees — H05 และ H09)
 export default function AdminUsersClient({
   initialUsers,
   orgOptions,
@@ -85,36 +107,46 @@ export default function AdminUsersClient({
 }) {
   const [users, setUsers] = useState<User[]>(initialUsers);
   const detail = useDetailParam("user");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<Tab>("active");
+  const [query, setQuery] = useState("");
+  const [department, setDepartment] = useState("");
+  const [position, setPosition] = useState("");
+  const [level, setLevel] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [exporting, setExporting] = useState(false);
 
   const listedUsers = useMemo(() => users.filter((u) => u.status !== "DECEASED"), [users]);
+  const activeCount = useMemo(() => listedUsers.filter((u) => u.status === "ACTIVE").length, [listedUsers]);
 
-  // กรองตามสถานะ + รหัสพนักงาน ชื่อ ชื่อเล่น อีเมล แผนก หรือตำแหน่ง
-  const filteredUsers = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    // บัญชีพนักงานที่เสียชีวิตไม่แสดงในรายชื่อและไม่นับในยอด
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return listedUsers.filter((u) => {
-      if (filter !== "all" && u.status !== filter) return false;
-      if (!query) return true;
+      const isActive = u.status === "ACTIVE";
+      if (tab === "active" && !isActive) return false;
+      if (tab === "left" && isActive) return false;
       const p = u.profile;
+      const deptName = p.departmentName ?? "ยังไม่ระบุแผนก";
+      const posName = p.positionName ?? "ยังไม่ระบุตำแหน่ง";
+      const lvlName = p.jobLevelName ?? "—";
+      const rLabel = u.hasAccount ? roleLabel(u.role) : NO_ACCOUNT;
+      if (department && deptName !== department) return false;
+      if (position && posName !== position) return false;
+      if (level && lvlName !== level) return false;
+      if (roleFilter && rLabel !== roleFilter) return false;
+      if (!q) return true;
       return [u.employeeId, u.name, u.email, p.nickname, p.contactEmail, p.departmentName, p.positionName].some((v) =>
-        v?.toLowerCase().includes(query),
+        v?.toLowerCase().includes(q),
       );
     });
-  }, [listedUsers, filter, searchQuery]);
+  }, [listedUsers, tab, query, department, position, level, roleFilter]);
 
-  const rows = paginate(filteredUsers, page, PAGE_SIZE);
   const selected = users.find((u) => u.employeeId === detail.id);
-  const emptyText = users.length === 0 ? "ยังไม่มีข้อมูลผู้ใช้งาน" : "ไม่พบผู้ใช้ที่ตรงกับเงื่อนไข";
 
   const exportCsv = () =>
     downloadCsv(
       "users.csv",
       CSV_COLUMNS,
-      filteredUsers.map((u) => {
+      shown.map((u) => {
         const p = u.profile;
         return [
           u.employeeId,
@@ -138,8 +170,17 @@ export default function AdminUsersClient({
   return (
     <>
       {selected ? (
-        <div className="flex flex-col gap-[12px]">
-          <Breadcrumb items={[{ label: "ตั้งค่าผู้ใช้งานระบบ", href: "/admin/users" }, { label: selected.employeeId }]} />
+        <div className="flex flex-col gap-4">
+          <PageHeader
+            crumbs={[{ label: "จัดการพนักงานและผู้ใช้งาน", href: "/admin/users" }, { label: selected.employeeId }]}
+            title={selected.name}
+            description={[selected.employeeId, selected.profile.positionName, selected.profile.departmentName].filter(Boolean).join(" · ")}
+            actions={
+              <Button variant="quiet" onClick={() => detail.close()}>
+                กลับหน้ารายชื่อ
+              </Button>
+            }
+          />
           <UserPanel
             key={selected.employeeId}
             user={selected}
@@ -153,169 +194,135 @@ export default function AdminUsersClient({
           />
         </div>
       ) : null}
-      <div className={cx("flex flex-col gap-[24px]", selected && "hidden")}>
-      <PageHeader title="ตั้งค่าผู้ใช้งานระบบ" description="จัดการบัญชี เช็คสถานะ และการเข้าใช้งาน" />
-      <section aria-labelledby="user-list-title" className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]">
-        <div className="flex flex-col gap-[12px] sm:flex-row sm:items-center sm:justify-between">
-          <h2 id="user-list-title" className="text-17 font-semibold text-ink">
-            รายชื่อผู้ใช้งานระบบ
-          </h2>
-          <Button onClick={() => setExporting(true)} disabled={filteredUsers.length === 0} className="sm:w-[200px] disabled:opacity-50">
-            <FileDown className="size-4" aria-hidden="true" />
-            ส่งออก CSV
-          </Button>
-          <ExportCsvDialog
-            open={exporting}
-            rowCount={filteredUsers.length}
-            unit="คน"
-            columns={CSV_COLUMNS}
-            personalData="ชื่อ อีเมล เบอร์โทร และข้อมูลการจ้างงาน"
-            onCancel={() => setExporting(false)}
-            onConfirm={() => {
-              exportCsv();
-              setExporting(false);
-            }}
+
+      <div className={cx("flex flex-col gap-4", selected && "hidden")}>
+        <PageHeader
+          title="จัดการพนักงานและผู้ใช้งานระบบ"
+          description={`${listedUsers.length} คน · ทำงานอยู่ ${activeCount} · พ้นสภาพ ${listedUsers.length - activeCount}`}
+          actions={
+            <Button variant="secondary" onClick={() => setExporting(true)} disabled={shown.length === 0}>
+              <FileDown className="size-4" aria-hidden="true" />
+              ส่งออก CSV
+            </Button>
+          }
+        />
+
+        <ExportCsvDialog
+          open={exporting}
+          rowCount={shown.length}
+          unit="คน"
+          columns={CSV_COLUMNS}
+          personalData="ชื่อ อีเมล เบอร์โทร และข้อมูลการจ้างงาน"
+          onCancel={() => setExporting(false)}
+          onConfirm={() => {
+            exportCsv();
+            setExporting(false);
+          }}
+        />
+
+        <Card>
+          <Tabs
+            label="กลุ่มพนักงาน"
+            value={tab}
+            onChange={setTab}
+            items={[
+              { id: "active", label: "ทำงานอยู่", count: activeCount },
+              { id: "left", label: "พ้นสภาพ", count: listedUsers.length - activeCount },
+              { id: "all", label: "ทั้งหมด", count: listedUsers.length },
+            ]}
           />
-        </div>
 
-        <SearchInput
-          label="ค้นหาผู้ใช้"
-          placeholder="ค้นหาชื่อ / รหัส / อีเมล / แผนก"
-          value={searchQuery}
-          onChange={(value) => {
-            setSearchQuery(value);
-            setPage(1);
-          }}
-          className="sm:max-w-[400px]"
-        />
+          <div className="flex flex-wrap gap-2 px-5 py-3">
+            <input
+              type="search"
+              aria-label="ค้นหาพนักงาน"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ค้นหาชื่อ รหัส อีเมล"
+              className={cx(fieldClass, "!h-9 w-full sm:!w-[260px]")}
+            />
+            <FilterPill label="แผนก" value={department} onChange={setDepartment}>
+              {unique(listedUsers.map((u) => u.profile.departmentName ?? "ยังไม่ระบุแผนก")).map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </FilterPill>
+            <FilterPill label="ตำแหน่ง" value={position} onChange={setPosition}>
+              {unique(listedUsers.map((u) => u.profile.positionName ?? "ยังไม่ระบุตำแหน่ง")).map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </FilterPill>
+            <FilterPill label="ระดับ" value={level} onChange={setLevel}>
+              {unique(listedUsers.map((u) => u.profile.jobLevelName ?? "—")).map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </FilterPill>
+            <FilterPill label="บทบาท" value={roleFilter} onChange={setRoleFilter}>
+              {unique(listedUsers.map((u) => (u.hasAccount ? roleLabel(u.role) : NO_ACCOUNT))).map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </FilterPill>
+          </div>
 
-        <FilterChips
-          label="กรองตามสถานะ"
-          value={filter}
-          onChange={(value) => {
-            setFilter(value);
-            setPage(1);
-          }}
-          options={[
-            { id: "all", label: "ทั้งหมด", count: listedUsers.length },
-            ...(["ACTIVE", "RESIGNED"] as const).map((status) => ({
-              id: status,
-              label: statusLabel(status),
-              count: users.filter((u) => u.status === status).length,
-            })),
-          ]}
-        />
-
-        <div className={table.wrapper}>
-          <table className={table.table}>
-            <thead>
-              <tr>
-                <th scope="col" className={table.th}>รหัส</th>
-                <th scope="col" className={table.th}>ชื่อ</th>
-                <th scope="col" className={table.th}>แผนก / ตำแหน่ง</th>
-                <th scope="col" className={table.th}>Email</th>
-                <th scope="col" className={table.th}>บทบาท</th>
-                <th scope="col" className={table.th}>สถานะ</th>
-                <th scope="col" className={table.th}>ใช้งานล่าสุด</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className={cx(table.td, "py-[40px] text-center text-muted")}>
-                    {emptyText}
-                  </td>
-                </tr>
-              ) : (
-                rows.map((u) => {
+          {shown.length === 0 ? (
+            <EmptyState>
+              {query || department || position || level || roleFilter
+                ? "ไม่พบพนักงานที่ตรงกับตัวกรอง"
+                : tab === "active"
+                  ? "ยังไม่มีพนักงานที่ทำงานอยู่"
+                  : "ยังไม่มีพนักงานที่พ้นสภาพ"}
+            </EmptyState>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="min-w-[860px]">
+                <div className={cx("grid gap-3.5 bg-[#F8FAFC] px-5 py-2 text-12 font-medium text-muted", COLS)}>
+                  <span>พนักงาน</span>
+                  <span>ระดับ / หัวหน้า</span>
+                  <span>บทบาท / ชื่อล็อกอิน</span>
+                  <span>สถานะ</span>
+                  <span />
+                </div>
+                {shown.map((u) => {
+                  const p = u.profile;
+                  const active = u.status === "ACTIVE";
+                  const locked = Boolean(u.lockedUntil && new Date(u.lockedUntil).getTime() > Date.now());
                   return (
-                    <tr
+                    <button
                       key={u.employeeId}
+                      type="button"
                       onClick={() => detail.open(u.employeeId)}
-                      className={cx(table.row, "cursor-pointer", table.rowHover)}
+                      className={cx(
+                        "grid w-full items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3 text-left text-ink transition-colors hover:bg-surface motion-reduce:transition-none",
+                        COLS,
+                      )}
                     >
-                      <td className={cx(table.td, "font-semibold whitespace-nowrap")}>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            detail.open(u.employeeId);
-                          }}
-                          className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                        >
-                          {u.employeeId}
-                        </button>
-                      </td>
-                      <td className={table.td}>
-                        {u.name}
-                        {u.profile.nickname ? <span className="block text-12 text-muted">({u.profile.nickname})</span> : null}
-                      </td>
-                      <td className={table.td}>
-                        {u.profile.departmentName ?? <span className="text-muted">—</span>}
-                        {u.profile.positionName ? <span className="block text-12 text-muted">{u.profile.positionName}</span> : null}
-                      </td>
-                      <td className={cx(table.td, "break-all text-muted")}>{u.email || u.profile.contactEmail}</td>
-                      <td className={table.td}>
+                      <RequesterCompact
+                        person={{
+                          name: u.name,
+                          code: u.employeeId,
+                          position: p.positionName,
+                          department: p.departmentName,
+                        }}
+                      />
+                      <span className="text-13">
+                        {p.jobLevelName ?? "—"}
+                        <span className="block text-muted">หัวหน้า: {p.managerName ?? "—"}</span>
+                      </span>
+                      <span className="min-w-0 text-13">
                         <RoleTag user={u} />
-                      </td>
-                      <td className={table.td}>
-                        <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
-                      </td>
-                      <td className={cx(table.td, "whitespace-nowrap text-muted tabular-nums")}>
-                        {u.lastLoginAt ? formatShortThaiDate(u.lastLoginAt) : "—"}
-                      </td>
-                    </tr>
+                        <span className="mt-0.5 block truncate text-12 text-muted">{u.email || p.contactEmail || "—"}</span>
+                      </span>
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <Badge tone={active ? "approved" : "neutral"}>{statusLabel(u.status)}</Badge>
+                        {locked ? <Badge tone="rejected">ถูกล็อก</Badge> : null}
+                      </span>
+                      <span className="text-13 text-[#1D4ED8]">ดู / แก้ไข ›</span>
+                    </button>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {rows.length === 0 ? (
-          <p className={table.cardEmpty}>{emptyText}</p>
-        ) : (
-          <ul className={table.cards}>
-            {rows.map((u) => {
-              return (
-                <li key={u.employeeId}>
-                  <button
-                    type="button"
-                    onClick={() => detail.open(u.employeeId)}
-                    className={cx(table.card, table.cardButton, table.cardHover)}
-                  >
-                    <span className="flex items-start justify-between gap-[8px]">
-                      <span className="min-w-0">
-                        <span className="block font-semibold">
-                          {u.name}
-                          {u.profile.nickname ? <span className="font-normal text-muted"> ({u.profile.nickname})</span> : null}
-                        </span>
-                        <span className="block text-12 text-muted">
-                          {u.employeeId}
-                          {u.profile.departmentName ? `, ${u.profile.departmentName}` : ""}
-                          {u.profile.positionName ? `, ${u.profile.positionName}` : ""}
-                        </span>
-                      </span>
-                      <Tag tone={u.status === "ACTIVE" ? "success" : "neutral"}>{statusLabel(u.status)}</Tag>
-                    </span>
-                    <span className="mt-[6px] block break-all text-12 text-muted">{u.email || u.profile.contactEmail}</span>
-                    <span className="mt-[8px] flex flex-wrap items-center gap-x-[8px] gap-y-[4px]">
-                      <RoleTag user={u} />
-                      <span className="ml-auto text-11 text-muted tabular-nums">
-                        ใช้งานล่าสุด {u.lastLoginAt ? formatShortThaiDate(u.lastLoginAt) : "—"}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        <div className="mt-auto pt-[8px]">
-          <Pagination page={page} pageSize={PAGE_SIZE} total={filteredUsers.length} onChange={setPage} />
-        </div>
-      </section>
+                })}
+              </div>
+            </div>
+          )}
+        </Card>
       </div>
     </>
   );
@@ -326,7 +333,6 @@ const inputClass =
 
 type InfoRow = [label: string, value: ReactNode];
 
-// แถวที่ยังไม่มีค่าไม่แสดงเป็น "—" ทีละบรรทัด แต่รวมชื่อไว้บรรทัดเดียวท้ายหมวด ให้หมวดสั้นลงและรู้ว่าขาดอะไร
 function InfoRows({ rows }: { rows: InfoRow[] }) {
   const filled = rows.filter(([, value]) => value);
   const missing = rows.filter(([, value]) => !value).map(([label]) => label);
@@ -348,7 +354,7 @@ function InfoRows({ rows }: { rows: InfoRow[] }) {
   );
 }
 
-type Choice = { value: string; label: string; disabled?: boolean };
+export type Choice = { value: string; label: string; disabled?: boolean };
 
 type FieldDef = {
   key: string;
@@ -365,9 +371,9 @@ type FieldDef = {
 
 type Values = Record<string, string>;
 
-type SectionId = "account" | "personal" | "family" | "contact" | "work";
+export type SectionId = "account" | "personal" | "family" | "contact" | "work";
 
-/** ฟอร์มแก้ไขของแต่ละส่วน (mount ใหม่ทุกครั้งที่กดแก้ไข ค่าเริ่มต้นจึงตรงกับข้อมูลล่าสุด) */
+/** ฟอร์มแก้ไขของแต่ละส่วน */
 function SectionForm({
   fields,
   initial,
@@ -392,7 +398,6 @@ function SectionForm({
       setError("กรุณาระบุเหตุผลการเปลี่ยนแปลง");
       return;
     }
-    // ส่งเฉพาะฟิลด์ที่เปลี่ยน
     const changed = Object.fromEntries(fields.filter((f) => values[f.key] !== initial[f.key]).map((f) => [f.key, values[f.key]]));
     setSaving(true);
     setError(null);
@@ -464,12 +469,12 @@ function SectionForm({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-[8px]">
-        <Button onClick={onCancel} disabled={saving}>
+      <div className="flex justify-end gap-2">
+        <Button variant="quiet" onClick={onCancel} disabled={saving}>
           ยกเลิก
         </Button>
-        <Button type="submit" variant="primary" loading={saving} disabled={!dirty} className="disabled:cursor-not-allowed disabled:opacity-50">
-          {saving ? "กำลังบันทึก…" : "บันทึก"}
+        <Button type="submit" disabled={!dirty || saving}>
+          {saving ? "กำลังบันทึก…" : "บันทึกการแก้ไข"}
         </Button>
       </div>
     </form>
@@ -477,12 +482,10 @@ function SectionForm({
 }
 
 const EMPTY_CHOICE: Choice = { value: "", label: "— ไม่ระบุ —" };
-// ค่าเดียวกับฟอร์มเพิ่มพนักงานของ HR
 const GENDER_OPTIONS = ["ชาย", "หญิง", "ไม่ระบุ"];
 const MARITAL_OPTIONS = ["โสด", "สมรส", "หย่าร้าง / หม้าย"];
 const withEmpty = (options: string[]): Choice[] => [EMPTY_CHOICE, ...options.map((value) => ({ value, label: value }))];
 
-/** ตัวเลือก dropdown + ค่าปัจจุบัน (กรณีถูกปิดใช้งานแล้ว) เพื่อไม่ให้ค่าเดิมหายไปเงียบ ๆ */
 function toChoices(options: OrgOption[], currentId: string | null, currentName: string | null): Choice[] {
   const choices = options.map((o) => ({ value: o.id, label: o.name }));
   if (currentId && !options.some((o) => o.id === currentId)) {
@@ -491,24 +494,54 @@ function toChoices(options: OrgOption[], currentId: string | null, currentName: 
   return [EMPTY_CHOICE, ...choices];
 }
 
-/** หน้ารายละเอียดผู้ใช้ แต่ละส่วนแก้ไขแยกกัน (แก้ได้ทีละส่วน) */
-function UserPanel({
+/** หน้ารายละเอียดและแก้ไขข้อมูลพนักงาน (ใช้ดีไซน์ H09 มีการ์ด RequesterFull ด้านซ้าย เหมือนกันทั้ง Admin และ HR) */
+export function UserPanel({
   user,
-  isSelf,
+  isSelf = false,
   emailDelivery,
   orgOptions,
   managerChoices,
+  mode = "admin",
+  defaultEditing = null,
   onSaved,
 }: {
   user: User;
-  isSelf: boolean;
-  emailDelivery: EmailDelivery;
+  isSelf?: boolean;
+  emailDelivery?: EmailDelivery;
   orgOptions: OrgOptions;
   managerChoices: Choice[];
+  mode?: "admin" | "hr";
+  defaultEditing?: SectionId | null;
   onSaved: (user: User) => void;
 }) {
-  const [editing, setEditing] = useState<SectionId | null>(null);
+  const [editing, setEditing] = useState<SectionId | null>(defaultEditing);
   const [notice, setNotice] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+
+  const isLocked = Boolean(user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now());
+
+  const handleUnlock = async () => {
+    if (unlocking) return;
+    setUnlocking(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: user.employeeId,
+          section: "unlock",
+          reason: "ผู้ดูแลระบบปลดล็อกบัญชีที่ถูกล็อกชั่วคราว",
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.user) {
+        onSaved(result.user);
+        setNotice("ปลดล็อกบัญชีผู้ใช้งานเรียบร้อยแล้ว");
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   const save = async (section: SectionId, values: Values, reason: string): Promise<string | null> => {
     try {
@@ -529,8 +562,6 @@ function UserPanel({
   };
 
   const p = user.profile;
-  const initial = Array.from((p.firstNameTh ?? user.name).trim())[0] ?? "?";
-  const workLine = [p.positionName, p.departmentName].filter(Boolean).join(", ");
   const managerLabel = p.managerName ? `${p.managerName}${p.managerCode ? ` (${p.managerCode})` : ""}` : null;
   const emergencyLabel = joinParts(p.emergencyContactName, p.emergencyContactPhone && `(${p.emergencyContactPhone})`);
   const endDate = user.status === "DECEASED" ? p.deceasedDate : p.resignedDate;
@@ -548,17 +579,30 @@ function UserPanel({
   const sections: { id: SectionId; title: string; rows: InfoRow[]; fields: FieldDef[]; initial: Values }[] = [
     {
       id: "account",
-      title: "บัญชีเข้าใช้งาน",
+      title: "บัญชีเข้าใช้งานระบบ",
       rows: user.hasAccount
         ? [
             ["ชื่อล็อกอิน", <span key="email" className="break-all">{user.email}</span>],
             ["บทบาท", <RoleTag key="role" user={user} />],
-            ["สถานะ", statusLabel(user.status)],
+            ["สถานะการทำงาน", statusLabel(user.status)],
+            [
+              "สถานะการล็อกบัญชี",
+              isLocked ? (
+                <span key="lock" className="inline-flex flex-wrap items-center justify-end gap-2">
+                  <Badge tone="rejected">ถูกล็อกชั่วคราว</Badge>
+                  <Button size="sm" disabled={unlocking} onClick={() => void handleUnlock()}>
+                    {unlocking ? "กำลังปลดล็อก..." : "ปลดล็อกบัญชี"}
+                  </Button>
+                </span>
+              ) : (
+                "ปกติ"
+              ),
+            ],
             ["ใช้งานล่าสุด", user.lastLoginAt ? formatShortThaiDate(user.lastLoginAt) : null],
           ]
         : [
             ["บัญชีเข้าใช้งาน", <RoleTag key="role" user={user} />],
-            ["สถานะ", statusLabel(user.status)],
+            ["สถานะการทำงาน", statusLabel(user.status)],
           ],
       fields: [
         { key: "email", label: "ชื่อล็อกอิน / อีเมล", required: true, wide: true },
@@ -589,7 +633,6 @@ function UserPanel({
         { key: "lastNameEn", label: "นามสกุล (อังกฤษ)" },
         { key: "gender", label: "เพศ", type: "select", options: withEmpty(GENDER_OPTIONS) },
         { key: "birthDate", label: "วันเกิด", type: "date" },
-        // เลขเต็มไม่ถูกส่งมาหน้าเว็บ เว้นว่างไว้คือไม่เปลี่ยน
         { key: "citizenId", label: "เลขบัตรประชาชน", inputMode: "numeric", maxLength: 13, wide: true, placeholder: p.citizenIdMasked ?? "ตัวเลข 13 หลัก" },
         { key: "nationality", label: "สัญชาติ" },
         { key: "religion", label: "ศาสนา" },
@@ -610,33 +653,33 @@ function UserPanel({
     },
     {
       id: "family",
-      title: "ครอบครัว",
+      title: "ครอบครัว (ใช้คำนวณสิทธิ์สวัสดิการ)",
       rows: [
         ["สถานะสมรส", p.maritalStatus],
-        ["จำนวนบุตร", p.childrenCount === null ? null : String(p.childrenCount)],
-        ["บิดา", joinParts(p.fatherFirstName, p.fatherLastName)],
-        ["มารดา", joinParts(p.motherFirstName, p.motherLastName)],
+        ["จำนวนบุตร (สูงสุด 2 คน)", p.childrenCount === null ? null : `${p.childrenCount} คน`],
       ],
       fields: [
         { key: "maritalStatus", label: "สถานะสมรส", type: "select", options: withEmpty(MARITAL_OPTIONS) },
-        { key: "childrenCount", label: "จำนวนบุตร", inputMode: "numeric" },
-        { key: "fatherFirstName", label: "ชื่อบิดา" },
-        { key: "fatherLastName", label: "นามสกุลบิดา" },
-        { key: "motherFirstName", label: "ชื่อมารดา" },
-        { key: "motherLastName", label: "นามสกุลมารดา" },
+        {
+          key: "childrenCount",
+          label: "จำนวนบุตร (สูงสุด 2 คน)",
+          type: "select",
+          options: [
+            EMPTY_CHOICE,
+            { value: "0", label: "0 คน (ไม่มีบุตร)" },
+            { value: "1", label: "1 คน" },
+            { value: "2", label: "2 คน" },
+          ],
+        },
       ],
       initial: {
         maritalStatus: p.maritalStatus ?? "",
-        childrenCount: p.childrenCount === null ? "" : String(p.childrenCount),
-        fatherFirstName: p.fatherFirstName ?? "",
-        fatherLastName: p.fatherLastName ?? "",
-        motherFirstName: p.motherFirstName ?? "",
-        motherLastName: p.motherLastName ?? "",
+        childrenCount: p.childrenCount === null ? "" : String(Math.min(2, Math.max(0, p.childrenCount))),
       },
     },
     {
       id: "contact",
-      title: "ติดต่อ",
+      title: "ข้อมูลติดต่อ",
       rows: [
         ["อีเมลติดต่อ", p.contactEmail],
         ["เบอร์โทร", p.phone],
@@ -668,7 +711,7 @@ function UserPanel({
     },
     {
       id: "work",
-      title: "การทำงาน",
+      title: "ข้อมูลการทำงาน",
       rows: [
         ["แผนก", p.departmentName],
         ["ตำแหน่ง", p.positionName],
@@ -699,32 +742,28 @@ function UserPanel({
     },
   ];
 
-  const renderSection = (s: (typeof sections)[number]) => {
+  const renderSectionCard = (s: (typeof sections)[number]) => {
     const isEditing = editing === s.id;
     return (
-      <section
+      <Card
         key={s.id}
         aria-label={s.title}
-        className={cx(
-          "flex flex-col gap-[10px] border-t border-line pt-[14px]",
-          editing && !isEditing && "opacity-60",
-        )}
+        className={cx("flex flex-col gap-3 p-5", editing && !isEditing && "opacity-60")}
       >
         <div className="flex min-h-8 items-center justify-between gap-3">
-          <h2 className="text-13 font-semibold text-ink">{s.title}</h2>
+          <h2 className="text-15 font-semibold text-ink">{s.title}</h2>
           {isEditing ? (
-            <span className="text-12 text-primary-700">กำลังแก้ไข</span>
+            <Badge tone="review">กำลังแก้ไข</Badge>
           ) : s.id === "account" && !user.hasAccount ? null : (
             <Button
               size="sm"
-              variant="ghost"
+              variant="quiet"
               onClick={() => {
                 setNotice(null);
                 setEditing(s.id);
               }}
               disabled={editing !== null}
               aria-label={`แก้ไข${s.title}`}
-              className="disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Pencil className="size-3.5" aria-hidden="true" />
               แก้ไข
@@ -741,67 +780,64 @@ function UserPanel({
         ) : (
           <InfoRows rows={s.rows} />
         )}
-      </section>
+      </Card>
     );
   };
 
+  const visibleSections = mode === "hr" ? sections.slice(1) : sections;
+
   return (
-    <article
-      aria-labelledby="user-panel-title"
-      className="flex min-w-0 flex-col gap-[16px] rounded-[10px] border border-line bg-white p-[16px] sm:p-[20px]"
-    >
-      <header className="flex items-start gap-[12px]">
-        <div
-          aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-50 text-18 font-semibold text-primary-700"
-        >
-          {initial}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h1 id="user-panel-title" className="min-w-0 break-words text-22 font-semibold text-ink">
-              {user.name}
-            </h1>
-            <Tag tone={user.status === "ACTIVE" ? "success" : "neutral"} className="shrink-0">
-              {statusLabel(user.status)}
-            </Tag>
-          </div>
-          <p className="mt-[2px] text-12 text-muted tabular-nums">
-            {user.employeeId}
-            {p.nickname ? ` (${p.nickname})` : ""}
-          </p>
-          {workLine ? <p className="text-12 text-muted">{workLine}</p> : null}
-        </div>
-      </header>
-
-      {notice && !editing ? (
-        <p role="status" className="rounded-lg bg-surface px-3 py-2 text-12 text-ok">
-          {notice}
-        </p>
-      ) : null}
-
+    <div className="flex flex-wrap items-start gap-4">
       <datalist id="title-th-options">
         <option value="นาย" />
         <option value="นาง" />
         <option value="นางสาว" />
       </datalist>
 
-      <div className="grid grid-cols-1 gap-[16px] lg:grid-cols-2 lg:gap-x-[40px]">
-        <div className="flex min-w-0 flex-col gap-[16px]">{sections.slice(0, 3).map(renderSection)}</div>
-        <div className="flex min-w-0 flex-col gap-[16px]">
-          {sections.slice(3).map(renderSection)}
-          <ResetPasswordSection user={user} isSelf={isSelf} emailDelivery={emailDelivery} dimmed={editing !== null} onIssued={onSaved} />
+      {/* คอลัมน์ซ้าย: การ์ดโปรไฟล์พนักงานแบบเดียวกับ HR (/hr/employees/[id]) */}
+      <div className="min-w-0 flex-[1_1_280px]">
+        <RequesterFull
+          title="พนักงาน"
+          person={{
+            name: user.name,
+            code: user.employeeId,
+            position: p.positionName,
+            department: p.departmentName,
+            level: p.jobLevelName,
+            tenure: tenureOf(p.hireDate, user.status === "ACTIVE" ? null : endDate),
+            supervisor: p.managerName,
+            employmentStatus: statusLabel(user.status),
+            claimsThisYear: user.hasAccount ? roleLabel(user.role) : NO_ACCOUNT,
+            available: user.lastLoginAt ? formatShortThaiDate(user.lastLoginAt) : "ยังไม่เคยเข้าใช้",
+          }}
+        />
+      </div>
+
+      {/* คอลัมน์ขวา: การ์ดข้อมูลและการแก้ไขแต่ละหมวด */}
+      <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+        {notice && !editing ? (
+          <p role="status" className="rounded-[8px] border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-2.5 text-13 font-medium text-[#166534]">
+            {notice}
+          </p>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {visibleSections.map(renderSectionCard)}
+          {mode === "admin" && emailDelivery ? (
+            <ResetPasswordSection
+              user={user}
+              isSelf={isSelf}
+              emailDelivery={emailDelivery}
+              dimmed={editing !== null}
+              onIssued={onSaved}
+            />
+          ) : null}
         </div>
       </div>
-    </article>
+    </div>
   );
 }
 
-/**
- * รีเซ็ตรหัสผ่าน (พนักงานลืมรหัส → HR/IT ยืนยันตัวตนแล้ว → Admin ออกรหัสชั่วคราว)
- * ทำใน dialog แบบ modal: ระหว่างเปิดอยู่ออกจากหน้านี้หรือเปิดฟอร์มอื่นไม่ได้
- * รหัสชั่วคราวจึงไม่หายเพราะเผลอคลิกที่อื่น ปิดแล้วดูซ้ำไม่ได้ พนักงานต้องตั้งรหัสใหม่ตอนล็อกอิน
- */
 function ResetPasswordSection({
   user,
   isSelf,
@@ -828,26 +864,24 @@ function ResetPasswordSection({
         ? "พนักงานคนนี้ยังไม่มีอีเมลที่ใช้เป็นชื่อล็อกอินได้ ให้แก้อีเมลติดต่อก่อน"
         : null
     : isSelf
-    ? "รหัสผ่านของตัวเองให้เปลี่ยนที่หน้าโปรไฟล์"
-    : user.status !== "ACTIVE"
-      ? "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่"
-      : null;
+      ? "รหัสผ่านของตัวเองให้เปลี่ยนที่หน้าโปรไฟล์"
+      : user.status !== "ACTIVE"
+        ? "รีเซ็ตได้เฉพาะบัญชีที่ยังทำงานอยู่"
+        : null;
 
   return (
-    <section
+    <Card
       aria-label="รหัสผ่าน"
-      className={cx("flex flex-col gap-[10px] border-t border-line pt-[14px]", dimmed && "opacity-60")}
+      className={cx("flex flex-col gap-3 p-5", dimmed && "opacity-60")}
     >
       <div className="flex min-h-8 items-center justify-between gap-3">
-        <h2 className="text-13 font-semibold text-ink">รหัสผ่าน</h2>
+        <h2 className="text-15 font-semibold text-ink">จัดการรหัสผ่านและบัญชี</h2>
         <Button
           size="sm"
-          ref={triggerRef}
-          variant={issuing ? "primary" : "danger-outline"}
+          variant={issuing ? "primary" : "reject"}
           onClick={() => setOpen(true)}
           disabled={dimmed || blocked !== null}
           aria-describedby={hintId}
-          className="disabled:cursor-not-allowed disabled:opacity-40"
         >
           <KeyRound className="size-3.5" aria-hidden="true" />
           {issuing ? "ออกบัญชี" : "รีเซ็ตรหัสผ่าน"}
@@ -867,12 +901,11 @@ function ResetPasswordSection({
           onIssued={onIssued}
           onClose={() => {
             setOpen(false);
-            // Safari ไม่โฟกัสปุ่มตอนคลิก dialog จึงคืนโฟกัสเองไม่ได้ ส่งโฟกัสกลับปุ่มรีเซ็ตเสมอ
             triggerRef.current?.focus();
           }}
         />
       ) : null}
-    </section>
+    </Card>
   );
 }
 
@@ -887,7 +920,6 @@ function ResetPasswordDialog({
   onIssued: (user: User) => void;
   onClose: () => void;
 }) {
-  // พนักงานที่ยังไม่มีบัญชี dialog นี้ทำหน้าที่ออกบัญชีแทนการรีเซ็ต (ขั้นตอนแสดงรหัสชั่วคราวเหมือนกัน)
   const issuing = !user.hasAccount;
   const [issuedUser, setIssuedUser] = useState<User | null>(null);
   const ref = useRef<HTMLDialogElement>(null);
@@ -905,11 +937,9 @@ function ResetPasswordDialog({
   const [acknowledged, setAcknowledged] = useState(false);
 
   const done = tempPassword !== null || emailedTo !== null;
-  // รหัสบนจอแสดงครั้งเดียว: ปิดได้เมื่อคัดลอกแล้วหรือยืนยันว่าแจ้งพนักงานแล้วเท่านั้น
   const mustAcknowledge = tempPassword !== null && !copied && !acknowledged;
   const canDismiss = !saving && !mustAcknowledge;
 
-  // เปิดเป็น modal ตอน mount: โฟกัสอยู่ใน dialog, พื้นหลังกดไม่ได้, ปิดแล้วโฟกัสกลับไปที่ปุ่มที่เปิด
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -920,16 +950,13 @@ function ResetPasswordDialog({
     };
   }, []);
 
-  // ผลลัพธ์มาแทนฟอร์ม: ย้ายโฟกัสไปที่ปุ่มหลักของผลลัพธ์ ไม่ให้หลุดไปที่ <body>
   useEffect(() => {
     if (done) resultRef.current?.focus();
   }, [done]);
 
-  // ปิดด้วย close() ก่อน unmount: เบราว์เซอร์คืนโฟกัสให้ปุ่มที่เปิด dialog ได้ (ถ้าถอด node ทิ้งเลย โฟกัสจะหลุดไป <body>)
   const dismiss = () => {
     ref.current?.close();
     onClose();
-    // อัปเดตข้อมูลหลังปิด ไม่ให้หน้าเปลี่ยนสถานะระหว่างที่รหัสชั่วคราวยังแสดงอยู่
     if (issuedUser) onIssued(issuedUser);
   };
 
@@ -963,7 +990,11 @@ function ResetPasswordDialog({
         if (issuing) setIssuedUser(result.user ?? { ...user, hasAccount: true, email: user.profile.contactEmail ?? "" });
       }
     } catch {
-      setError(issuing ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาโหลดหน้าใหม่เพื่อตรวจว่าออกบัญชีแล้วหรือยัง" : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ รหัสผ่านยังไม่ถูกรีเซ็ต ลองอีกครั้ง");
+      setError(
+        issuing
+          ? "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาโหลดหน้าใหม่เพื่อตรวจว่าออกบัญชีแล้วหรือยัง"
+          : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ รหัสผ่านยังไม่ถูกรีเซ็ต ลองอีกครั้ง",
+      );
     }
     setSaving(false);
   };
@@ -978,7 +1009,6 @@ function ResetPasswordDialog({
     }
   };
 
-  // บอกล่วงหน้าตามที่ server จะทำจริง (กติกาเดียวกับ API) ไม่สัญญาว่าจะส่งอีเมลเมื่อระบบส่งไม่ได้
   const contactEmail = deliverableEmail(user.profile.contactEmail);
   const deliveryPlan = !contactEmail
     ? "พนักงานไม่มีอีเมลติดต่อ ระบบจะแสดงรหัสชั่วคราวบนจอครั้งเดียว ให้คุณแจ้งพนักงานเอง"
@@ -1001,7 +1031,6 @@ function ResetPasswordDialog({
       ref={ref}
       aria-labelledby={titleId}
       onKeyDown={(event) => {
-        // จัดการ Esc เอง: Chrome ปิด dialog ได้ถ้ากด Esc ซ้ำติดกัน แม้ onCancel จะสั่ง preventDefault
         if (event.key === "Escape") {
           event.preventDefault();
           requestClose();
@@ -1012,7 +1041,6 @@ function ResetPasswordDialog({
         requestClose();
       }}
       onClose={() => {
-        // ถ้าเบราว์เซอร์ปิด dialog เองทั้งที่ยังปิดไม่ได้ ให้เปิดกลับ ไม่ทิ้งรหัสที่ดูซ้ำไม่ได้
         if (!canDismiss && ref.current && !ref.current.open) ref.current.showModal();
       }}
       className="m-auto max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-[440px] overflow-y-auto rounded-[10px] border border-line bg-white p-0 text-ink shadow-lg backdrop:bg-ink/40"
@@ -1065,12 +1093,12 @@ function ResetPasswordDialog({
               </p>
             ) : null}
             <div className="flex flex-col-reverse gap-[8px] sm:flex-row sm:justify-end">
-              <Button onClick={requestClose} disabled={saving}>
+              <AdminButton onClick={requestClose} disabled={saving}>
                 ยกเลิก
-              </Button>
-              <Button type="submit" variant={issuing ? "primary" : "danger"} loading={saving}>
+              </AdminButton>
+              <AdminButton type="submit" variant={issuing ? "primary" : "danger"} loading={saving}>
                 {issuing ? (saving ? "กำลังออกบัญชี…" : "ออกบัญชี") : saving ? "กำลังรีเซ็ต…" : "รีเซ็ตรหัสผ่าน"}
-              </Button>
+              </AdminButton>
             </div>
           </form>
         ) : null}
@@ -1091,9 +1119,9 @@ function ResetPasswordDialog({
               )}
             </p>
             <div className="flex flex-col sm:flex-row sm:justify-end">
-              <Button ref={resultRef} variant="primary" onClick={dismiss}>
+              <AdminButton ref={resultRef} variant="primary" onClick={dismiss}>
                 เสร็จสิ้น
-              </Button>
+              </AdminButton>
             </div>
           </div>
         ) : null}
@@ -1112,10 +1140,10 @@ function ResetPasswordDialog({
               <code className="min-w-0 flex-1 select-all break-all rounded-md border border-line bg-surface px-3 py-2 font-mono text-14 tracking-wider text-ink">
                 {tempPassword}
               </code>
-              <Button ref={resultRef} size="sm" onClick={copy} aria-label="คัดลอกรหัสผ่านชั่วคราว">
+              <AdminButton ref={resultRef} size="sm" onClick={copy} aria-label="คัดลอกรหัสผ่านชั่วคราว">
                 <Copy className="size-3.5" aria-hidden="true" />
                 {copied ? "คัดลอกแล้ว" : "คัดลอก"}
-              </Button>
+              </AdminButton>
             </div>
             <p className="text-12 text-muted">
               แจ้งรหัสนี้กับพนักงานโดยตรง ห้ามส่งในแชตกลุ่ม ปิดกล่องนี้แล้วจะดูรหัสซ้ำไม่ได้ ถ้าทำหายต้องรีเซ็ตรหัสผ่านใหม่
@@ -1131,7 +1159,7 @@ function ResetPasswordDialog({
               <span>แจ้งหรือจดรหัสนี้ให้พนักงานแล้ว</span>
             </label>
             <div className="flex flex-col gap-[6px] sm:items-end">
-              <Button
+              <AdminButton
                 variant="primary"
                 onClick={dismiss}
                 disabled={mustAcknowledge}
@@ -1139,7 +1167,7 @@ function ResetPasswordDialog({
                 className="disabled:cursor-not-allowed disabled:opacity-50"
               >
                 เสร็จสิ้น
-              </Button>
+              </AdminButton>
               {mustAcknowledge ? (
                 <p id={ackId} className="text-12 text-muted">
                   คัดลอกรหัส หรือติ๊กยืนยันก่อนปิด

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Pencil } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Tag } from "@/components/ui/Tag";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import type { EmployeeProfile, UserWithProfile } from "@/lib/auth/users";
-import { formatThaiDate } from "@/lib/format";
+import type { EmployeeBenefit } from "@/lib/claims/types";
+import type { MyProfile } from "@/lib/employee/profile";
+import { formatBahtWhole, formatThaiDate } from "@/lib/format";
 import { EMPLOYMENT_STATUS_LABELS } from "@/lib/employmentStatus";
 
 const STATUS_LABELS = EMPLOYMENT_STATUS_LABELS;
@@ -40,9 +42,23 @@ function formatDateTime(iso: string): string {
   });
 }
 
-// โปรไฟล์อ่านอย่างเดียว: หัวโปรไฟล์ + 4 หมวด (ส่วนตัว / ติดต่อ / การทำงาน / บัญชี) เรียง 2 คอลัมน์บนจอกว้าง
+// โปรไฟล์อ่านอย่างเดียว: หัวโปรไฟล์ + หมวดข้อมูล (ส่วนตัว / ติดต่อ / การทำงาน / บัญชี / สวัสดิการของฉัน) เรียง 2 คอลัมน์บนจอกว้าง
 // ชิดซ้ายเหมือนหน้า Admin อื่น หัวข้อหน้าจะได้อยู่ตำแหน่งเดิมเมื่อสลับเมนู
-export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | null; fallbackName: string }) {
+export function ProfilePage({
+  user,
+  fallbackName,
+  lastEdit = null,
+  benefits = null,
+  bankAccount = null,
+  recentLogins = [],
+}: {
+  user: UserWithProfile | null;
+  fallbackName: string;
+  lastEdit?: MyProfile["lastEdit"];
+  benefits?: EmployeeBenefit[] | null;
+  bankAccount?: { bankCode: string; accountMasked: string } | null;
+  recentLogins?: { at: string; ip: string | null }[];
+}) {
   if (!user) {
     return (
       <div className="flex w-full max-w-[960px] flex-col gap-[20px]">
@@ -60,14 +76,20 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
   const tenure = p.hireDate && user.status === "ACTIVE" ? tenureLabel(p.hireDate) : null;
   const endDate = user.status === "DECEASED" ? p.deceasedDate : p.resignedDate;
 
+  const totalLimit = benefits ? benefits.reduce((sum, item) => sum + item.limit, 0) : null;
+  const totalRemaining = benefits ? benefits.reduce((sum, item) => sum + Math.max(item.remaining, 0), 0) : null;
+  const totalClaims = benefits ? benefits.reduce((sum, item) => sum + item.claimsThisYear, 0) : null;
+
   const sections: { id: string; title: string; rows: InfoRow[] }[] = [
     {
       id: "personal",
-      title: "ข้อมูลส่วนตัว",
+      title: "ข้อมูลส่วนตัวและครอบครัว",
       rows: [
         ["ชื่อ (ไทย)", joinParts(p.titleTh, p.firstNameTh, p.lastNameTh)],
         ["ชื่อ (อังกฤษ)", joinParts(p.firstNameEn, p.lastNameEn)],
         ["ชื่อเล่น", p.nickname],
+        ["สถานะสมรส", p.maritalStatus],
+        ["จำนวนบุตร", p.childrenCount === null ? null : `${p.childrenCount} คน`],
       ],
     },
     {
@@ -84,7 +106,7 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
       id: "work",
       title: "การทำงาน",
       rows: [
-        ["รหัสพนักงาน", <span className="tabular-nums">{user.employeeId}</span>],
+        ["รหัสพนักงาน", <span key="code" className="tabular-nums">{user.employeeId}</span>],
         ["แผนก", p.departmentName],
         ["ตำแหน่ง", p.positionName],
         ["ระดับ", p.jobLevelName],
@@ -105,12 +127,41 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
     },
     {
       id: "account",
-      title: "บัญชีผู้ใช้งาน",
+      title: "บัญชีผู้ใช้งานและประวัติล่าสุด",
       rows: [
         ["ชื่อล็อกอิน", user.email],
         ["บทบาท", ROLE_LABELS[user.role as Role] ?? user.role],
-        ["เข้าสู่ระบบล่าสุด", user.lastLoginAt ? <span className="tabular-nums">{formatDateTime(user.lastLoginAt)}</span> : null],
-        ["แก้ไขข้อมูลล่าสุด", user.updatedAt ? <span className="tabular-nums">{formatDateTime(user.updatedAt)}</span> : null],
+        ["เข้าสู่ระบบล่าสุด", user.lastLoginAt ? <span key="login" className="tabular-nums">{formatDateTime(user.lastLoginAt)}</span> : null],
+        ...(recentLogins.length > 0
+          ? ([
+              [
+                "ประวัติล็อกอิน",
+                <ul key="logins" className="flex flex-col gap-[2px] text-12 font-normal text-muted tabular-nums">
+                  {recentLogins.map((item, idx) => (
+                    <li key={`${item.at}-${idx}`}>
+                      {formatDateTime(item.at)}
+                      {item.ip ? ` · IP ${item.ip}` : ""}
+                    </li>
+                  ))}
+                </ul>,
+              ],
+            ] as InfoRow[])
+          : []),
+        [
+          "แก้ไขโปรไฟล์ล่าสุด",
+          lastEdit ? (
+            <span key="lastEdit" className="flex flex-col gap-[2px]">
+              <span className="tabular-nums">{lastEdit.at}</span>
+              <span className="text-12 font-normal text-muted">
+                โดย {lastEdit.editorName ?? "ระบบ"}
+                {lastEdit.editorPosition ? ` (${lastEdit.editorPosition})` : ""}
+                {lastEdit.reason ? ` · เหตุผล: ${lastEdit.reason}` : ""}
+              </span>
+            </span>
+          ) : user.updatedAt ? (
+            <span key="upd" className="tabular-nums">{formatDateTime(user.updatedAt)}</span>
+          ) : null,
+        ],
       ],
     },
   ];
@@ -166,6 +217,53 @@ export function ProfilePage({ user, fallbackName }: { user: UserWithProfile | nu
             </section>
           ))}
         </div>
+
+        {/* สิทธิ์สวัสดิการของฉันและบัญชีรับเงินสวัสดิการ (เชื่อมข้อมูลเดียวกับหน้าผู้ส่งคำขอและ HR) */}
+        <section aria-labelledby="profile-welfare" className="border-t border-line p-[20px]">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 id="profile-welfare" className="text-14 font-semibold text-ink">
+              สวัสดิการของฉันและบัญชีรับเงิน
+            </h3>
+            <Link
+              href="/employee"
+              className="inline-flex items-center gap-1.5 text-13 font-medium text-primary-700 hover:underline"
+            >
+              ไปหน้ายื่นคำขอสวัสดิการของฉัน
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="mt-[12px] grid grid-cols-1 gap-x-[40px] gap-y-[10px] lg:grid-cols-2">
+            <InfoList
+              rows={[
+                [
+                  "วงเงินคงเหลือปีนี้",
+                  totalRemaining !== null && totalLimit !== null ? (
+                    <span key="rem" className="tabular-nums">
+                      {formatBahtWhole(totalRemaining)}{" "}
+                      <span className="font-normal text-muted">จาก {formatBahtWhole(totalLimit)}</span>
+                    </span>
+                  ) : null,
+                ],
+                [
+                  "จำนวนครั้งที่เบิกปีนี้",
+                  totalClaims !== null ? <span key="cnt" className="tabular-nums">{totalClaims} ครั้ง</span> : null,
+                ],
+              ]}
+            />
+            <InfoList
+              rows={[
+                [
+                  "บัญชีรับเงินสวัสดิการ",
+                  bankAccount ? `${bankAccount.bankCode} · ${bankAccount.accountMasked}` : null,
+                ],
+                [
+                  "จำนวนสวัสดิการที่มีสิทธิ์",
+                  benefits ? <span key="ben" className="tabular-nums">{benefits.length} รายการ</span> : null,
+                ],
+              ]}
+            />
+          </div>
+        </section>
 
         {/* รหัสผ่านอยู่ในแผ่นเดียวกับโปรไฟล์ คั่นด้วยเส้น ไม่แยกเป็นกล่องใหม่ */}
         <section aria-labelledby="profile-password" className="border-t border-line p-[20px]">

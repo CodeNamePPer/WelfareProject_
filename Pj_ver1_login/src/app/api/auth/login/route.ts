@@ -102,7 +102,13 @@ export async function POST(req: NextRequest) {
   // (ไม่งั้นจะเห็นโครงหน้าของ "/" ซึ่งเป็นหน้าพนักงาน แวบก่อนเข้า /admin)
   const home = mustChange ? "/change-password" : user.role === "SUPER_ADMIN" ? "/admin" : "/";
 
-  const res = NextResponse.json({ ok: true, mustChangePassword: mustChange, home });
+  const res = NextResponse.json({
+    ok: true,
+    mustChangePassword: mustChange,
+    home,
+    // ให้หน้า login จำบัญชีนี้ไว้ในเครื่อง (ตัวเลือกบัญชี) – ข้อมูลที่ผู้ใช้เห็นอยู่แล้วหลังเข้าระบบ ไม่มีรหัสผ่าน/token
+    account: { code: user.employeeId, login: user.email, name: user.name, role: user.role },
+  });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return res;
 }

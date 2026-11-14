@@ -27,12 +27,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const result = await decideProposal(id, decision, note, session.sub);
     if (result.benefitCode) {
+      const action = result.kind === "create" ? "WELFARE_CREATE" : "WELFARE_UPDATE";
+      const detail =
+        result.kind === "create"
+          ? `อนุมัติข้อเสนอและสร้างสวัสดิการ ${result.benefitCode}`
+          : result.kind === "close"
+            ? `อนุมัติข้อเสนอปิดใช้สวัสดิการ ${result.benefitCode}`
+            : `อนุมัติข้อเสนอแก้ไขสวัสดิการ ${result.benefitCode}`;
       await writeAudit({
-        action: "WELFARE_CREATE",
+        action,
         userId: session.sub,
         ip: getClientIp(req.headers),
         targetId: result.benefitCode,
-        detail: `อนุมัติข้อเสนอและสร้างสวัสดิการ ${result.benefitCode}`,
+        detail,
         reason: note.trim() || undefined,
       });
     }

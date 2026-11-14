@@ -11,6 +11,7 @@ import {
   getOrgOptions,
   getUserById,
   getUserWithProfileById,
+  unlockUserAccount,
   updateEmployeeRecord,
   updateUser,
   type EmployeeColumn,
@@ -50,11 +51,12 @@ const EMPLOYEE_SECTIONS: Record<"personal" | "family" | "contact" | "work", Reco
   },
   family: {
     maritalStatus: { column: "marital_status", label: "สถานะสมรส" },
-    childrenCount: { column: "children_count", label: "จำนวนบุตร", pattern: /^\d+$/, patternMessage: "จำนวนบุตรต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป" },
-    fatherFirstName: { column: "father_first_name", label: "ชื่อบิดา" },
-    fatherLastName: { column: "father_last_name", label: "นามสกุลบิดา" },
-    motherFirstName: { column: "mother_first_name", label: "ชื่อมารดา" },
-    motherLastName: { column: "mother_last_name", label: "นามสกุลมารดา" },
+    childrenCount: {
+      column: "children_count",
+      label: "จำนวนบุตร",
+      pattern: /^[0-2]$/,
+      patternMessage: "จำนวนบุตรที่เบิกได้สูงสุด 2 คน (0–2)",
+    },
   },
   contact: {
     contactEmail: { column: "email", label: "อีเมลติดต่อ", required: true, pattern: EMAIL_RE, patternMessage: "รูปแบบอีเมลติดต่อไม่ถูกต้อง" },
@@ -76,13 +78,13 @@ const EMPLOYEE_SECTIONS: Record<"personal" | "family" | "contact" | "work", Reco
   },
 };
 
-type Section = "account" | keyof typeof EMPLOYEE_SECTIONS;
+type Section = "account" | "unlock" | keyof typeof EMPLOYEE_SECTIONS;
 
 class InputError extends Error {}
 
 export async function PUT(req: NextRequest) {
   const session = await getSession();
-  if (!session || session.role !== "SUPER_ADMIN") {
+  if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "HR")) {
     return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
   }
 
@@ -93,20 +95,28 @@ export async function PUT(req: NextRequest) {
     const section: Section = body.section ?? "account";
     const values: Record<string, unknown> = body.values ?? body;
 
+    if ((section === "account" || section === "unlock") && session.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "การจัดการบัญชีผู้ใช้ทำได้เฉพาะผู้ดูแลระบบ (Admin)" }, { status: 403 });
+    }
+
     if (!employeeId || typeof employeeId !== "string") {
       return NextResponse.json({ error: "ไม่พบรหัสพนักงาน" }, { status: 400 });
     }
     if (!reason) {
       return NextResponse.json({ error: "กรุณาระบุเหตุผลการเปลี่ยนแปลง" }, { status: 400 });
     }
-    if (section !== "account" && !(section in EMPLOYEE_SECTIONS)) {
+    if (section !== "account" && section !== "unlock" && !(section in EMPLOYEE_SECTIONS)) {
       return NextResponse.json({ error: "ส่วนข้อมูลไม่ถูกต้อง" }, { status: 400 });
     }
 
     const changes =
-      section === "account"
-        ? await saveAccount(employeeId, values, reason)
-        : await saveEmployee(employeeId, EMPLOYEE_SECTIONS[section], values);
+      section === "unlock"
+        ? (await unlockUserAccount(employeeId))
+          ? ({ accountLock: { old: "ถูกล็อกชั่วคราว", new: "ปลดล็อกแล้ว" } } as AuditChanges)
+          : null
+        : section === "account"
+          ? await saveAccount(employeeId, values, reason)
+          : await saveEmployee(employeeId, EMPLOYEE_SECTIONS[section], values);
 
     if (changes === null) {
       return NextResponse.json({ error: "ไม่พบผู้ใช้งาน" }, { status: 404 });

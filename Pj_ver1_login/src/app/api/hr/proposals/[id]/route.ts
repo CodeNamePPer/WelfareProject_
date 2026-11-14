@@ -1,14 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
 import { parseProposalInput } from "@/lib/hr/proposalInput";
-import { ProposalError, reviseProposal, withdrawProposal } from "@/lib/hr/proposals";
+import { ProposalError, getProposal, reviseProposal, withdrawProposal } from "@/lib/hr/proposals";
 
 export const runtime = "nodejs";
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session || (session.role !== "HR" && session.role !== "SUPER_ADMIN")) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  }
+  const { id } = await params;
+  const proposal = await getProposal(id);
+  if (!proposal) return NextResponse.json({ error: "ไม่พบข้อเสนอนี้" }, { status: 404 });
+  return NextResponse.json({ proposal });
+}
 
 // ผู้เสนอแก้ข้อเสนอแล้วส่งกลับ (H14) หรือถอนข้อเสนอ
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
-  if (!session || session.role !== "HR") return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  if (!session || (session.role !== "HR" && session.role !== "SUPER_ADMIN")) {
+    return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
+  }
   const { id } = await params;
 
   let body: Record<string, unknown>;

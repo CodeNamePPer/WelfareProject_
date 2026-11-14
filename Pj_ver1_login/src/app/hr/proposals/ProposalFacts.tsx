@@ -1,5 +1,7 @@
-import { BUDGET_LABEL, type ProposalDetail, type ProposalStatus } from "@/lib/hr/proposals";
+import type { BudgetType, ProposalDetail, ProposalStatus } from "@/lib/hr/proposals";
 import { Card, type BadgeTone } from "@/features/hr/ui";
+
+const BUDGET_LABEL: Record<BudgetType, string> = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
 
 // รายละเอียดที่เสนอ (HH2) ใช้ทั้งหน้าหัวหน้า HR และหน้าผู้เสนอ
 export const PROPOSAL_STATUS: Record<ProposalStatus, { label: string; tone: BadgeTone }> = {

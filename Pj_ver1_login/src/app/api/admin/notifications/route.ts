@@ -31,6 +31,9 @@ export async function PATCH(req: NextRequest) {
   if (!ACTIONS.includes(action)) {
     return NextResponse.json({ error: "คำสั่งไม่ถูกต้อง" }, { status: 400 });
   }
+  if (typeof body.id === "string" && body.id.startsWith("prop-")) {
+    return NextResponse.json({ ok: true });
+  }
   const id = Number(body.id);
   if (action !== "read_all" && !(Number.isSafeInteger(id) && id > 0)) {
     return NextResponse.json({ error: "ไม่พบรหัสแจ้งเตือน" }, { status: 400 });

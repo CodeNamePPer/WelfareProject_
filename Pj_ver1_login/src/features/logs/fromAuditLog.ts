@@ -42,6 +42,7 @@ const FIELD_LABELS: Record<string, string> = {
   jobLevelId: 'ระดับ',
   managerCode: 'หัวหน้า',
   hireDate: 'วันเริ่มงาน',
+  accountLock: 'สถานะการล็อกบัญชี',
 };
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'ทำงานอยู่', RESIGNED: 'ลาออก' };
 
@@ -144,15 +145,41 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
         {
           ...base,
           title: welfareTitle(row.action, fields),
-          detail: fields.map((f) => WELFARE_FIELD_LABELS[f] ?? f).join(', '),
+          detail: fields.length > 0 ? fields.map((f) => WELFARE_FIELD_LABELS[f] ?? f).join(', ') : (row.detail ?? ''),
           category: 'settings' as AuditCategory,
           action: 'welfare',
-          target: row.targetId ? { code: row.targetId, name: row.detail } : undefined,
+          target: row.targetId ? { code: row.targetId, name: row.detail, href: `/admin/benefits?item=${row.targetId}` } : undefined,
           change: {
             fields: fields.map((f) => ({
               label: WELFARE_FIELD_LABELS[f] ?? f,
               before: changes[f].old == null ? '—' : String(changes[f].old),
               after: changes[f].new == null ? '—' : String(changes[f].new),
+            })),
+            reason: row.reason,
+          },
+        },
+      ];
+    }
+
+    if (row.action === 'EMPLOYEE_LIMIT_UPDATE') {
+      const changes = row.changes ?? {};
+      const codes = Object.keys(changes);
+      const targetName = (row.targetId && users.get(row.targetId)?.name) || undefined;
+      const fmtMoney = (v: unknown) =>
+        v == null || v === '' ? 'วงเงินมาตรฐาน' : `฿${Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
+      return [
+        {
+          ...base,
+          title: `ปรับวงเงินสวัสดิการรายบุคคลของ ${targetName ?? row.targetId ?? ''}`,
+          detail: row.detail ?? codes.join(', '),
+          category: 'settings' as AuditCategory,
+          action: 'welfare',
+          target: row.targetId ? { code: row.targetId, name: targetName, href: `/admin/users?user=${row.targetId}` } : undefined,
+          change: {
+            fields: codes.map((code) => ({
+              label: `วงเงิน ${code}`,
+              before: fmtMoney(changes[code].old),
+              after: fmtMoney(changes[code].new),
             })),
             reason: row.reason,
           },

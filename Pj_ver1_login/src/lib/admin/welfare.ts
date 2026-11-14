@@ -8,6 +8,23 @@ import type { BudgetType, WelfareItem, WelfareStatus } from "../../types";
 
 type DbBudgetType = "yearly" | "monthly" | "per_claim";
 
+interface BenefitExtraRow {
+  id: string;
+  form_type: string | null;
+  category: string | null;
+  description: string | null;
+  detail: string | null;
+  image_path: string | null;
+  allow_advance: boolean | null;
+}
+
+interface LevelLimitRow {
+  benefit_id: string;
+  job_level_id: string;
+  amount: number | string;
+  level: { code: string; name_th: string; rank_order: number } | null;
+}
+
 interface BenefitRow {
   id: string;
   code: string;
@@ -17,6 +34,12 @@ interface BenefitRow {
   max_claims_note: string | null;
   /** ไม่อยู่ใน v_welfare_benefit_current จึงอ่านจาก welfare_benefit แยก */
   form_type?: string | null;
+  category?: string | null;
+  description?: string | null;
+  detail?: string | null;
+  image_path?: string | null;
+  allow_advance?: boolean | null;
+  levelLimits?: WelfareItem["levelLimits"];
   eligibility_note: string | null;
   approver_role_id: string | null;
   required_documents: string[];
@@ -65,9 +88,19 @@ function estimateBudget(row: BenefitRow, amount: number, lookup: LookupData): st
 function toItem(row: BenefitRow, lookup: LookupData): WelfareItem {
   const hasCurrent = row.current_amount !== null;
   const amount = Number(row.current_amount ?? row.next_amount ?? 0);
+  const eligible = row.eligibility_note ?? "";
   return {
+    id: row.id,
     code: row.code,
     name: row.name_th,
+    category: row.category ?? "",
+    description: row.description ?? "",
+    detail: row.detail ?? "",
+    imagePath: row.image_path ?? null,
+    allowAdvance: Boolean(row.allow_advance),
+    allowFamily: eligible.includes("เบิกให้ครอบครัวได้"),
+    allowInsurance: eligible.includes("เบิกส่วนเกินจากประกันได้"),
+    levelLimits: row.levelLimits ?? [],
     updatedAt: bangkokDate(new Date(row.updated_at)),
     owner: "Admin",
     amount,
@@ -76,7 +109,7 @@ function toItem(row: BenefitRow, lookup: LookupData): WelfareItem {
     maxClaims: maxClaimsLabel(row.max_claims, row.max_claims_note),
     maxClaimsPerYear: row.max_claims,
     formType: row.form_type && row.form_type in FORM_FIELDS ? row.form_type : "general",
-    eligible: row.eligibility_note ?? "",
+    eligible,
     startDate: row.current_effective_from ?? row.next_effective_from ?? "",
     approver: row.approver_role_id ? (lookup.roleCodeById.get(row.approver_role_id) ?? "") : "",
     estimatedBudget: estimateBudget(row, amount, lookup),
@@ -104,15 +137,64 @@ async function fetchLookup(): Promise<LookupData> {
 /** คืน null เมื่อโหลดไม่สำเร็จ เพื่อให้หน้าจอแจ้งตามจริงแทนการแสดงรายการว่าง */
 export async function getWelfareItems(): Promise<WelfareItem[] | null> {
   try {
-    const [benefits, forms, lookup] = await Promise.all([
+    const [benefits, extras, levelRows, lookup] = await Promise.all([
       supabaseAdmin.from("v_welfare_benefit_current").select(COLUMNS).order("code").returns<BenefitRow[]>(),
-      supabaseAdmin.from("welfare_benefit").select("id, form_type").is("deleted_at", null).returns<{ id: string; form_type: string | null }[]>(),
+      supabaseAdmin
+        .from("welfare_benefit")
+        .select("id, form_type, category, description, detail, image_path, allow_advance")
+        .is("deleted_at", null)
+        .returns<BenefitExtraRow[]>(),
+      supabaseAdmin
+        .from("welfare_benefit_limit")
+        .select("benefit_id, job_level_id, amount, level:job_level_id(code, name_th, rank_order)")
+        .is("employee_id", null)
+        .not("job_level_id", "is", null)
+        .is("effective_to", null)
+        .is("deleted_at", null)
+        .returns<LevelLimitRow[]>(),
       fetchLookup(),
     ]);
     if (benefits.error) throw benefits.error;
-    if (forms.error) throw forms.error;
-    const formTypeOf = new Map((forms.data ?? []).map((row) => [row.id, row.form_type]));
-    return (benefits.data ?? []).map((row) => toItem({ ...row, form_type: formTypeOf.get(row.id) }, lookup));
+    let extraRows = extras.data ?? [];
+    if (extras.error) {
+      const fallback = await supabaseAdmin
+        .from("welfare_benefit")
+        .select("id, form_type, category, description")
+        .is("deleted_at", null)
+        .returns<BenefitExtraRow[]>();
+      extraRows = fallback.data ?? [];
+    }
+    const extraOf = new Map(extraRows.map((row) => [row.id, row]));
+    const limitsByBenefit = new Map<string, { levelId: string; code: string; name: string; amount: number; rank: number }[]>();
+    for (const row of levelRows.data ?? []) {
+      if (!row.job_level_id || !row.level) continue;
+      const list = limitsByBenefit.get(row.benefit_id) ?? [];
+      list.push({
+        levelId: row.job_level_id,
+        code: row.level.code,
+        name: row.level.name_th,
+        amount: Number(row.amount),
+        rank: row.level.rank_order ?? 0,
+      });
+      limitsByBenefit.set(row.benefit_id, list);
+    }
+    return (benefits.data ?? []).map((row) => {
+      const extra = extraOf.get(row.id);
+      const levelLimits = (limitsByBenefit.get(row.id) ?? []).sort((a, b) => a.rank - b.rank).map(({ rank: _rank, ...rest }) => rest);
+      return toItem(
+        {
+          ...row,
+          form_type: extra?.form_type,
+          category: extra?.category,
+          description: extra?.description,
+          detail: extra?.detail,
+          image_path: extra?.image_path,
+          allow_advance: extra?.allow_advance,
+          levelLimits,
+        },
+        lookup,
+      );
+    });
   } catch (err) {
     console.error("[admin welfare] load failed", err);
     return null;

@@ -62,10 +62,16 @@ const config: Config = {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
+        // หน้า login: สลับขั้นตอน เลือกบัญชี ↔ ใส่รหัสผ่าน
+        "step-in": {
+          from: { opacity: "0", transform: "translateY(8px)", filter: "blur(2px)" },
+          to: { opacity: "1", transform: "none", filter: "none" },
+        },
       },
       animation: {
         // หน่วง 200ms ก่อนค่อยๆ แสดง skeleton
         "skeleton-in": "skeleton-in 200ms ease-out 200ms both",
+        "step-in": "step-in 450ms cubic-bezier(.16,1,.3,1) both",
       },
     },
   },

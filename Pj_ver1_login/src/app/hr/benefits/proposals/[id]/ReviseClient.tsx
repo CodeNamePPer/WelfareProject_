@@ -19,10 +19,12 @@ export function ReviseClient({
   proposal,
   request,
   levels,
+  onSuccess,
 }: {
   proposal: { id: string; input: ProposalInput };
   request: { by: string; at: string; note: string } | null;
   levels: Level[];
+  onSuccess?: () => void;
 }) {
   const router = useRouter();
   const { notify } = useToast();
@@ -58,8 +60,12 @@ export function ReviseClient({
       const body = await response.json().catch(() => ({}));
       if (!response.ok) return setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       notify(action === 'withdraw' ? 'ถอนข้อเสนอแล้ว' : 'ส่งกลับให้หัวหน้า HR แล้ว');
-      router.push('/hr/benefits');
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push('/hr/benefits');
+        router.refresh();
+      }
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
