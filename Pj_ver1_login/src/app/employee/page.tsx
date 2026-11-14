@@ -1,17 +1,24 @@
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
-import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
-import type { ClaimRecord } from "@/lib/claims/types";
-import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { getEmployeeBenefits, getPaySettings, listClaims } from "@/lib/claims/service";
+import { getMyProfile } from "@/lib/employee/profile";
+import { APPROVAL_FLOW } from "@/lib/claims/forms";
+import { APPROVED, HOLDER, RESERVED, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
+import type { EmployeeBenefit } from "@/lib/claims/types";
+import { BenefitThumb, ClaimPill, EmptyNote, RowLink, Sheet, UsageBar, pill } from "@/features/requester/ui";
 
-const number = new Intl.NumberFormat("th-TH");
-const thaiDate = (iso: string) => new Date(iso).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" });
+const BUDGET_TYPE = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
+// ตาม R01: คอลัมน์ 1.7fr / 1.3fr / 110 / 120 / 120 / 130 ทุกขนาดจอ จอแคบเลื่อนแนวนอนในกล่อง
+// กว้างขั้นต่ำ 900px ให้ "อยู่ที่ใคร" ที่ยาวที่สุดยังอยู่บรรทัดเดียว
+const CLAIM_COLS = "grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)_110px_120px_120px_130px]";
 
-const PENDING: ClaimRecord["status"][] = ["pending_hr", "needs_revision", "pending_finance", "finance_returned"];
-const APPROVED: ClaimRecord["status"][] = ["awaiting_payment", "paid"];
+/** วงเงินเทียบเป็นต่อปี สวัสดิการที่จ่ายต่อครั้งไม่มีเพดานรายปีจึงไม่นับ */
+const yearlyLimit = (benefit: EmployeeBenefit) => (benefit.budgetType === "yearly" ? benefit.limit : benefit.budgetType === "monthly" ? benefit.limit * 12 : 0);
+
+function claimsNote(benefit: EmployeeBenefit) {
+  return benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : "ไม่จำกัดครั้ง";
+}
 
 export default async function Home() {
   const session = await getSession();
@@ -19,131 +26,244 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const [benefits, claims] = await Promise.all([getEmployeeBenefits(session.sub), listClaims({ employeeCode: session.sub })]);
-  if (!benefits || !claims) {
+  const [profile, benefits, claims, paySettings] = await Promise.all([
+    getMyProfile(session.sub),
+    getEmployeeBenefits(session.sub),
+    listClaims({ employeeCode: session.sub }),
+    getPaySettings().catch(() => undefined),
+  ]);
+  if (!profile || !benefits || !claims) {
     return <p className="text-13 text-status-rejected">โหลดข้อมูลสวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   }
 
-  const visible = claims.filter((claim) => claim.status !== "cancelled");
-  const pendingCount = visible.filter((claim) => PENDING.includes(claim.status)).length;
-  const approvedCount = visible.filter((claim) => APPROVED.includes(claim.status)).length;
-  const draftCount = visible.filter((claim) => claim.status === "draft").length;
-  const recent = visible.slice(0, 3);
-  // สิทธิ์ที่ใช้ไปแล้วขึ้นก่อน เพื่อให้เห็นยอดที่เปลี่ยนแปลงจริง
-  const topBenefits = [...benefits].sort((a, b) => b.used + b.pending - (a.used + a.pending)).slice(0, 3);
-  const year = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" }).slice(0, 4);
+  const today = bangkokToday();
+  const year = today.slice(0, 4);
+  const thaiYear = Number(year) + 543;
+  // นับตามปีของวันที่เกิดค่าใช้จ่าย กฎเดียวกับวงเงินในฐานข้อมูล
+  const thisYear = claims.filter((claim) => claim.expenseDate?.slice(0, 4) === year);
+  const used = thisYear.filter((claim) => APPROVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
+  const reserved = thisYear.filter((claim) => RESERVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
+  const total = benefits.reduce((sum, benefit) => sum + yearlyLimit(benefit), 0);
+  const available = Math.max(total - used - reserved, 0);
+  const claimCount = thisYear.filter((claim) => APPROVED.includes(claim.status) || RESERVED.includes(claim.status)).length;
+  const paidThisYear = thisYear.filter((claim) => claim.status === "paid").reduce((sum, claim) => sum + countedAmount(claim), 0);
+  const awaiting = thisYear.filter((claim) => claim.status === "awaiting_payment").reduce((sum, claim) => sum + countedAmount(claim), 0);
+
+  const toRevise = claims.filter((claim) => claim.status === "needs_revision");
+  const recent = claims.filter((claim) => claim.status !== "cancelled").slice(0, 5);
+  // สิทธิ์ที่มีการใช้ขึ้นก่อน จะได้เห็นยอดที่เปลี่ยนจริง
+  const shownBenefits = [...benefits].sort((a, b) => b.used + b.pending - (a.used + a.pending)).slice(0, 8);
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className='flex flex-col gap-1'>
-          <h1 className='text-22 font-semibold tracking-tight text-ink'>ภาพรวมสวัสดิการของฉัน</h1>
-          <p className='text-13 text-muted'>ตรวจสอบสิทธิ์สวัสดิการของคุณได้ที่นี่</p>
+      <Sheet aria-label="โปรไฟล์" className="overflow-hidden">
+        <div className="h-24 bg-blue-900" />
+        <div className="flex flex-wrap items-end gap-4 px-6">
+          <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
+            {profile.initials}
+          </div>
+          <div className="min-w-0 pb-1">
+            <h1 className="text-22 font-semibold">{profile.name}</h1>
+            <p className="text-14 text-ink-soft">{[profile.position, profile.department].filter(Boolean).join(" · ") || "ยังไม่ระบุตำแหน่ง"}</p>
+            <p className="text-12 text-muted">
+              {profile.code}
+              {profile.managerName ? ` · หัวหน้า: ${profile.managerName}` : ""}
+            </p>
+          </div>
         </div>
-        <Link href="/employee/withdraw" className='inline-flex min-h-10 items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-13 font-medium text-white transition-colors hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'>
-          ยื่นคำขอใหม่
-        </Link>
-      </div>
-      <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className='font-medium text-ink'>สิทธิ์คงเหลือของฉัน</h2>
-        <div className='flex items-center justify-between gap-4 text-13'>
-          <span className='text-muted'>1 ม.ค. – 31 ธ.ค. {Number(year) + 543}</span>
-          <Link href="/employee/welfare" className='inline-flex shrink-0 items-center gap-1 text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'>
-            ดูสิทธิ์ทั้งหมด <ArrowRight className="inline-block size-4" aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-3 text-13 lg:grid-cols-3">
-        {topBenefits.map((benefit) => {
-          const percent = benefit.limit > 0 ? Math.min(100, Math.round((benefit.remaining / benefit.limit) * 100)) : 0;
-          return (
-            <article key={benefit.code} className='rounded-lg border border-line bg-white p-5 transition-colors hover:border-primary-100'>
-              <div className='mb-4 flex items-center justify-between gap-3'>
-                <p className='text-14 font-semibold text-ink'>{benefit.name}</p>
-                <span className='shrink-0 rounded-full bg-primary-50 px-2.5 py-1 text-12 font-medium text-primary-700'>ต่อ{benefit.budgetLabel}</span>
+
+        <div className="mt-4 flex flex-wrap border-t border-line">
+          <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-2.5 px-6 py-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-12 text-muted">วงเงินที่ใช้ได้ ปี {thaiYear}</p>
+                <p className="text-[26px] leading-tight font-semibold tabular-nums">
+                  {baht(available)} <span className="text-14 font-normal text-muted">จากวงเงินทั้งหมด {baht(total)}</span>
+                </p>
               </div>
-              <div className='mb-3 flex items-end gap-2'>
-                <span className='text-24 font-semibold tabular-nums text-ink'>{number.format(benefit.remaining)}</span>
-                <span className='pb-1 text-12 text-muted'>บาทคงเหลือ</span>
-              </div>
-              <div className='mb-3 h-2 w-full overflow-hidden rounded-full bg-primary-50' role='progressbar' aria-label={`วงเงิน${benefit.name}คงเหลือ`} aria-valuemin={0} aria-valuemax={benefit.limit} aria-valuenow={benefit.remaining}>
-                <div className='h-full rounded-full bg-primary-600' style={{ width: `${percent}%` }}></div>
-              </div>
-              <div className='flex items-center justify-between text-12 text-muted'>
-                <span>ใช้แล้ว{benefit.pending > 0 ? ` · รอตรวจ ${number.format(benefit.pending)}` : ""}</span>
-                <span className='font-medium tabular-nums text-ink-soft'>{number.format(benefit.used)} / {number.format(benefit.limit)} บาท</span>
-              </div>
-            </article>
-          );
-        })}
-        {topBenefits.length === 0 ? <p className='text-muted'>ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้</p> : null}
-      </div>
-      <div className='my-2'>
-        <p className='text-13 text-muted'>วงเงินคงเหลือหักทั้งรายการที่อนุมัติแล้วและรายการที่รอตรวจ</p>
-      </div>
-      <div className='grid grid-cols-2 gap-3 lg:grid-cols-4'>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>คำขอทั้งหมด <span className='text-22 font-semibold tabular-nums text-ink'>{visible.length}</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>รออนุมัติ <span className='text-22 font-semibold tabular-nums text-ink'>{pendingCount}</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>อนุมัติแล้ว <span className='text-22 font-semibold tabular-nums text-ink'>{approvedCount}</span></div>
-        <div className='flex min-h-[76px] items-center justify-between gap-3 rounded-lg border border-line px-4 py-3 text-13 text-ink-soft'>ฉบับร่าง <span className='text-22 font-semibold tabular-nums text-ink'>{draftCount}</span></div>
-      </div>
-      <div className='mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-[2fr_1fr]'>
-        <section className='min-w-0 rounded-lg border border-line bg-white p-4 sm:p-5' aria-labelledby='recent-requests-title'>
-          <div className='mb-4 flex items-center justify-between'>
-            <h2 id='recent-requests-title' className='text-17 font-semibold'>คำขอล่าสุด</h2>
-            <Link href="/employee/status" className='inline-flex items-center gap-1 rounded text-13 text-primary-700 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'>
-              ติดตามทั้งหมด <ArrowRight className="inline-block size-4" aria-hidden="true" />
+              <p className="text-right text-12 text-muted">
+                รวมวงเงินรายปีและรายเดือน
+                <br />
+                รีเซ็ต 1 ม.ค. {thaiYear + 1}
+              </p>
+            </div>
+            <UsageBar size="lg" used={used} pending={reserved} limit={total} label={`ใช้ไปแล้ว ${baht(used)} กันวงเงินไว้ ${baht(reserved)}`} />
+            <ul className="flex flex-wrap gap-5 text-13">
+              <Legend swatch="bg-primary-700" label="ใช้ไปแล้ว" value={baht(used)} />
+              <Legend swatch="bg-amber-500" label="กันวงเงินไว้ (รอตรวจ)" value={baht(reserved)} />
+              <Legend swatch="border border-slate-300 bg-mist" label="ใช้ได้" value={baht(available)} />
+            </ul>
+            <p className="text-12 text-muted">คำขอที่รอตรวจจะถูกกันวงเงินไว้ทันทีที่ยื่น ถ้าไม่อนุมัติหรือยกเลิก ระบบคืนวงเงินให้อัตโนมัติ</p>
+          </div>
+          <div className="flex flex-[1_1_200px] flex-col gap-1.5 border-line px-6 py-4 max-lg:border-t lg:border-l">
+            <p className="text-12 text-muted">จำนวนครั้งที่เบิกปีนี้</p>
+            <p className="text-[20px] font-semibold tabular-nums">
+              {claimCount} <span className="text-14 font-normal text-muted">ครั้ง</span>
+            </p>
+            <p className="text-12 text-muted">นับคำขอที่ยื่นแล้วทุกสถานะ ยกเว้นยกเลิกและไม่อนุมัติ</p>
+          </div>
+          <div className="flex flex-[1_1_200px] flex-col gap-1 border-line px-6 py-4 max-lg:border-t lg:border-l">
+            <p className="text-12 text-muted">รอบจ่ายถัดไป</p>
+            <p className="text-[20px] font-semibold">{thaiDate(nextPayDate(paySettings, today))}</p>
+            <p className="text-12 text-muted">คำขอที่อนุมัติครบก่อนวันจ่าย</p>
+            <Link href="/employee/rounds" className="text-12 text-primary-600 hover:text-primary-700 hover:underline">
+              ดูรอบจ่าย ›
             </Link>
           </div>
-          <div className='overflow-x-auto'>
-            <table className='w-full min-w-[560px] table-fixed border-collapse text-left text-13'>
-              <thead className='bg-surface text-12 text-ink-soft'>
-                <tr>
-                  <th scope='col' className='w-[26%] px-3 py-3 font-medium'>เลขที่คำขอ</th>
-                  <th scope='col' className='w-[34%] px-3 py-3 font-medium'>ประเภท / วันที่ยื่น</th>
-                  <th scope='col' className='w-[16%] px-3 py-3 font-medium'>จำนวนเงิน (บาท)</th>
-                  <th scope='col' className='w-[24%] px-3 py-3 font-medium'>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((claim) => (
-                  <tr key={claim.id} className='h-16 border-b border-line'>
-                    <th scope='row' className='px-3 py-2 font-semibold'>{claim.claimNo}</th>
-                    <td className='px-3 py-2'>
-                      <div className='font-medium'>{claim.benefitName}</div>
-                      <div className='mt-1 text-12 text-muted'>{thaiDate(claim.submittedAt ?? claim.createdAt)}</div>
-                    </td>
-                    <td className='px-3 py-2 font-semibold'>{number.format(claim.amountRequested)}</td>
-                    <td className='px-3 py-2'>
-                      <StatusBadge
-                        status={APPROVED.includes(claim.status) ? "approved" : claim.status === "cancelled" || claim.status === "rejected" ? "rejected" : "pending"}
-                        label={CLAIM_STATUS_LABEL[claim.status]}
-                      />
-                    </td>
-                  </tr>
-                ))}
-                {recent.length === 0 ? (
-                  <tr><td colSpan={4} className='px-3 py-8 text-center text-muted'>ยังไม่มีคำขอ</td></tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        </div>
 
-        <section className='rounded-lg border border-line bg-white p-5' aria-labelledby='announcements-title'>
-          <h2 id='announcements-title' className='mb-4 text-17 font-semibold'>ประกาศสวัสดิการ</h2>
-          <article className='border-b border-line py-4 first:pt-0'>
-            <h3 className='mb-1 font-semibold leading-6 text-ink'>กำหนดส่งคำขอรอบเดือนตุลาคม</h3>
-            <p className='text-13 leading-6 text-ink-soft'>ส่งคำขอพร้อมเอกสารภายใน 25 ต.ค. 2569 เพื่อรับการพิจารณาในรอบนี้</p>
-            <p className='mt-2 text-12 text-muted'>8 ต.ค. 2569</p>
-          </article>
-          <article className='pt-4'>
-            <h3 className='mb-1 font-semibold leading-6 text-ink'>เตรียมเอกสารก่อนยื่นคำขอ</h3>
-            <p className='text-13 leading-6 text-ink-soft'>ใบเสร็จต้องระบุชื่อพนักงาน วันที่ และยอดที่ชำระอย่างชัดเจน</p>
-            <p className='mt-2 text-12 text-muted'>1 ต.ค. 2569</p>
-          </article>
+        <nav aria-label="ส่วนของหน้า" className="flex flex-wrap gap-1 border-t border-line px-4 text-14">
+          <span aria-current="page" className="border-b-2 border-primary-600 px-2.5 py-3 font-semibold text-ink">
+            สิทธิ์สวัสดิการ
+          </span>
+          <Link href="/employee/status" className="px-2.5 py-3 text-muted hover:text-ink">
+            คำขอของฉัน
+          </Link>
+          <Link href="/employee/profile" className="px-2.5 py-3 text-muted hover:text-ink">
+            ข้อมูลส่วนตัว
+          </Link>
+        </nav>
+      </Sheet>
+
+      {toRevise.length > 0 ? (
+        <section aria-label="ต้องทำ" className="flex flex-col gap-2">
+          {toRevise.map((claim) => (
+            <div key={claim.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-orange-300 bg-orange-50 px-4 py-3 text-orange-800">
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  HR ส่งคำขอกลับให้แก้ไข: {claim.claimNo} {claim.benefitName} {baht(claim.amountRequested)}
+                </p>
+                <p className="text-12">{lastEventOf(claim, "revision_requested")?.note || "เปิดคำขอเพื่อดูสิ่งที่ต้องแก้ไข"}</p>
+              </div>
+              <Link
+                href={`/employee/withdraw?claim=${encodeURIComponent(claim.claimNo)}`}
+                className="inline-flex h-[34px] items-center rounded-full border border-orange-600 bg-white px-3.5 text-13 font-medium text-orange-800 hover:bg-orange-100"
+              >
+                แก้ไขคำขอ
+              </Link>
+            </div>
+          ))}
         </section>
-      </div>
+      ) : null}
+
+      <Sheet aria-labelledby="my-claims-title">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-4 pb-2">
+          <h2 id="my-claims-title" className="text-16 font-semibold">
+            คำขอของฉันและยอดจ่าย
+          </h2>
+          <Link href="/employee/status" className="text-13 text-primary-600 hover:text-primary-700 hover:underline">
+            ดูทั้งหมด ›
+          </Link>
+        </div>
+        {recent.length === 0 ? (
+          <EmptyNote>
+            ยังไม่มีคำขอ{" "}
+            <Link href="/employee/withdraw" className="text-primary-600 hover:underline">
+              ยื่นคำขอแรกของคุณ
+            </Link>
+          </EmptyNote>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <div className={`grid ${CLAIM_COLS} items-center gap-3 bg-surface px-5 py-2 text-12 font-medium text-muted`}>
+                <span>คำขอ</span>
+                <span>อยู่ที่ใคร</span>
+                <span className="text-right">ยอดขอเบิก</span>
+                <span className="text-right">ยอดจ่าย</span>
+                <span>วันจ่าย</span>
+                <span>สถานะ</span>
+              </div>
+              {recent.map((claim) => {
+                const payDate = payDateOf(claim);
+                return (
+                  <RowLink
+                    key={claim.id}
+                    href={claim.status === "draft" || claim.status === "needs_revision" ? `/employee/withdraw?claim=${encodeURIComponent(claim.claimNo)}` : `/employee/status?id=${encodeURIComponent(claim.claimNo)}`}
+                    className={`${CLAIM_COLS} py-3`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block break-words font-medium">{claim.benefitName}</span>
+                      <span className="block text-12 text-muted">{claim.claimNo}</span>
+                    </span>
+                    <span className="whitespace-nowrap text-13 text-ink-soft">{HOLDER[claim.status]}</span>
+                    <span className="text-right tabular-nums">{baht(claim.amountRequested)}</span>
+                    <span className="text-right tabular-nums">
+                      {APPROVED.includes(claim.status) ? <b className="font-semibold">{baht(countedAmount(claim))}</b> : <span className="text-muted">{claim.status === "rejected" ? "ไม่จ่าย" : "รอดำเนินการ"}</span>}
+                    </span>
+                    <span className="text-13 text-ink-soft">{payDate ? thaiDate(payDate) : "—"}</span>
+                    <span>
+                      <ClaimPill status={claim.status} />
+                    </span>
+                  </RowLink>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="flex flex-wrap justify-between gap-3 border-t border-line px-5 py-3 text-13">
+          <span className="text-muted">ลำดับผู้อนุมัติ: {APPROVAL_FLOW}</span>
+          <span>
+            รับเงินแล้วปีนี้ <b className="font-semibold tabular-nums">{baht(paidThisYear)}</b> · รอจ่าย <b className="font-semibold tabular-nums">{baht(awaiting)}</b>
+          </span>
+        </div>
+      </Sheet>
+
+      <Sheet aria-labelledby="my-benefits-title">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-4 pb-2">
+          <h2 id="my-benefits-title" className="text-16 font-semibold">
+            สิทธิ์สวัสดิการของฉัน
+          </h2>
+          <Link href="/employee/welfare" className="text-13 text-primary-600 hover:text-primary-700 hover:underline">
+            ดูทั้งหมด {benefits.length} รายการ ›
+          </Link>
+        </div>
+        {shownBenefits.length === 0 ? (
+          <EmptyNote>ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้</EmptyNote>
+        ) : (
+          <ul className="grid gap-3 px-5 pt-1 pb-5 md:grid-cols-2">
+            {shownBenefits.map((benefit) => {
+              const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
+              return (
+                <li key={benefit.code} className="flex items-center gap-3.5 rounded-lg border border-line px-3.5 py-3">
+                  <BenefitThumb category={benefit.category} className="size-16 rounded-lg" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <p className="break-words font-semibold">{benefit.name}</p>
+                    <p className="text-12 text-muted">
+                      {BUDGET_TYPE[benefit.budgetType]} · {claimsNote(benefit)} · วงเงิน {baht(benefit.limit)}
+                    </p>
+                    <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className={`text-14 font-semibold tabular-nums ${outOfClaims ? "text-status-pending-ink" : "text-ink"}`}>{outOfClaims ? "ครบจำนวนครั้งแล้ว" : `คงเหลือ ${baht(benefit.remaining)}`}</p>
+                    <Link
+                      href={`/employee/welfare/${encodeURIComponent(benefit.code)}`}
+                      aria-label={`ดูรายละเอียด ${benefit.name}`}
+                      className="text-13 font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                    >
+                      ดูรายละเอียด ›
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="flex justify-end border-t border-line px-5 py-3">
+          <Link href="/employee/withdraw" className={pill.primary}>
+            ยื่นคำขอใหม่
+          </Link>
+        </div>
+      </Sheet>
     </>
+  );
+}
+
+function Legend({ swatch, label, value }: { swatch: string; label: string; value: string }) {
+  return (
+    <li className="flex items-center gap-2">
+      <span aria-hidden="true" className={`size-2.5 rounded-sm ${swatch}`} />
+      <span className="text-muted">{label}</span>
+      <span className="font-semibold tabular-nums">{value}</span>
+    </li>
   );
 }

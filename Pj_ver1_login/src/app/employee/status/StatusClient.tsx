@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { Check, Paperclip } from "lucide-react";
 import { useDetailParam } from "@/lib/useDetailParam";
+import type { ClaimDbStatus } from "@/lib/claims/types";
+import { baht } from "@/lib/claims/requester";
+import { cx } from "@/lib/cx";
+import { ClaimPill, EmptyNote, PageHead, Sheet, inputClass, pill } from "@/features/requester/ui";
 
 export type RequestStatus = "pending" | "approved" | "draft" | "rejected" | "revision" | "processing" | "cancelled";
-type StatusFilter = "all" | "pending" | "approved" | "processing" | "rejected";
+type StatusFilter = "all" | "todo" | "processing" | "done";
 
 export type ApprovalStep = { title: string; description: string; date: string; state: string; complete: boolean; current: boolean };
 
@@ -18,12 +22,17 @@ export type WelfareRequest = {
   submittedTime: string;
   amount: number;
   status: RequestStatus;
+  dbStatus: ClaimDbStatus;
   statusText: string;
   year: string;
   description: string;
-  employeeLabel: string;
-  expenseDate: string;
-  providerLine: string;
+  /** ยื่นเอง หรือ ยื่นแทนโดยใคร */
+  kindLabel: string;
+  /** บรรทัดรองใต้ชื่อสวัสดิการ: สิ่งที่ต้องรู้ตอนนี้ */
+  hint: string;
+  facts: { label: string; value: string }[];
+  payNote: string | null;
+  reserveNote: string | null;
   attachments: { id: string; name: string }[];
   steps: ApprovalStep[];
   lastStep: string;
@@ -31,29 +40,22 @@ export type WelfareRequest = {
   canCancel: boolean;
 };
 
-const statusStyles: Record<RequestStatus, string> = {
-  pending: "bg-stone-100 text-stone-700",
-  approved: "bg-status-approved-soft text-status-approved-ink",
-  draft: "bg-amber-50 text-amber-700",
-  rejected: "bg-status-rejected-soft text-status-rejected",
-  revision: "bg-amber-50 text-amber-800",
-  processing: "bg-primary-50 text-primary-700",
-  cancelled: "bg-neutral-100 text-muted",
+// แท็บตามสิ่งที่ผู้ส่งคำขอต้องทำ ไม่ใช่ตามสถานะในฐานข้อมูล
+const TAB_STATUSES: Record<Exclude<StatusFilter, "all">, RequestStatus[]> = {
+  todo: ["draft", "revision"],
+  processing: ["pending", "processing"],
+  done: ["approved", "rejected", "cancelled"],
 };
 
-const PROCESSING: RequestStatus[] = ["draft", "revision", "processing"];
-
 const tabs: { value: StatusFilter; label: string }[] = [
-  { value: "all", label: "ทั้งหมด" },
-  { value: "pending", label: "รออนุมัติ" },
-  { value: "approved", label: "อนุมัติแล้ว" },
-  { value: "processing", label: "ดำเนินการ" },
-  { value: "rejected", label: "ไม่อนุมัติ" },
+  { value: "all", label: "คำขอของฉัน" },
+  { value: "todo", label: "ต้องทำ" },
+  { value: "processing", label: "กำลังดำเนินการ" },
+  { value: "done", label: "เสร็จสิ้น" },
 ];
 
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat("th-TH").format(amount);
-}
+const LIST_COLS = "grid-cols-[150px_minmax(0,1.6fr)_minmax(0,1.2fr)_110px_130px_150px]";
+const inTab = (request: WelfareRequest, tab: StatusFilter) => tab === "all" || TAB_STATUSES[tab].includes(request.status);
 
 export default function StatusClient({ initialRequests }: { initialRequests: WelfareRequest[] }) {
   const router = useRouter();
@@ -68,26 +70,15 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
 
+  const requestsForYear = useMemo(() => requests.filter((request) => request.year === selectedYear), [requests, selectedYear]);
   const filteredRequests = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("th");
+    return requestsForYear.filter(
+      (request) => inTab(request, activeTab) && (!query || `${request.id} ${request.title} ${request.description}`.toLocaleLowerCase("th").includes(query)),
+    );
+  }, [activeTab, requestsForYear, search]);
 
-    return requests.filter((request) => {
-      const matchesTab =
-        activeTab === "all" ||
-        (activeTab === "processing"
-          ? PROCESSING.includes(request.status)
-          : request.status === activeTab);
-      const matchesSearch =
-        !query ||
-        `${request.id} ${request.title} ${request.description}`
-          .toLocaleLowerCase("th")
-          .includes(query);
-
-      return matchesTab && matchesSearch && request.year === selectedYear;
-    });
-  }, [activeTab, requests, search, selectedYear]);
-
-  // ?id=เลขคำขอ คือเปิดหน้ารายละเอียด ส่วน selectedId ใช้กับปุ่มยกเลิกในแถวตาราง
+  // ?id=เลขคำขอ คือเปิดหน้ารายละเอียด ส่วน selectedId ใช้กับปุ่มยกเลิกในหน้ารายละเอียด
   const detail = useDetailParam("id");
   const detailRequest = requests.find((request) => request.id === detail.id);
   const selectedRequest = detailRequest ?? requests.find((request) => request.id === selectedId);
@@ -102,17 +93,6 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showCancelConfirmation]);
-
-  function countForTab(tab: StatusFilter) {
-    const requestsForYear = requests.filter(
-      (request) => request.year === selectedYear,
-    );
-    if (tab === "all") return requestsForYear.length;
-    if (tab === "processing") {
-      return requestsForYear.filter((request) => PROCESSING.includes(request.status)).length;
-    }
-    return requestsForYear.filter((request) => request.status === tab).length;
-  }
 
   async function cancelRequest() {
     if (!selectedRequest || cancelling) return;
@@ -129,7 +109,13 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
         setCancelError(data.error ?? "ยกเลิกคำขอไม่สำเร็จ");
         return;
       }
-      setRequests((current) => current.map((request) => (request.id === selectedRequest.id ? { ...request, status: "cancelled", statusText: "ยกเลิกแล้ว", lastStep: "ยกเลิกแล้ว", canEdit: false, canCancel: false } : request)));
+      setRequests((current) =>
+        current.map((request) =>
+          request.id === selectedRequest.id
+            ? { ...request, status: "cancelled", dbStatus: "cancelled", statusText: "ยกเลิกแล้ว", lastStep: "ยกเลิกแล้ว", hint: "ยกเลิกแล้ว คืนวงเงินให้แล้ว", payNote: null, reserveNote: null, canEdit: false, canCancel: false }
+            : request,
+        ),
+      );
       setShowCancelConfirmation(false);
       router.refresh();
     } catch {
@@ -140,309 +126,281 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-3 px-1 pb-8 text-13 text-ink">
+    <>
       {!detailRequest && (
-      <>
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-22 font-semibold">ติดตามคำขอสวัสดิการ</h1>
-          <p className="mt-1 text-12 text-muted">
-            ตรวจสอบรายการคำขอและดูขั้นตอนการอนุมัติของคุณ
-          </p>
-        </div>
-        <Link
-          href="/employee/withdraw"
-          className='inline-flex min-h-10 items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-13 font-medium text-white transition-colors hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600'
-        >
-          ยื่นคำขอใหม่
-        </Link>
-      </div>
+        <>
+          <PageHead title="ติดตามสถานะ" description={`ปี ${selectedYear} · คำขอทั้งหมด ${requestsForYear.length} รายการ`}>
+            <Link href="/employee/withdraw" className={pill.primary}>
+              ยื่นคำขอใหม่
+            </Link>
+          </PageHead>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded border border-neutral-300 px-3 focus-within:border-neutral-500">
-          <svg
-            aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-muted"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <circle cx="10.8" cy="10.8" r="6.8" />
-            <path d="m16 16 4 4" />
-          </svg>
-          <input
-            aria-label="ค้นหาคำขอสวัสดิการ"
-            className="w-full bg-transparent text-12 outline-none placeholder:text-muted"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="ค้นหาด้วยเลขที่คำขอ หรือชื่อสวัสดิการ"
-            value={search}
-          />
-        </label>
-        <select
-          aria-label="เลือกปี"
-          className="h-10 rounded border border-neutral-300 bg-white px-3 text-12"
-          onChange={(event) => setSelectedYear(event.target.value)}
-          value={selectedYear}
-        >
-          {years.map((year) => <option key={year} value={year}>ปี {year}</option>)}
-        </select>
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            aria-pressed={activeTab === tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`shrink-0 rounded border px-3 py-1.5 text-12 transition ${
-              activeTab === tab.value
-                ? "border-primary-600 bg-primary-600 text-white"
-                : "border-line bg-white text-ink-soft hover:bg-surface"
-            }`}
-          >
-            {tab.label} ({countForTab(tab.value)})
-          </button>
-        ))}
-      </div>
-
-      <section className="rounded border border-line bg-white p-3">
-        <h2 className="mb-3 font-semibold">คำขอของฉัน</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] border-collapse text-left text-12">
-            <thead>
-              <tr className="bg-primary-50 text-ink-soft">
-                <th className="px-3 py-2 font-medium">เลขที่คำขอ</th>
-                <th className="px-3 py-2 font-medium">ประเภท / วันที่ยื่น</th>
-                <th className="px-3 py-2 text-right font-medium">
-                  จำนวนเงิน (บาท)
-                </th>
-                <th className="px-3 py-2 font-medium">สถานะ</th>
-                <th className="px-3 py-2 font-medium">ขั้นตอนล่าสุด</th>
-                <th className="px-3 py-2 text-right font-medium">การจัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.map((request) => (
-                <tr
-                  key={request.id}
-                  onClick={() => {
-                    setShowCancelConfirmation(false);
-                    detail.open(request.id);
-                  }}
-                  className="cursor-pointer border-b border-line transition hover:bg-surface"
-                >
-                  <td className="px-3 py-3 font-semibold">{request.id}</td>
-                  <td className="px-3 py-3">
-                    <div>{request.title}</div>
-                    <div className="mt-1 text-11 text-muted">
-                      {request.submittedAt}
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-right font-semibold">
-                    {formatAmount(request.amount)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span
-                      className={`whitespace-nowrap rounded px-2 py-1 text-11 ${statusStyles[request.status]}`}
+          <Sheet>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5">
+              <div role="group" aria-label="กรองสถานะ" className="flex flex-wrap">
+                {tabs.map((tab) => {
+                  const active = activeTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setActiveTab(tab.value)}
+                      className={cx(
+                        "mr-[18px] border-b-2 px-1 py-3 text-14 transition-colors motion-reduce:transition-none",
+                        active ? "border-primary-600 font-semibold text-ink" : "border-transparent text-muted hover:text-ink",
+                      )}
                     >
-                      {request.statusText}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-muted">
-                    {request.lastStep}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    {request.canEdit ? (
-                      <Link
-                        href={`/employee/withdraw?claim=${encodeURIComponent(request.id)}`}
-                        onClick={(event) => event.stopPropagation()}
-                        className="whitespace-nowrap rounded border border-neutral-400 px-2 py-1 hover:bg-primary-50"
-                      >
-                        {request.status === "draft" ? "แก้ไขฉบับร่าง" : "แก้ไขและยื่นใหม่"}
-                      </Link>
-                    ) : request.canCancel ? (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedId(request.id);
-                          setShowCancelConfirmation(true);
-                        }}
-                        className="whitespace-nowrap rounded border border-neutral-400 px-2 py-1 hover:bg-primary-50"
-                      >
-                        ยกเลิกคำขอ
-                      </button>
-                    ) : (
-                      <span className="whitespace-nowrap text-muted">
-                        ยกเลิกไม่ได้
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filteredRequests.length === 0 && (
-                <tr>
-                  <td
-                    className="px-3 py-8 text-center text-muted"
-                    colSpan={6}
-                  >
-                    ไม่พบรายการคำขอสวัสดิการ
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex justify-between pt-3 text-11 text-muted">
-          <span>แสดง {filteredRequests.length} จาก {requests.length} รายการ</span>
-          <span>หน้า 1 / 1</span>
-        </div>
-      </section>
+                      {tab.label} ({requestsForYear.filter((request) => inTab(request, tab.value)).length})
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 py-2">
+                <input
+                  type="search"
+                  aria-label="ค้นหาคำขอสวัสดิการ"
+                  className={cx(inputClass, "!h-9 !w-60 max-w-full")}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="ค้นหาเลขคำขอหรือสวัสดิการ"
+                  value={search}
+                />
+                <select
+                  aria-label="เลือกปี"
+                  className="h-9 rounded-full border border-slate-300 bg-white px-4 text-13 text-ink-soft"
+                  onChange={(event) => setSelectedYear(event.target.value)}
+                  value={selectedYear}
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      ปี {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-      </>
+            {/* ไม่มีแถวก็ไม่แสดงหัวตาราง จะได้ไม่มีแถบเลื่อนเปล่า ๆ บนจอแคบ */}
+            <div className={cx("overflow-x-auto", filteredRequests.length === 0 && "hidden")}>
+              <div className="min-w-[880px]">
+                <div className={`grid ${LIST_COLS} items-center gap-3 bg-surface px-5 py-2.5 text-12 font-medium text-muted`}>
+                  <span>เลขคำขอ</span>
+                  <span>สวัสดิการ</span>
+                  <span>ประเภท</span>
+                  <span className="text-right">
+                    จำนวนเงิน
+                  </span>
+                  <span>วันที่ยื่น</span>
+                  <span>สถานะ</span>
+                </div>
+                {filteredRequests.map((request) => (
+                  <button
+                    key={request.id}
+                    type="button"
+                   
+                    onClick={() => {
+                      setShowCancelConfirmation(false);
+                      detail.open(request.id);
+                    }}
+                    className={`grid w-full ${LIST_COLS} items-center gap-3 border-t border-slate-100 px-5 py-3.5 text-left transition-colors hover:bg-surface focus-visible:bg-surface focus-visible:outline-none motion-reduce:transition-none`}
+                  >
+                    <span className="font-medium tabular-nums">
+                      {request.id}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{request.title}</span>
+                      <span className="block truncate text-12 text-muted">{request.hint}</span>
+                    </span>
+                    <span className="text-13 text-ink-soft">
+                      {request.kindLabel}
+                    </span>
+                    <span className="text-right font-medium tabular-nums">
+                      {baht(request.amount)}
+                    </span>
+                    <span className="text-13 text-muted">
+                      {request.submittedAt}
+                    </span>
+                    <span>
+                      <ClaimPill status={request.dbStatus} />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {filteredRequests.length === 0 ? <EmptyNote>{requestsForYear.length === 0 ? "ยังไม่มีคำขอในปีนี้" : "ไม่พบคำขอที่ตรงกับตัวกรอง"}</EmptyNote> : null}
+          </Sheet>
+        </>
       )}
 
       {detailRequest && selectedRequest && (
         <>
-        <Breadcrumb items={[{ label: "ติดตามคำขอสวัสดิการ", href: "/employee/status" }, { label: selectedRequest.id }]} />
-        <section className="rounded border border-line bg-white p-3">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3">
-            <div>
-              <h2 className="font-semibold">
-                รายละเอียดคำขอ {selectedRequest.id}
-              </h2>
-              <p className="mt-2 text-12 text-muted">
-                {selectedRequest.title} · ยื่นเมื่อ {selectedRequest.submittedTime}
-              </p>
-            </div>
-            <span
-              className={`rounded px-2 py-1 text-11 ${statusStyles[selectedRequest.status]}`}
-            >
-              {selectedRequest.statusText}
-            </span>
-          </div>
+          <PageHead
+            crumbs={[{ label: "ติดตามสถานะ", href: "/employee/status" }, { label: selectedRequest.id }]}
+            title={selectedRequest.id}
+            description={`${selectedRequest.title} · ${selectedRequest.kindLabel} · ยื่น ${selectedRequest.submittedTime}`}
+          >
+            <ClaimPill status={selectedRequest.dbStatus} />
+            {selectedRequest.canEdit ? (
+              <Link href={`/employee/withdraw?claim=${encodeURIComponent(selectedRequest.id)}`} className={pill.primary}>
+                {selectedRequest.status === "draft" ? "แก้ไขฉบับร่าง" : "แก้ไขและยื่นใหม่"}
+              </Link>
+            ) : null}
+            {selectedRequest.canCancel ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedId(selectedRequest.id);
+                  setShowCancelConfirmation(true);
+                }}
+                className={pill.quiet}
+              >
+                ยกเลิกคำขอ
+              </button>
+            ) : null}
+          </PageHead>
 
-          <div className="grid gap-5 pt-4 md:grid-cols-[minmax(190px,0.8fr)_2fr]">
-            <div className="space-y-4 md:border-r md:border-line md:pr-5">
-              <div>
-                <p className="text-12 text-muted">จำนวนเงินที่ขอเบิก</p>
-                <p className="mt-1 text-22 font-semibold">
-                  {formatAmount(selectedRequest.amount)} บาท
-                </p>
-              </div>
-              <div className="space-y-1 text-12">
-                <p className="text-muted">พนักงาน</p>
-                <p className="font-medium">{selectedRequest.employeeLabel}</p>
-              </div>
-              <div className="space-y-1 text-12">
-                <p className="text-muted">วันที่ใช้บริการ</p>
-                <p className="font-medium">{selectedRequest.expenseDate}</p>
-              </div>
-              <div className="space-y-1 text-12">
-                <p className="text-muted">รายละเอียดคำขอ</p>
-                <p className="leading-5">{selectedRequest.description}</p>
-                {selectedRequest.providerLine ? <p className="text-muted">{selectedRequest.providerLine}</p> : null}
-              </div>
-              <div className="border-t border-line pt-3 text-12">
-                <p className="mb-2 font-medium">เอกสารแนบ {selectedRequest.attachments.length} ไฟล์</p>
-                {selectedRequest.attachments.map((file) => (
-                  <a key={file.id} href={`/api/claims/attachments/${file.id}`} target="_blank" rel="noreferrer" className="mt-1 block text-left text-ink-soft underline">
-                    {file.name} · ดูไฟล์
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h3 className="mb-3 font-semibold">ขั้นตอนการอนุมัติ</h3>
-              <ol className="space-y-1">
-                {selectedRequest.steps.map((step, index) => (
-                  <li key={step.title} className="flex gap-3">
-                    <div className="flex flex-col items-center">
+          <Sheet className="px-6 py-5">
+            <div className="overflow-x-auto">
+              <ol aria-label="ความคืบหน้า" className="flex min-w-[560px] items-start">
+                {selectedRequest.steps.slice(0, 4).map((step, index) => (
+                  <li key={step.title} className="flex flex-1 items-start last:flex-none">
+                    <div className="flex min-w-[120px] flex-col items-center gap-1 text-center">
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-11 ${
-                          step.complete
-                            ? "bg-neutral-200 text-ink-soft"
-                            : step.current
-                              ? "bg-neutral-800 text-white"
-                              : "bg-primary-50 text-muted"
-                        }`}
+                        className={cx(
+                          "flex size-7 items-center justify-center rounded-full text-12 font-semibold",
+                          step.complete ? "bg-status-approved text-white" : step.current ? "border-2 border-status-pending bg-white text-status-pending" : "border border-slate-300 bg-white text-muted",
+                        )}
                       >
-                        {step.complete ? "✓" : index + 1}
+                        {step.complete ? <Check className="size-3.5" strokeWidth={3} aria-hidden="true" /> : index + 1}
                       </span>
-                      {index < selectedRequest.steps.length - 1 && (
-                        <span className="my-1 min-h-5 w-px flex-1 bg-neutral-200" />
-                      )}
+                      <span className={cx("text-13", step.complete || step.current ? "font-semibold text-ink" : "text-muted")}>{step.title}</span>
+                      <span className="text-11 text-muted">{step.state}</span>
                     </div>
-                    <div className="flex min-w-0 flex-1 justify-between gap-3 pb-3">
-                      <div>
-                        <p className="font-medium">{step.title}</p>
-                        <p className="mt-1 text-12 text-muted">
-                          {step.description}
-                        </p>
-                        <p className="mt-1 text-11 text-muted">
-                          {step.date}
-                        </p>
-                      </div>
-                      <span className="shrink-0 pt-1 text-11 text-muted">
-                        {step.state}
-                      </span>
-                    </div>
+                    {index < 3 ? <div aria-hidden="true" className={cx("mx-2 mt-[13px] h-0.5 flex-1", step.complete ? "bg-status-approved" : "bg-line")} /> : null}
                   </li>
                 ))}
               </ol>
             </div>
+            {selectedRequest.payNote || selectedRequest.reserveNote ? (
+              <div className="mt-4 flex flex-wrap gap-3 text-13">
+                {selectedRequest.payNote ? (
+                  <p className="flex-[1_1_280px] rounded-lg bg-primary-50 px-3 py-2.5 text-blue-900">
+                    <b className="font-semibold">{selectedRequest.payNote}</b> ถ้า HR และการเงินอนุมัติทันรอบ ไม่ทันจะเลื่อนไปรอบถัดไป
+                  </p>
+                ) : null}
+                {selectedRequest.reserveNote ? <p className="flex-[1_1_220px] rounded-lg bg-surface px-3 py-2.5 text-ink-soft">{selectedRequest.reserveNote}</p> : null}
+              </div>
+            ) : null}
+          </Sheet>
+
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+              <Sheet className="p-5">
+                <h2 className="mb-3 text-16 font-semibold">รายละเอียดคำขอ</h2>
+                <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {selectedRequest.facts.map((fact) => (
+                    <div key={fact.label} className="min-w-0">
+                      <dt className="text-12 text-muted">{fact.label}</dt>
+                      <dd className="break-words">{fact.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Sheet>
+
+              <Sheet className="p-5">
+                <h2 className="mb-3 text-16 font-semibold">เอกสารแนบ</h2>
+                {selectedRequest.attachments.length === 0 ? (
+                  <p className="text-13 text-muted">ยังไม่มีเอกสารแนบ</p>
+                ) : (
+                  <ul className="flex flex-wrap gap-2">
+                    {selectedRequest.attachments.map((file) => (
+                      <li key={file.id}>
+                        <a
+                          href={`/api/claims/attachments/${file.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-white px-3.5 text-13 text-ink no-underline hover:border-primary-600 hover:bg-primary-50 hover:text-primary-700"
+                        >
+                          <Paperclip className="size-3.5" aria-hidden="true" />
+                          {file.name}
+                          <span className="sr-only"> (เปิดในแท็บใหม่)</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Sheet>
+            </div>
+
+            <Sheet className="flex-[1_1_300px] px-[18px] py-4">
+              <h2 className="text-15 font-semibold">ความคืบหน้า</h2>
+              <p className="mb-3.5 text-12 text-muted">{selectedRequest.lastStep}</p>
+              <ol aria-label="ความคืบหน้าคำขอ">
+                {selectedRequest.steps.map((step, index) => {
+                  const last = index === selectedRequest.steps.length - 1;
+                  return (
+                    <li key={step.title} aria-current={step.current ? "step" : undefined} className="flex gap-3">
+                      <span className="flex flex-col items-center">
+                        <span
+                          className={cx(
+                            "flex size-6 shrink-0 items-center justify-center rounded-full",
+                            step.complete ? "bg-status-approved text-white" : step.current ? "border-[3px] border-status-pending bg-white ring-4 ring-status-pending-soft" : "border-2 border-slate-300 bg-white",
+                          )}
+                        >
+                          {step.complete ? <Check className="size-3.5" strokeWidth={3} aria-hidden="true" /> : null}
+                        </span>
+                        {!last ? <span aria-hidden="true" className={cx("my-1 min-h-7 w-0.5 flex-1", step.complete ? "bg-status-approved" : "bg-line")} /> : null}
+                      </span>
+                      <span className={cx("min-w-0 flex-1", step.current ? "-mt-1.5 mb-2.5 rounded-lg bg-amber-50 px-2.5 py-2" : last ? "" : "pb-3.5")}>
+                        <span className="sr-only">{step.state}: </span>
+                        <span className={cx("block text-14 font-semibold", step.complete || step.current ? "text-ink" : "text-muted")}>
+                          {step.title}
+                          {step.current ? <span className="ml-1.5 rounded-full bg-status-pending-soft px-2 text-11 font-semibold text-status-pending-ink">ขั้นตอนปัจจุบัน</span> : null}
+                        </span>
+                        {step.description ? <span className={cx("block text-13", step.complete || step.current ? "text-ink-soft" : "text-muted")}>{step.description}</span> : null}
+                        {step.date ? <span className="block text-12 text-muted">{step.date}</span> : null}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </Sheet>
           </div>
-        </section>
         </>
       )}
 
       {showCancelConfirmation && selectedRequest?.canCancel && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
           onClick={(event) => {
             if (event.target === event.currentTarget) {
               setShowCancelConfirmation(false);
             }
           }}
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cancel-request-title"
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
-          >
-            <h2 id="cancel-request-title" className="text-14 font-semibold">
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-request-title" className="w-full max-w-md rounded-lg bg-white p-5 shadow-popover">
+            <h2 id="cancel-request-title" className="text-16 font-semibold">
               ยืนยันการยกเลิกคำขอ
             </h2>
             <p className="mt-2 text-13 text-ink-soft">
-              ต้องการยกเลิกคำขอ {selectedRequest.id} ใช่หรือไม่?
-              เมื่อยืนยันแล้ว คำขอนี้จะเปลี่ยนเป็นสถานะยกเลิก และคืนวงเงินที่กันไว้
+              ต้องการยกเลิกคำขอ {selectedRequest.id} ใช่หรือไม่? เมื่อยืนยันแล้ว คำขอนี้จะเปลี่ยนเป็นสถานะยกเลิก และคืนวงเงินที่กันไว้
             </p>
-            {cancelError ? <p role="alert" className="mt-2 text-12 text-status-rejected">{cancelError}</p> : null}
+            {cancelError ? (
+              <p role="alert" className="mt-2 text-12 text-status-rejected">
+                {cancelError}
+              </p>
+            ) : null}
             <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setShowCancelConfirmation(false)}
-                className="rounded border border-neutral-300 px-3 py-2 text-12 hover:bg-surface"
-              >
+              <button type="button" autoFocus onClick={() => setShowCancelConfirmation(false)} className={pill.quiet}>
                 กลับ
               </button>
-              <button
-                type="button"
-                disabled={cancelling}
-                onClick={() => void cancelRequest()}
-                className="rounded bg-neutral-800 px-3 py-2 text-12 text-white hover:bg-neutral-700 disabled:opacity-60"
-              >
+              <button type="button" disabled={cancelling} onClick={() => void cancelRequest()} className={cx(pill.primary, "bg-danger hover:bg-danger/90")}>
                 ยืนยันการยกเลิก
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

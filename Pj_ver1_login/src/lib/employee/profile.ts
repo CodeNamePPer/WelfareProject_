@@ -18,6 +18,10 @@ export interface MyProfile {
   statusLabel: string;
   department: string | null;
   position: string | null;
+  /** ระดับงาน (job_level.name_th) */
+  jobLevel: string | null;
+  /** หัวหน้าโดยตรง (employee.manager_employee_id) */
+  managerName: string | null;
   /** วันเริ่มงานแบบพร้อมแสดง เช่น 1 มีนาคม 2565 */
   hireDate: string;
   email: string;
@@ -42,6 +46,8 @@ interface ProfileRow extends EmployeeNameParts {
   hire_date: string;
   department: { name_th: string } | null;
   position: { name_th: string } | null;
+  job_level: { name_th: string } | null;
+  manager: EmployeeNameParts | null;
 }
 
 const TZ = "Asia/Bangkok";
@@ -103,7 +109,8 @@ export const getMyProfile = cache(async (code: string): Promise<MyProfile | null
            emergency_contact_name, emergency_contact_phone,
            address_line, subdistrict, district, province, postal_code,
            employment_status, hire_date,
-           department:department_id(name_th), position:position_id(name_th)`,
+           department:department_id(name_th), position:position_id(name_th), job_level:job_level_id(name_th),
+           manager:manager_employee_id(title_th, first_name_th, last_name_th)`,
         )
         .eq("employee_code", code)
         .is("deleted_at", null)
@@ -121,6 +128,8 @@ export const getMyProfile = cache(async (code: string): Promise<MyProfile | null
       statusLabel: employmentStatusLabel(data.employment_status.toUpperCase()),
       department: data.department?.name_th ?? null,
       position: data.position?.name_th ?? null,
+      jobLevel: data.job_level?.name_th ?? null,
+      managerName: data.manager ? employeeFullName(data.manager) : null,
       hireDate: new Intl.DateTimeFormat("th-TH", { dateStyle: "long", timeZone: TZ }).format(new Date(`${data.hire_date}T00:00:00+07:00`)),
       email: data.email,
       phone: data.phone,

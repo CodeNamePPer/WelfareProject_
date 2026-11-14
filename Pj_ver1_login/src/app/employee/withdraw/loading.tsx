@@ -1,75 +1,73 @@
 import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
+import { PageHead, Sheet } from "@/features/requester/ui";
 
-const SUMMARY_ROWS = 7;
+const SUMMARY_ROWS = 5;
+const SECTIONS = [
+  { title: "1. ชื่อผู้ส่งคำขอ", fields: 3, cols: "sm:grid-cols-2 lg:grid-cols-3" },
+  { title: "2. ประเภทการยื่นและสวัสดิการ", fields: 0, cols: "" },
+  { title: "3. รายละเอียดค่าใช้จ่าย", fields: 4, cols: "sm:grid-cols-2" },
+  { title: "4. เอกสารแนบ", fields: 2, cols: "sm:grid-cols-2" },
+];
 
-function Field({ wide = false }: { wide?: boolean }) {
+function Field() {
   return (
-    <div className={wide ? "md:col-span-2" : undefined}>
-      <Skeleton className="mb-2 h-4 w-24" />
-      <Skeleton className="h-11 w-full rounded-lg" />
+    <div>
+      <Skeleton className="mb-1.5 h-3.5 w-24" />
+      <Skeleton className="h-[42px] w-full rounded-lg" />
     </div>
   );
 }
 
+// โครงฟอร์มยื่นคำขอ ตรงกับ WithdrawClient (สี่ส่วนด้านซ้าย สรุปคำขอด้านขวา)
 export default function WithdrawLoading() {
   return (
-    <SkeletonScreen className="mx-auto max-w-[1250px] px-4 py-5 text-ink">
-      <div className="mb-4">
-        <h1 className="text-22 font-semibold tracking-[-0.04em] text-ink">ยื่นคำขอวัสดิการ</h1>
-        <p className="mt-1 text-13 text-muted">แบบฟอร์มยื่นคำขอเบิกสวัสดิการตามสิทธิ์ของคุณ</p>
-      </div>
+    <SkeletonScreen className="flex flex-col gap-4">
+      <PageHead
+        crumbs={[{ label: "ภาพรวม", href: "/employee" }, { label: "ยื่นคำขอ" }]}
+        title="ยื่นคำขอสวัสดิการ"
+        description="กรอกเฉพาะช่องที่มีเครื่องหมาย * ข้อมูลพนักงานดึงจากระบบ HR อัตโนมัติ"
+      />
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface px-4 py-3">
-        <Skeleton className="h-6 w-28 rounded-full" />
-        <Skeleton className="h-6 w-20 rounded-full" />
-      </div>
-
-      <div className="mt-5 grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
-        <div className="rounded-xl border border-line bg-white p-5">
-          <div className="mb-5">
-            <h2 className="text-18 font-semibold text-ink">1. ข้อมูลผู้ยื่น</h2>
-            <p className="mt-1 text-13 text-muted">ข้อมูลส่วนบุคคล และสิทธิ์ที่สามารถเบิกได้</p>
-          </div>
-
-          <div className="space-y-5">
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field />
-                <Field />
-                <Field wide />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-line bg-surface p-4">
-              <h3 className="mb-4 text-18 font-semibold text-ink">2. ข้อมูลคำขอและค่าใช้จ่าย</h3>
-              <div className="space-y-4">
-                <Field />
-                <Field />
-                <Field />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
-            <Skeleton className="h-10 w-24 rounded-lg" />
-            <div className="flex gap-3">
-              <Skeleton className="h-10 w-24 rounded-lg" />
-              <Skeleton className="h-10 w-28 rounded-lg" />
-            </div>
-          </div>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+          {SECTIONS.map((section) => (
+            <Sheet key={section.title} className="flex flex-col gap-3.5 p-5">
+              <h2 className="text-16 font-semibold">{section.title}</h2>
+              {section.fields === 0 ? (
+                <div className="flex items-center gap-3.5 rounded-lg border border-line px-3.5 py-3">
+                  <Skeleton className="size-16 shrink-0 rounded-lg" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-4 w-48 max-w-full" />
+                    <Skeleton className="h-3.5 w-40 max-w-full" />
+                  </div>
+                </div>
+              ) : (
+                <div className={`grid gap-3.5 ${section.cols}`}>
+                  {Array.from({ length: section.fields }).map((_, index) => (
+                    <Field key={index} />
+                  ))}
+                </div>
+              )}
+            </Sheet>
+          ))}
         </div>
 
-        <aside className="rounded-xl border border-line bg-white p-5">
-          <h3 className="mb-4 text-18 font-semibold text-ink">ตรวจสอบก่อนส่ง</h3>
-          <div className="space-y-2 rounded-xl border border-line bg-surface p-4">
-            {Array.from({ length: SUMMARY_ROWS }).map((_, index) => (
-              <div key={index} className="flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            ))}
-          </div>
-          <Skeleton className="mt-5 h-32 w-full rounded-xl" />
+        <aside className="flex-[1_1_300px]">
+          <Sheet className="flex flex-col gap-2.5 px-5 py-[18px]">
+            <h2 className="text-15 font-semibold">สรุปคำขอ</h2>
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: SUMMARY_ROWS }).map((_, index) => (
+                <div key={index} className="flex justify-between gap-3">
+                  <Skeleton className="h-3.5 w-20" />
+                  <Skeleton className="h-3.5 w-24" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-[74px] w-full rounded-lg" />
+            <Skeleton className="h-[38px] w-full rounded-full" />
+            <Skeleton className="h-[38px] w-full rounded-full" />
+          </Sheet>
         </aside>
       </div>
     </SkeletonScreen>

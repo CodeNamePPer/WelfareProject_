@@ -181,6 +181,21 @@ export async function getClaim(claimNo: string): Promise<ClaimRecord | null> {
   return toRecord(data, await fetchUsage([data.employee_id]));
 }
 
+/** จำนวนคำขอที่ถูกส่งกลับมารอพนักงานคนนี้แก้ไข ใช้กับตัวเลขบนเมนู โหลดไม่ได้คืน 0 */
+export async function countClaimsToRevise(employeeCode: string): Promise<number> {
+  const { count, error } = await supabaseAdmin
+    .from("welfare_claim")
+    .select("id, owner:employee_id!inner(employee_code)", { count: "exact", head: true })
+    .eq("owner.employee_code", employeeCode)
+    .eq("status", "needs_revision")
+    .is("deleted_at", null);
+  if (error) {
+    console.error("[claims] count revisions failed", error);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 /** ผู้ที่เข้าระบบดูคำขอนี้ได้หรือไม่ ตามตารางสิทธิ์ในเอกสารออกแบบ */
 export function canViewClaim(claim: ClaimRecord, actor: ClaimActor) {
   if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) return true;
@@ -322,7 +337,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   if (input.employeeCode !== actor.sub) {
     const reports = await getSubordinates(actor.sub);
     if (!reports?.some((report) => report.id === input.employeeCode)) {
-      throw new ClaimInputError("ยื่นแทนได้เฉพาะลูกน้องโดยตรงที่ยังทำงานอยู่");
+      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้าแผนก และเฉพาะพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
     }
   }
 
