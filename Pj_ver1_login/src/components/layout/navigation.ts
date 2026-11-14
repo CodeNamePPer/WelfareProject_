@@ -79,7 +79,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
     items: (notificationCount) => [
       // ตัวเลขของ HR คือคำขอที่รอ HR ตรวจ (ดีไซน์ H01–H08)
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
-      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell },
+      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/hr/notifications' },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
