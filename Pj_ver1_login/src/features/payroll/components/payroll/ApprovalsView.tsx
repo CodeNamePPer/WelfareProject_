@@ -61,7 +61,6 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
   const [payOpen, setPayOpen] = useState(false);
   const [transferRef, setTransferRef] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
-  const [approveAmount, setApproveAmount] = useState("");
   const [approveNote, setApproveNote] = useState("");
   const [modalError, setModalError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -111,32 +110,22 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
 
   function openApprove() {
     if (!active) return;
-    setApproveAmount(String(active.amount));
     setApproveNote("");
     setModalError("");
     setApproveOpen(true);
   }
 
-  /** ยืนยันอนุมัติ: ถ้าปรับยอดต้องระบุเหตุผล */
+  /** ยืนยันอนุมัติจ่ายตามยอดที่ HR อนุมัติ การเงินปรับยอดไม่ได้ (ถ้ายอดผิดให้ส่งกลับ HR) */
   async function confirmApprove() {
     if (!active) return;
-    const amount = Number(approveAmount);
-    if (!(amount > 0) || amount > active.amount) {
-      setModalError("ยอดอนุมัติต้องมากกว่า 0 และไม่เกินยอดเบิก");
-      return;
-    }
-    if (amount !== active.amount && !approveNote.trim()) {
-      setModalError("กรุณาระบุเหตุผลที่ปรับยอด");
-      return;
-    }
     setSaving(true);
-    const failure = await claimAction(active.id, { action: "finance_approve", amountApproved: amount, note: approveNote.trim() });
+    const failure = await claimAction(active.id, { action: "finance_approve", note: approveNote.trim() });
     setSaving(false);
     if (failure) {
       setModalError(failure);
       return;
     }
-    setRequests((prev) => prev.map((r) => (r.id === active.id ? { ...r, status: "pending", paidAmount: amount } : r)));
+    setRequests((prev) => prev.map((r) => (r.id === active.id ? { ...r, status: "pending" } : r)));
     toast(`อนุมัติคำขอ ${active.id} แล้ว`);
     setApproveOpen(false);
     router.refresh();
@@ -363,24 +352,12 @@ export function ApprovalsView({ initialRequests }: { initialRequests: PaymentReq
             <p className="text-12 text-muted">
               <span className="num">{active.id}</span> · {active.employeeName} · ยอดเบิก <span className="num">{formatBaht(active.amount)}</span>
             </p>
-            <Field label="ยอดอนุมัติ *">
-              {(id) => (
-                <input
-                  id={id}
-                  type="number"
-                  min={0}
-                  max={active.amount}
-                  step="0.01"
-                  value={approveAmount}
-                  onChange={(e) => {
-                    setApproveAmount(e.target.value);
-                    setModalError("");
-                  }}
-                  className="h-10 w-full rounded-lg border border-line bg-white px-3 text-13 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/25 focus:outline-none"
-                />
-              )}
-            </Field>
-            <Field label="เหตุผล (บังคับเมื่อปรับยอด)" error={modalError}>
+            <div className="rounded-lg bg-surface px-3 py-2.5">
+              <p className="text-12 text-muted">ยอดที่ HR อนุมัติ</p>
+              <p className="num text-16 font-semibold">{formatBaht(active.paidAmount)}</p>
+              <p className="text-12 text-muted">การเงินปรับยอดไม่ได้ ถ้ายอดไม่ถูกต้องให้ส่งกลับ HR</p>
+            </div>
+            <Field label="หมายเหตุ (ถ้ามี)" error={modalError}>
               {(id, describedBy) => (
                 <textarea
                   id={id}

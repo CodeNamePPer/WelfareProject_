@@ -6,6 +6,7 @@ import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
 import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
+import { Search } from 'lucide-react';
 
 const ALL = 'ทั้งหมด';
 
@@ -46,10 +47,17 @@ export default function WelfareClient({ benefits, roleNote }: { benefits: Employ
                         );
                     })}
                 </div>
-                <label className="w-full sm:w-[260px]">
+                <label className="relative block w-full sm:w-[260px]">
                     <span className="sr-only">ค้นหาสวัสดิการ</span>
-                    <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="ค้นหาสวัสดิการ" className={cx(inputClass, '!h-9')} />
-                </label>
+<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+    <input
+        type="search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="ค้นหาสวัสดิการ..."
+        className={cx(inputClass, '!h-9 !pl-9')}
+    />
+</label>
             </div>
 
             {shown.length === 0 ? (

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Paperclip } from "lucide-react";
+import { Check, Paperclip, Search } from "lucide-react";
 import { useDetailParam } from "@/lib/useDetailParam";
 import type { ClaimDbStatus } from "@/lib/claims/types";
 import { baht } from "@/lib/claims/requester";
 import { cx } from "@/lib/cx";
 import { ClaimPill, EmptyNote, PageHead, Sheet, inputClass, pill } from "@/features/requester/ui";
+
 
 export type RequestStatus = "pending" | "approved" | "draft" | "rejected" | "revision" | "processing" | "cancelled";
 type StatusFilter = "all" | "todo" | "processing" | "done";
@@ -156,15 +157,18 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
                   );
                 })}
               </div>
-              <div className="flex flex-wrap gap-2 py-2">
-                <input
-                  type="search"
-                  aria-label="ค้นหาคำขอสวัสดิการ"
-                  className={cx(inputClass, "!h-9 !w-60 max-w-full")}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="ค้นหาเลขคำขอหรือสวัสดิการ"
-                  value={search}
-                />
+              <div className="flex flex-wrap items-center gap-2 py-2">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+                  <input
+                    type="search"
+                    aria-label="ค้นหาคำขอ"
+                    className={cx(inputClass, "!h-9 !w-60 max-w-full !pl-9")}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="ค้นหาเลขคำขอ"
+                    value={search}
+                  />
+                </div>
                 <select
                   aria-label="เลือกปี"
                   className="h-9 rounded-full border border-slate-300 bg-white px-4 text-13 text-ink-soft"

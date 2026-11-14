@@ -1,0 +1,233 @@
+{
+ "title": "เลือก Visual Identity ของหน้า Admin",
+ "question": "ระบบสุ่มได้ทิศทาง “สมุดนักเรียน” เลือกใช้ทิศทางนี้ เลือกทางเลือกอื่น หรือสุ่มใหม่",
+ "options": [
+  {
+   "id": "assigned",
+   "kind": "assigned",
+   "label": "สมุดนักเรียน (Ruled Notebook)",
+   "kicker": "THE ROLL",
+   "lineage": "สมุดนักเรียนปกน้ำเงิน เส้นบรรทัดฟ้า เส้นกั้นหน้าแดง ป้ายชื่อหน้าปก",
+   "thesis": "คิวงาน Admin เขียนเหมือนหน้าสมุด: เส้นกั้นหน้าสีแดงเก็บกำหนดเวลา ส่วนเนื้อหาเรียงเป็นบรรทัด ไม่มีการ์ด",
+   "palette": [
+    "#1E3A8A",
+    "#1D4ED8",
+    "#FFFFFF",
+    "#DCE6F5",
+    "#C2362B",
+    "#18253F"
+   ],
+   "materials": [
+    "เส้นบรรทัดฟ้าเป็นตัวแบ่งแถว",
+    "เส้นกั้นหน้าแดงเป็นคอลัมน์เวลา",
+    "ปกน้ำเงินเข้มเป็น sidebar",
+    "ป้ายชื่อหน้าปกเป็นหัวหน้า"
+   ],
+   "viewport": "Sidebar ปกน้ำเงินเข้ม, หัวหน้าเป็นป้ายชื่อ (หน้า/วันที่/ผู้ดูแล), ตามด้วย 3 กลุ่มบรรทัด: ต้องจัดการ / รอ HR อนุมัติ / ปัญหาระบบ แต่ละแถวมีเวลาค้างอยู่หลังเส้นแดง",
+   "risk": "ถ้าใส่ลายเส้นสมุดเป็นพื้นหลังจะกลายเป็นคอสตูม ต้องใช้เส้นเฉพาะที่เป็นตัวแบ่งข้อมูลจริง",
+   "raised": [
+    {
+     "from": "challenger-splitflap",
+     "raise": "สถานะเปลี่ยนสีทั้งแถวโดยไม่ขยับคอลัมน์ ตารางมีคอลัมน์ตายตัวทุกหน้า"
+    },
+    {
+     "from": "challenger-saville",
+     "raise": "ทุกรายการมีรหัสเป็นด้ามจับ (WEL-002, E00004) แสดงเป็นตัวเลขคงที่"
+    },
+    {
+     "from": "challenger-orienteering",
+     "raise": "สีน้ำเงินสงวนไว้ให้ ‘สิ่งที่คุณต้องกด’ เท่านั้น สีแดงสงวนให้ ‘เกินกำหนด’"
+    },
+    {
+     "from": "challenger-console",
+     "raise": "ปุ่มลบ/ระงับแยกออกด้วยช่องว่าง เป็นเส้นขอบจนกว่าจะโฟกัส"
+    }
+   ],
+   "html": ".impeccable/mocks/decision/assigned.html"
+  },
+  {
+   "id": "model-pick",
+   "kind": "pick",
+   "label": "ทะเบียนหนังสือรับ-ส่ง",
+   "kicker": "IMPECCABLE’S PICK",
+   "lineage": "สมุดทะเบียนหนังสือรับ และใบเวียนหนังสือราชการ",
+   "thesis": "ทุกงานคือหนังสือเข้า มีเลขรับ วันที่รับ และเส้นทางเวียน Admin → HR → เปิดใช้",
+   "palette": [
+    "#F4F6FA",
+    "#1D4ED8",
+    "#18253F",
+    "#8A6A1E",
+    "#B3261E"
+   ],
+   "materials": [
+    "เลขรับเรียงตามลำดับ",
+    "ตราประทับสถานะ",
+    "เส้นทางเวียนเป็นแถบขั้นตอน"
+   ],
+   "viewport": "ตารางทะเบียนเต็มกว้าง คอลัมน์ เลขรับ / เรื่อง / จาก / ถึง / เวียนถึงขั้นไหน / ค้าง (วัน)",
+   "risk": "คุ้นตาที่สุดและเป็นทางที่ระบบหลังบ้านส่วนใหญ่ไปถึง อาจไม่ต่างจากเดิมพอ",
+   "html": ".impeccable/mocks/decision/model-pick.html"
+  },
+  {
+   "id": "challenger-transit",
+   "kind": "challenger",
+   "catalogId": "wayfinding-cartography-signage-midnight-transit-diagram",
+   "label": "ผังเส้นทางรถไฟฟ้า",
+   "verdict": "competitive",
+   "lineage": "ผังรถไฟฟ้าสีน้ำเงินเข้ม เส้นสีตัดกันที่สถานีเปลี่ยนสาย",
+   "thesis": "สวัสดิการแต่ละรายการวิ่งบนสาย Admin → HR → เปิดใช้ สถานีที่ติดค้างคือปัญหา",
+   "palette": [
+    "#0F1E45",
+    "#1D4ED8",
+    "#F2F4F8",
+    "#D99A1E",
+    "#C2362B",
+    "#1F7A55"
+   ],
+   "materials": [
+    "เส้นสายตั้งฉาก 45/90 องศา",
+    "วงสถานีเปลี่ยนสาย",
+    "ป้ายสถานีขนาดคงที่"
+   ],
+   "viewport": "ผังสายงานแนวนอนด้านบนแสดงจำนวนงานต่อสถานี ใต้ลงมาเป็นตารางงานของสถานีที่เลือก",
+   "case": "ผังสายงานอธิบาย flow Admin → HR ได้ชัด แต่ Admin ต้องอ่านผังก่อนเห็นงาน",
+   "risk": "ผังจะเป็นของประดับถ้างานมีแค่ 2–3 ขั้น",
+   "html": ".impeccable/mocks/decision/challenger-transit.html"
+  },
+  {
+   "id": "challenger-splitflap",
+   "kind": "challenger",
+   "catalogId": "signals-instruments-split-flap-concourse",
+   "label": "ป้ายเวลารถไฟ Split-flap",
+   "verdict": "declined",
+   "lineage": "ป้ายตารางเดินรถแบบพลิก",
+   "thesis": "งานเรียงตามเวลาเหมือนขบวนรถ",
+   "palette": [
+    "#111111",
+    "#FFFFFF",
+    "#E0A100"
+   ],
+   "materials": [
+    "แผ่นพลิกตัวอักษร"
+   ],
+   "viewport": "ตารางพื้นดำตัวขาว",
+   "risk": "เป็นคอสตูมบนหน้าทำงานกลางวัน",
+   "case": "พื้นดำไม่เข้ากับออฟฟิศ และผู้ใช้ไม่ได้ผูกพันกับป้ายนี้",
+   "kept": "สถานะเปลี่ยนสีทั้งแถว คอลัมน์ไม่ขยับ"
+  },
+  {
+   "id": "challenger-streaming",
+   "kind": "challenger",
+   "catalogId": "pop-culture-shelf-streaming-title-card-wall",
+   "label": "กำแพงโปสเตอร์สตรีมมิ่ง",
+   "verdict": "declined",
+   "lineage": "แถวโปสเตอร์เลื่อนแนวนอน",
+   "thesis": "สวัสดิการเป็นแถวโปสเตอร์",
+   "palette": [
+    "#141414",
+    "#E50914",
+    "#FFFFFF"
+   ],
+   "materials": [
+    "ภาพเต็มกรอบ"
+   ],
+   "viewport": "แถวการ์ดเลื่อนแนวนอน",
+   "risk": "กลับไปเป็นการ์ดทุกส่วน",
+   "case": "ขัดกับโจทย์เลิกใช้การ์ดโดยตรง",
+   "kept": "รายละเอียดแถวขยายในที่เดิมเมื่อโฟกัส"
+  },
+  {
+   "id": "challenger-saville",
+   "kind": "challenger",
+   "catalogId": "brand-identity-canon-saville-catalog-sleeve",
+   "label": "แคตตาล็อกรหัส FAC",
+   "verdict": "declined",
+   "lineage": "ปกแผ่นเสียงที่ใช้รหัสแทนชื่อ",
+   "thesis": "ทุกอย่างคือรายการที่มีรหัส",
+   "palette": [
+    "#0B0B0B",
+    "#FFFFFF",
+    "#E94E1B"
+   ],
+   "materials": [
+    "เส้นพล็อตขาวบนดำ"
+   ],
+   "viewport": "ดัชนีรหัสเต็มหน้า",
+   "risk": "ซ่อนข้อความเป็นรหัสสี ไม่เหมาะกับงานจริง",
+   "case": "อ่านยาก Admin ต้องการคำชัด ไม่ใช่รหัสสี",
+   "kept": "รหัสรายการเป็นด้ามจับหลักทุกแถว"
+  },
+  {
+   "id": "challenger-orienteering",
+   "kind": "challenger",
+   "catalogId": "notation-diagram-systems-orienteering-map",
+   "label": "แผนที่ Orienteering",
+   "verdict": "declined",
+   "lineage": "แผนที่วิ่งหาจุดตามมาตรฐานสี ISOM",
+   "thesis": "งานคือจุดตรวจบนเส้นทาง",
+   "palette": [
+    "#FFFFFF",
+    "#7A3E9D",
+    "#B5651D"
+   ],
+   "materials": [
+    "เส้นชั้นความสูง"
+   ],
+   "viewport": "แผนที่พร้อมเส้นทางสีม่วง",
+   "risk": "ผู้ใช้ไม่รู้จักแผนที่ประเภทนี้",
+   "case": "ห่างจากโลกของผู้ใช้",
+   "kept": "สงวนสีเดียวไว้ให้สิ่งที่ต้องทำ"
+  },
+  {
+   "id": "challenger-console",
+   "kind": "challenger",
+   "catalogId": "digital-design-canon-dark-first-developer-console",
+   "label": "Developer Console โทนมืด",
+   "verdict": "declined",
+   "lineage": "คอนโซลนักพัฒนาโทนกราไฟต์",
+   "thesis": "แผงต่อกันด้วยเส้นบาง",
+   "palette": [
+    "#1B1E23",
+    "#2A2E35",
+    "#61AFEF"
+   ],
+   "materials": [
+    "เส้นแบ่งแผง 1px"
+   ],
+   "viewport": "แผงมืดเรียงกัน",
+   "risk": "ขัดกับสีน้ำเงินบนพื้นขาวที่ทีมยืนยันไว้",
+   "case": "โทนมืดขัดแบรนด์และสภาพออฟฟิศ",
+   "kept": "ปุ่มอันตรายแยกด้วยช่องว่าง"
+  }
+ ],
+ "reroll": {
+  "registers": [
+   "safer",
+   "bolder"
+  ]
+ },
+ "canon": true,
+ "canonCard": {
+  "kind": "canon",
+  "label": "มาตรฐานระบบหลังบ้านทั่วไป",
+  "thesis": "หน้า Admin แบบ SaaS มาตรฐาน ทำให้เนี้ยบที่สุด",
+  "palette": [
+   "#FFFFFF",
+   "#111827",
+   "#1D4ED8"
+  ],
+  "materials": [
+   "ตาราง",
+   "แท็บ",
+   "เส้นแบ่ง"
+  ],
+  "viewport": "หัวหน้า + แถบตัวเลขบรรทัดเดียว + ตารางงานค้าง",
+  "risk": "หน้าตาเหมือนระบบอื่นโดยตั้งใจ",
+  "html": ".impeccable/mocks/decision/canon.html"
+ },
+ "steer": true,
+ "buildPath": {
+  "value": "code",
+  "toggle": false
+ }
+}
