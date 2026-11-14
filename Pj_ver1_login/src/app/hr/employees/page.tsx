@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { getHrEmployees } from "@/lib/hr/employees";
 import { listClaims } from "@/lib/claims/service";
 import { bangkokToday } from "@/lib/claims/requester";
-import { initialsOf } from "@/features/hr/queue";
+import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
+import { HrPage } from "@/features/hr/ui";
 import { EmployeesClient, type EmployeeRow } from "./EmployeesClient";
 
 export const metadata: Metadata = { title: "จัดการพนักงานและสิทธิ์" };
@@ -15,7 +16,7 @@ const NOT_COUNTED = new Set(["draft", "cancelled", "rejected"]);
 
 // H05 จัดการพนักงานและสิทธิ์
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
-  const [employees, claims, params] = await Promise.all([getHrEmployees(), listClaims(), searchParams]);
+  const [employees, claims, maxClaims, params] = await Promise.all([getHrEmployees(), listClaims(), getBenefitMaxClaims().catch(() => null), searchParams]);
   if (!employees) return <p className="text-13 text-status-rejected">โหลดรายชื่อพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   const year = bangkokToday().slice(0, 4);
@@ -28,10 +29,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const rows: EmployeeRow[] = employees.map((employee) => ({
     code: employee.code,
     name: employee.name,
-    initials: initialsOf(employee.name),
-    line: [employee.code, employee.position, employee.department].filter(Boolean).join(" · "),
     department: employee.department ?? "ไม่ระบุแผนก",
     position: employee.position ?? "ไม่ระบุตำแหน่ง",
+    positionName: employee.position,
+    departmentName: employee.department,
     level: employee.jobLevel ?? "ไม่ระบุระดับ",
     manager: employee.manager?.name ?? null,
     claims: claims ? (claimCount.get(employee.code) ?? 0) : null,
@@ -39,11 +40,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
     statusLabel: employee.statusLabel,
   }));
 
+  // เพดานรวมจำนวนครั้งของทุกสวัสดิการ ใช้แสดง "เบิกปีนี้ 5/30 ครั้ง" ตามดีไซน์ (null = มีสวัสดิการไม่จำกัดหรือโหลดไม่ได้)
+  const maxTotal = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) || null : null;
+
   // ลิงก์จากคิวคำขอส่งรหัสพนักงานมาเป็น ?q= เพื่อเปิดรายชื่อที่ค้นหาไว้แล้ว
   const initialQuery = typeof params.q === "string" ? params.q : "";
   return (
-    <div className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
-      <EmployeesClient rows={rows} initialQuery={initialQuery} />
-    </div>
+    <HrPage>
+      <EmployeesClient rows={rows} maxClaimsTotal={maxTotal} initialQuery={initialQuery} />
+    </HrPage>
   );
 }

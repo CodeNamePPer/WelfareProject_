@@ -1,80 +1,31 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getHrBenefits } from "@/lib/hr/benefits";
-import { formatBahtWhole } from "@/lib/format";
+import { getOpenProposals } from "@/lib/hr/proposals";
+import { HrPage } from "@/features/hr/ui";
+import { BenefitsClient, type BenefitRow } from "./BenefitsClient";
 
-export const metadata: Metadata = { title: "รายการสวัสดิการ" };
+export const metadata: Metadata = { title: "จัดการสวัสดิการ" };
 
-// ข้อมูลชุดเดียวกับ /admin/benefits และหน้าสิทธิ์ของพนักงาน HR ดูได้อย่างเดียว
+// ข้อมูลชุดเดียวกับ /admin/benefits และหน้าสิทธิ์ของพนักงาน
 export const dynamic = "force-dynamic";
 
+// H03 จัดการสวัสดิการ: HR แก้ตรงไม่ได้ ต้องเสนอผ่านหัวหน้า HR
 export default async function BenefitsPage() {
-  const benefits = await getHrBenefits();
+  const [benefits, proposals] = await Promise.all([getHrBenefits(), getOpenProposals()]);
+  if (!benefits) return <p className="text-13 text-status-rejected-ink">โหลดรายการสวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
+
+  const rows: BenefitRow[] = benefits.map((benefit) => ({
+    code: benefit.code,
+    name: benefit.name,
+    category: benefit.category ?? "อื่น ๆ",
+    amount: benefit.amount,
+    claims: benefit.maxClaimsPerYear !== null ? `${benefit.maxClaimsPerYear} ครั้ง/ปี` : benefit.maxClaims || "ไม่จำกัด",
+    active: benefit.status === "active",
+  }));
 
   return (
-    <div className="app-shell">
-      <div className="app-main benefits-main">
-        <div className="page-content benefits-content">
-          <div className="benefits-heading">
-            <div>
-              <h1>รายการสวัสดิการ</h1>
-              <p className="queue-meta">ดูได้อย่างเดียว การเพิ่มและแก้ไขสวัสดิการทำโดย Admin</p>
-            </div>
-            <div className="benefits-heading-actions">
-              <Link href="/hr/benefits/approvals" className="button button-primary benefits-approve-button">
-                อนุมัติคำขอเพิ่มสวัสดิการ
-              </Link>
-              <Link href="/hr/benefits/requests" className="button button-secondary benefits-track-button">
-                ติดตามคำขอเพิ่มสวัสดิการ
-              </Link>
-            </div>
-          </div>
-
-          {benefits ? (
-            <section className="benefits-table-card" aria-label="รายการสวัสดิการ">
-              <div className="benefits-table-wrap">
-                <table className="benefits-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">ชื่อสวัสดิการ</th>
-                      <th scope="col">ประเภทสวัสดิการ</th>
-                      <th scope="col">จำนวนเงิน</th>
-                      <th scope="col">เงื่อนไขการเบิกจ่าย</th>
-                      <th scope="col">สถานะ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {benefits.map((benefit) => (
-                      <tr key={benefit.code} className="benefits-link-row">
-                        <td className="benefits-name">
-                          {/* ลิงก์ขยายคลุมทั้งแถว คลิกตรงไหนของแถวก็เปิดรายละเอียด */}
-                          <Link href={`/hr/benefits/${encodeURIComponent(benefit.code)}`}>{benefit.name}</Link>
-                        </td>
-                        <td>{benefit.category ?? "—"}</td>
-                        <td>{formatBahtWhole(benefit.amount)} {benefit.budgetType}</td>
-                        <td>
-                          {[benefit.maxClaims, benefit.eligible].filter(Boolean).join(" ") || "—"}
-                          {benefit.documents.length > 0 ? <span className="queue-meta">เอกสารที่ต้องแนบ: {benefit.documents.join(", ")}</span> : null}
-                        </td>
-                        <td>
-                          <span className={`benefit-status-label${benefit.status === "active" ? "" : " is-disabled"}`} style={{ marginLeft: 0 }}>
-                            {benefit.status === "active" ? "ใช้งาน" : "หยุดใช้"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {benefits.length === 0 ? (
-                      <tr><td className="benefits-empty" colSpan={5}>ยังไม่มีรายการสวัสดิการ</td></tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ) : (
-            <p className="queue-alert" role="alert">โหลดรายการสวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <HrPage>
+      <BenefitsClient rows={rows} proposals={proposals} />
+    </HrPage>
   );
 }

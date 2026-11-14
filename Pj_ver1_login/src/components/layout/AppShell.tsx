@@ -20,7 +20,9 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const DESIGN_C: NavSection[] = ['employee', 'hr'];
+const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head'];
+// HR และหัวหน้า HR: เนื้อหาคอลัมน์เดียว กว้างสุด 1140px จัดกลาง (สเปกรีดีไซน์ HR)
+const HR_COLUMN: NavSection[] = ['hr', 'hr_head'];
 
 export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, user, children }: AppShellProps) {
   const pathname = usePathname();
@@ -79,7 +81,7 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, u
             'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8',
             // ดีไซน์แบบ C เว้นขอบบน 24px ล่าง 40px ส่วน Admin คง 32px เดิม
             DESIGN_C.includes(section) ? 'lg:pb-10' : 'lg:py-8',
-            collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
+            HR_COLUMN.includes(section) ? 'max-w-[1140px]' : collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
           )}
         >
           {children}

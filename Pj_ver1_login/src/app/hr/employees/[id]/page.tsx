@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { notFound } from "next/navigation";
-import { getHrEmployees, type HrEmployee } from "@/lib/hr/employees";
-import { getEntitlements } from "@/lib/hr/entitlements";
-import { formatThaiDate } from "@/lib/format";
-import { listClaims } from "@/lib/claims/service";
-import { hrStatusOf, toBangkokDate } from "@/lib/claims/mappers";
-import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
+import { getHrEmployees } from "@/lib/hr/employees";
+import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
+import { getEmployeeLimits } from "@/lib/hr/employeeLimits";
+import { getSession } from "@/lib/auth/get-session";
+import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
+import { bangkokToday, thaiDate } from "@/lib/claims/requester";
+import { COUNTED } from "@/features/hr/queue";
+import { ButtonLink, Card, EmptyState, HrPage, PageHeader, RequesterFull, StatusBadge } from "@/features/hr/ui";
+import { cx } from "@/lib/cx";
+import { LimitTable, type LimitRow } from "./LimitTable";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +21,14 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { title: `พนักงาน ${decodeURIComponent(id)}` };
 }
 
-const baht = new Intl.NumberFormat("th-TH");
+const money = (value: number) => `฿${value.toLocaleString("th-TH", { maximumFractionDigits: 2 })}`;
+// คอลัมน์ตามดีไซน์ H09
+const HISTORY_COLS = "grid-cols-[150px_minmax(0,2fr)_110px_150px]";
 
-/** อายุงานแบบอ่านง่าย เช่น "3 ปี 2 เดือน" นับถึงวันนี้หรือวันที่พ้นสภาพ */
-function tenure(hireIso: string, endIso: string | null) {
-  const start = new Date(`${hireIso}T00:00:00`);
-  const end = endIso ? new Date(`${endIso}T00:00:00`) : new Date();
+/** อายุงาน เช่น "8 ปี 7 เดือน" นับถึงวันนี้หรือวันที่พ้นสภาพ */
+function tenureOf(hireIso: string, endIso: string | null) {
+  const start = new Date(`${hireIso}T00:00:00+07:00`);
+  const end = endIso ? new Date(`${endIso}T00:00:00+07:00`) : new Date();
   let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
   if (end.getDate() < start.getDate()) months -= 1;
   if (months < 1) return "ไม่ถึง 1 เดือน";
@@ -32,196 +37,135 @@ function tenure(hireIso: string, endIso: string | null) {
   return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : ""].filter(Boolean).join(" ");
 }
 
-type HistoryItem = { id: string; benefit: string; amount: number; date: string; status: string; tone: string };
-
-/** คำขอที่ยื่นแล้วทั้งหมดของพนักงานคนนี้ ใหม่สุดก่อน */
-async function requestHistory(code: string): Promise<HistoryItem[]> {
-  const claims = (await listClaims({ employeeCode: code })) ?? [];
-  return claims
-    .flatMap((claim): HistoryItem[] => {
-      const status = hrStatusOf(claim.status);
-      if (!status) return [];
-      return [{ id: claim.claimNo, benefit: claim.benefitName, amount: claim.amountApproved ?? claim.amountRequested, date: toBangkokDate(claim.submittedAt ?? claim.createdAt), status: CLAIM_STATUS_LABEL[claim.status], tone: status }];
-    })
-    .sort((a, b) => b.date.localeCompare(a.date));
-}
-
-function Fact({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-function EmployeeLink({ employee }: { employee: { code: string; name: string } }) {
-  return <Link className="queue-name-link" href={`/hr/employees/${encodeURIComponent(employee.code)}`}>{employee.name}</Link>;
-}
-
+// H09 โปรไฟล์พนักงาน + สิทธิ์และวงเงินรายคน + ประวัติการเบิกปีนี้
 export default async function EmployeeProfilePage({ params }: { params: Params }) {
   const { id } = await params;
   const code = decodeURIComponent(id);
   const employees = await getHrEmployees();
-
-  if (employees === null) {
-    return (
-      <div className="page-content queue-page">
-        <p className="queue-alert" role="alert">โหลดข้อมูลพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>
-      </div>
-    );
-  }
-
+  if (employees === null) return <p className="text-13 text-status-rejected-ink">โหลดข้อมูลพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
   const employee = employees.find((item) => item.code === code);
   if (!employee) notFound();
 
-  const directReports: HrEmployee[] = employees.filter((item) => item.manager?.code === code);
-  const entitlementResult = await getEntitlements(employee);
-  const entitlements = entitlementResult?.items ?? null;
-  const eligibleCount = entitlements?.filter((item) => item.eligible).length ?? 0;
-  const history = await requestHistory(code);
-  const approvedTotal = history.filter((item) => item.tone === "approved").reduce((sum, item) => sum + item.amount, 0);
-  const endDate = employee.status === "ACTIVE" ? null : employee.statusDate;
+  const [benefits, claims, maxClaims, limits, session] = await Promise.all([
+    getEmployeeBenefits(code),
+    listClaims({ employeeCode: code }),
+    getBenefitMaxClaims().catch(() => null),
+    getEmployeeLimits(code).catch(() => null),
+    getSession(),
+  ]);
+  const today = bangkokToday();
+  const year = today.slice(0, 4);
+  const thaiYear = Number(year) + 543;
+  const thisYear = (claims ?? [])
+    .filter((claim) => claim.status !== "draft" && (claim.expenseDate ?? claim.submittedAt ?? claim.createdAt).startsWith(year))
+    .sort((a, b) => b.claimNo.localeCompare(a.claimNo));
+  const counted = thisYear.filter((claim) => COUNTED.includes(claim.status)).length;
+  const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
+  // วงเงินคนนี้ = วงเงินรายคนที่มีผลแล้ว (ถ้ามี) ไม่เช่นนั้นใช้วงเงินตามระดับ คงเหลือคิดจากวงเงินคนนี้
+  const limitRows: LimitRow[] = (benefits ?? []).map((item) => {
+    const custom = limits?.get(item.code);
+    const own = custom?.current?.amount ?? item.limit;
+    const capped = own > 0 || custom?.current != null;
+    return {
+      code: item.code,
+      name: item.name,
+      base: item.limit,
+      own,
+      custom: custom?.current != null,
+      next: custom?.next ? `${money(custom.next.amount)} ตั้งแต่ ${thaiDate(`${custom.next.effectiveFrom}T00:00:00+07:00`)}` : null,
+      claims: item.maxClaims !== null ? `${item.claimsThisYear}/${item.maxClaims}` : String(item.claimsThisYear),
+      remaining: capped ? Math.max(own - item.used - item.pending, 0) : null,
+    };
+  });
+  const remainingAll = benefits ? limitRows.reduce((sum, row) => sum + (row.remaining ?? 0), 0) : null;
+  const line = [employee.code, employee.position, employee.department].filter(Boolean).join(" · ");
 
   return (
-    <div className="page-content queue-page profile-page">
-      <Breadcrumb items={[{ label: "รายชื่อพนักงาน", href: "/hr/employees" }, { label: employee.code }]} />
+    <HrPage>
+      <PageHeader
+        crumbs={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: employee.code }]}
+        title={employee.name}
+        description={line}
+        actions={
+          <ButtonLink href={`/hr/employees/${encodeURIComponent(employee.code)}/edit`} variant="secondary">
+            แก้ไขข้อมูล
+          </ButtonLink>
+        }
+      />
 
-      <header className="queue-heading">
-        <h1>{employee.name}</h1>
-        <ul className="queue-summary">
-          <li>{employee.code}</li>
-          <li><span className={`employment-status ${employee.status.toLowerCase()}`}>{employee.statusLabel}</span></li>
-          {employee.status !== "ACTIVE" ? <li>ไม่มีสิทธิ์เบิกสวัสดิการ</li> : null}
-        </ul>
-      </header>
-
-      <section className="queue-sheet profile-sheet" aria-labelledby="profile-work">
-        <h2 id="profile-work">ข้อมูลการทำงาน</h2>
-        <dl className="profile-facts">
-          <Fact label="ฝ่าย / แผนก">
-            {employee.department ? (
-              <>{employee.parentDepartment ? `${employee.parentDepartment} › ` : ""}{employee.department}</>
-            ) : <span className="queue-meta-danger">ยังไม่ระบุ</span>}
-          </Fact>
-          <Fact label="ตำแหน่ง">
-            {employee.position ?? <span className="queue-meta-danger">ยังไม่ระบุ</span>}
-            {employee.jobLevel ? <span className="queue-meta">{employee.jobLevel}</span> : null}
-          </Fact>
-          <Fact label="หัวหน้าโดยตรง">
-            {employee.manager ? <EmployeeLink employee={employee.manager} /> : "—"}
-          </Fact>
-          <Fact label="ลูกน้องโดยตรง">
-            {directReports.length > 0 ? (
-              <ul className="profile-list">
-                {directReports.map((report) => (
-                  <li key={report.code}>
-                    <EmployeeLink employee={report} />
-                    {report.status !== "ACTIVE" ? <span className="queue-meta-inline"> · {report.statusLabel}</span> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : "—"}
-          </Fact>
-          <Fact label="วันเริ่มงาน">
-            {formatThaiDate(employee.hireDate)}
-            <span className="queue-meta">อายุงาน {tenure(employee.hireDate, endDate)}</span>
-          </Fact>
-          <Fact label="สถานะ">
-            {employee.statusLabel}
-            {employee.statusDate ? <span className="queue-meta">ตั้งแต่ {formatThaiDate(employee.statusDate)}</span> : null}
-          </Fact>
-          <Fact label="อีเมล">
-            {employee.email.endsWith(".invalid") ? <span className="queue-meta-danger">ไม่มีอีเมลจริง</span> : employee.email}
-          </Fact>
-        </dl>
-      </section>
-
-      <section className="queue-sheet" aria-labelledby="profile-entitlements">
-        <div className="profile-sheet-head">
-          <h2 id="profile-entitlements">สิทธิสวัสดิการ</h2>
-          <p className="queue-meta">
-            {entitlements === null
-              ? "โหลดข้อมูลสวัสดิการไม่สำเร็จ"
-              : `มีสิทธิ์ ${eligibleCount} จาก ${entitlements.length} รายการ · จากตารางสวัสดิการ · ยอดที่ใช้ไปจะแสดงเมื่อเชื่อมระบบคำขอเบิก`}
-          </p>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="min-w-0 flex-[1_1_280px]">
+          <RequesterFull
+            title="พนักงาน"
+            person={{
+              name: employee.name,
+              code: employee.code,
+              position: employee.position,
+              department: employee.department,
+              level: employee.jobLevel,
+              tenure: tenureOf(employee.hireDate, employee.status === "ACTIVE" ? null : employee.statusDate),
+              supervisor: employee.manager?.name ?? null,
+              employmentStatus: employee.statusLabel,
+              claimsThisYear: claims ? (maxAll > 0 ? `${counted}/${maxAll} ครั้ง` : `${counted} ครั้ง`) : null,
+              available: remainingAll !== null ? money(remainingAll) : null,
+            }}
+          />
         </div>
-        {entitlements && entitlements.length > 0 ? (
-          <div className="queue-table-scroll">
-            <table className="queue-table">
-              <thead>
-                <tr>
-                  <th scope="col">สวัสดิการ</th>
-                  <th scope="col" className="queue-num">วงเงิน</th>
-                  <th scope="col">จำนวนครั้ง</th>
-                  <th scope="col" className="queue-num">ใช้ไปแล้ว</th>
-                  <th scope="col">สิทธิ์</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entitlements.map((item) => (
-                  <tr key={item.code} className={item.eligible ? undefined : "profile-row-muted"}>
-                    <td data-label="สวัสดิการ">
-                      <span className="queue-item">{item.name}</span>
-                      <span className="queue-meta">{item.code}</span>
-                    </td>
-                    <td data-label="วงเงิน" className="queue-num">
-                      {item.limit !== null ? <span className="queue-amount">{baht.format(item.limit)} บาท</span> : <span className="queue-meta">ยังไม่กำหนด</span>}
-                      <span className="queue-meta">{item.budget}</span>
-                      {item.nextLimit ? <span className="queue-meta">{baht.format(item.nextLimit.amount)} บาท ตั้งแต่ {formatThaiDate(item.nextLimit.from)}</span> : null}
-                    </td>
-                    <td data-label="จำนวนครั้ง">
-                      {item.claims}
-                    </td>
-                    <td data-label="ใช้ไปแล้ว" className="queue-num"><span className="queue-meta">ยังไม่มีข้อมูล</span></td>
-                    <td data-label="สิทธิ์">
-                      <span className={`request-status request-status-${item.eligible ? "approved" : "rejected"}`}>{item.eligible ? "มีสิทธิ์" : "ไม่มีสิทธิ์"}</span>
-                      {item.note ? <span className="queue-meta">{item.note}</span> : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </section>
 
-      <section className="queue-sheet" aria-labelledby="profile-requests">
-        <div className="profile-sheet-head">
-          <h2 id="profile-requests">คำขอสวัสดิการ</h2>
-          <p className="queue-meta">
-            {history.length} รายการ{approvedTotal > 0 ? ` · อนุมัติแล้วรวม ${baht.format(approvedTotal)} บาท` : ""}
-          </p>
+        <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+          <Card aria-labelledby="limits">
+            <div className="flex flex-wrap justify-between gap-2 px-5 pt-3.5 pb-2">
+              <h2 id="limits" className="text-16 font-semibold">
+                สิทธิ์และวงเงินรายคน
+              </h2>
+              <span className="text-12 text-muted">
+                ค่าเริ่มต้นตามระดับ{employee.jobLevel ? ` ${employee.jobLevel}` : ""} · ปรับรายคนได้ บันทึก Log
+              </span>
+            </div>
+            {employee.status !== "ACTIVE" ? (
+              <EmptyState>พนักงาน{employee.statusLabel} ไม่มีสิทธิ์เบิกสวัสดิการ</EmptyState>
+            ) : !benefits ? (
+              <EmptyState>โหลดสิทธิ์สวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</EmptyState>
+            ) : benefits.length === 0 ? (
+              <EmptyState>ยังไม่มีสวัสดิการที่มีสิทธิ์</EmptyState>
+            ) : (
+              <LimitTable employeeCode={employee.code} rows={limitRows} canAdjust={session?.role === "HR"} />
+            )}
+          </Card>
+
+          <Card aria-labelledby="history">
+            <div className="px-5 pt-3.5 pb-2">
+              <h2 id="history" className="text-16 font-semibold">
+                ประวัติการเบิก ปี {thaiYear}
+              </h2>
+            </div>
+            {claims === null ? (
+              <EmptyState>โหลดประวัติการเบิกไม่สำเร็จ</EmptyState>
+            ) : thisYear.length === 0 ? (
+              <EmptyState>ยังไม่มีคำขอในปีนี้</EmptyState>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="min-w-[560px]">
+                  {thisYear.map((claim) => (
+                    <Link
+                      key={claim.claimNo}
+                      href={`/hr/home/requests/${encodeURIComponent(claim.claimNo)}`}
+                      className={cx("grid items-center gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline hover:bg-surface", HISTORY_COLS)}
+                    >
+                      <span className="text-13">{claim.claimNo}</span>
+                      <span className="text-13">{claim.benefitName}</span>
+                      <span className="text-right font-semibold">{money(claim.amountApproved ?? claim.amountRequested)}</span>
+                      <span>
+                        <StatusBadge status={claim.status} />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
         </div>
-        <div className="queue-table-scroll">
-          <table className="queue-table">
-            <thead>
-              <tr>
-                <th scope="col">คำขอ</th>
-                <th scope="col" className="queue-num">ยอดเบิก</th>
-                <th scope="col">สถานะ</th>
-                <th scope="col">วันที่</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((item) => (
-                <tr key={`${item.tone}-${item.id}`}>
-                  <td data-label="คำขอ">
-                    <span className="queue-item">{item.benefit}</span>
-                    <span className="queue-meta">{item.id}</span>
-                  </td>
-                  <td data-label="ยอดเบิก" className="queue-num">{item.amount > 0 ? <span className="queue-amount">{baht.format(item.amount)} บาท</span> : <span className="queue-meta">—</span>}</td>
-                  <td data-label="สถานะ"><span className={`request-status request-status-${item.tone}`}>{item.status}</span></td>
-                  <td data-label="วันที่" className="queue-date-cell">{formatThaiDate(item.date)}</td>
-                </tr>
-              ))}
-              {history.length === 0 ? (
-                <tr><td className="queue-empty" colSpan={4}>ยังไม่มีคำขอสวัสดิการ</td></tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+      </div>
+    </HrPage>
   );
 }

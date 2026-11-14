@@ -9,7 +9,9 @@ import {
   Gift,
   History,
   LayoutDashboard,
+  Eye,
   ListChecks,
+  Stamp,
   Network,
   UserCog,
   Users,
@@ -28,7 +30,7 @@ export interface NavItem {
   switchesToRequester?: boolean;
 }
 
-export type NavSection = 'admin' | 'hr' | 'employee' | 'finance';
+export type NavSection = 'admin' | 'hr' | 'hr_head' | 'employee' | 'finance';
 
 const REQUEST_ITEM: NavItem = {
   id: 'requests',
@@ -72,6 +74,8 @@ export const NAV: Record<NavSection, SectionConfig> = {
     basePath: '/hr',
     subtitle: 'HR',
     sectionLabel: 'HR',
+    // หน้าโปรไฟล์ของ HR (P01 5 แท็บ) ยังไม่มี ใช้หน้าโปรไฟล์ของฉันที่มีอยู่ไปก่อน เหมือนเมนูการเงิน (ข้อ 10 จะเปลี่ยนเป็น /hr/profile)
+    profileHref: '/employee/profile',
     items: (notificationCount) => [
       // ตัวเลขของ HR คือคำขอที่รอ HR ตรวจ (ดีไซน์ H01–H08)
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
@@ -80,6 +84,22 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
       { id: 'logs', label: 'ประวัติการแก้ไข', icon: History },
+      REQUEST_ITEM,
+    ],
+  },
+  // หัวหน้า HR (ดีไซน์ HH1–HH4) ใช้เส้นทาง /hr เดียวกัน ยังไม่ผูกกับบทบาทจนกว่าจะมีบทบาท HR_HEAD (ข้อ 9)
+  hr_head: {
+    basePath: '/hr',
+    subtitle: 'หัวหน้า HR',
+    sectionLabel: 'HR',
+    profileHref: '/employee/profile',
+    items: (notificationCount) => [
+      { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
+      { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp },
+      { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText },
+      { id: 'visibility', label: 'การแสดงสวัสดิการ', icon: Eye },
+      { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
+      { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       REQUEST_ITEM,
     ],
   },

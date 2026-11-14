@@ -1,10 +1,10 @@
 import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
-import { Sheet } from "@/features/requester/ui";
+import { Card as Sheet } from "@/features/hr/ui";
 
 // โครงหน้าตรวจคำขอ (H02) ระหว่างรอข้อมูล
 export default function ReviewLoading() {
   return (
-    <SkeletonScreen className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
+    <SkeletonScreen className="flex w-full flex-col gap-4 text-14 text-ink">
       <div className="flex flex-col gap-2">
         <Skeleton className="h-3 w-48" />
         <Skeleton className="h-6 w-64" />

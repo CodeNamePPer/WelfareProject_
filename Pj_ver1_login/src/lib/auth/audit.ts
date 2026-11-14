@@ -13,6 +13,7 @@ export type AuditAction =
   | "LOGOUT"
   | "USER_UPDATE"
   | "EMPLOYEE_CREATE" // HR เพิ่มพนักงานใหม่ (targetId = รหัสพนักงาน)
+  | "EMPLOYEE_LIMIT_UPDATE" // HR ปรับวงเงินรายคน (targetId = รหัสพนักงาน, changes = { รหัสสวัสดิการ: { old, new } })
   | "ACCOUNT_CREATE" // admin ออกบัญชีให้พนักงาน (targetId = รหัสพนักงาน)
   | "NOTIFICATION_RESOLVE"
   | "WELFARE_CREATE"
