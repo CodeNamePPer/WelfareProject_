@@ -83,7 +83,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
-      { id: 'logs', label: 'ประวัติการแก้ไข', icon: History },
+      { id: 'logs', label: 'ประวัติการแก้ไข', icon: History, href: '/hr/logs' },
       REQUEST_ITEM,
     ],
   },
