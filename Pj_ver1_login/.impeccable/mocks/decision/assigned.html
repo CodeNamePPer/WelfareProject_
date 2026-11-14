@@ -1,0 +1,42 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}body{width:1440px;height:900px;overflow:hidden;font-family:'IBM Plex Sans Thai',sans-serif;font-size:13px;color:#18253F;background:#fff;display:flex}
+.cover{width:240px;background:#1E3A8A;color:#DCE6F5;padding:20px 0;display:flex;flex-direction:column}
+.brand{padding:0 20px 18px;font-weight:600;color:#fff;font-size:15px}.brand small{display:block;font-weight:400;color:#9DB2DD;font-size:11px}
+.nav a{display:flex;justify-content:space-between;padding:9px 20px;color:#C9D6EE;text-decoration:none}.nav a.on{background:#fff;color:#1E3A8A;font-weight:600;border-left:4px solid #C2362B}
+.nav b{background:#C2362B;color:#fff;border-radius:9px;padding:0 7px;font-size:11px}
+main{flex:1;display:flex;flex-direction:column}
+.label{display:flex;border-bottom:2px solid #1E3A8A;margin:24px 40px 0}
+.label div{padding:8px 16px;border-right:1px solid #DCE6F5}.label div:first-child{padding-left:0}.label span{display:block;font-size:11px;color:#5b6b82}
+.label h1{font-size:22px;font-weight:600}
+.sum{display:flex;gap:28px;margin:14px 40px 4px;color:#5b6b82}.sum strong{color:#18253F;font-size:15px;margin-right:4px}.sum .r strong{color:#C2362B}
+.sec{margin:22px 40px 0}.sec h2{font-size:16px;font-weight:600;display:flex;gap:8px;align-items:baseline;padding-bottom:6px;border-bottom:2px solid #1E3A8A}.sec h2 em{font-style:normal;font-weight:400;color:#5b6b82;font-size:13px}
+.row{display:grid;grid-template-columns:96px 110px 1fr 180px 120px;align-items:center;height:42px;border-bottom:1px solid #DCE6F5}
+.row .due{border-right:2px solid #C2362B;height:100%;display:flex;align-items:center;padding-right:12px;justify-content:flex-end;color:#5b6b82;font-variant-numeric:tabular-nums}
+.row .due.late{color:#C2362B;font-weight:600}.row .code{padding-left:16px;font-variant-numeric:tabular-nums;color:#5b6b82}
+.row .act{color:#1D4ED8;font-weight:600;text-align:right}
+.st{font-size:12px;padding:2px 8px;border-radius:4px;justify-self:start}.p{background:#FEF3C7;color:#92400E}.x{background:#FEE2E2;color:#991B1B}.i{background:#DBEAFE;color:#1E40AF}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 48px}
+</style></head><body>
+<nav class="cover"><div class="brand">ระบบสวัสดิการพนักงาน<small>ผู้ดูแลระบบ</small></div>
+<div class="nav"><a class="on">งานวันนี้ <b>7</b></a><a>แจ้งเตือน</a><a>สวัสดิการ</a><a>ผู้ใช้และสิทธิ์</a><a>ประวัติระบบ</a></div></nav>
+<main>
+<div class="label"><div><span>หน้า</span><h1>งานวันนี้</h1></div><div><span>วันที่</span>พฤ. 6 พ.ย. 2569</div><div><span>ผู้ดูแล</span>สมชาย ใจดี</div></div>
+<div class="sum"><span class="r"><strong>3</strong>เกินกำหนด</span><span><strong>4</strong>ต้องจัดการ</span><span><strong>2</strong>รอ HR อนุมัติ</span><span><strong>12</strong>ล็อกอินผิด 24 ชม.</span></div>
+<section class="sec"><h2>ต้องจัดการ <em>4 รายการ · เรียงตามเวลาค้าง</em></h2>
+<div class="row"><div class="due late">ค้าง 3 วัน</div><div class="code">E00041</div><div>ขอสิทธิ์ HR — วิภา สุขสันต์</div><span class="st i">คำขอสิทธิ์</span><div class="act">ตรวจสอบ</div></div>
+<div class="row"><div class="due late">ค้าง 2 วัน</div><div class="code">E00017</div><div>บัญชีถูกล็อกหลังใส่รหัสผิด 5 ครั้ง</div><span class="st x">ความปลอดภัย</span><div class="act">ปลดล็อก</div></div>
+<div class="row"><div class="due">วันนี้</div><div class="code">WEL-007</div><div>นำเข้าข้อมูลเบิกค่าทันตกรรม — 6 แถวต้องแก้</div><span class="st p">ต้องแก้ไข</span><div class="act">แก้ไข</div></div>
+<div class="row"><div class="due">วันนี้</div><div class="code">E00052</div><div>รีเซ็ตรหัสผ่าน — ธนา ศรีสุข</div><span class="st i">คำขอบัญชี</span><div class="act">รีเซ็ต</div></div>
+</section>
+<div class="cols">
+<section class="sec" style="margin-right:0"><h2>รอ HR อนุมัติ <em>สวัสดิการที่คุณส่ง</em></h2>
+<div class="row" style="grid-template-columns:96px 90px 1fr 90px"><div class="due late">5 วัน</div><div class="code">WEL-011</div><div>ค่าเลี้ยงดูบุตร ปี 2570</div><span class="st p">รอ HR</span></div>
+<div class="row" style="grid-template-columns:96px 90px 1fr 90px"><div class="due">1 วัน</div><div class="code">WEL-012</div><div>ค่าตัดแว่นสายตา</div><span class="st p">รอ HR</span></div>
+</section>
+<section class="sec" style="margin-left:0"><h2>ปัญหาระบบ <em>24 ชม.</em></h2>
+<div class="row" style="grid-template-columns:96px 1fr 90px"><div class="due late">09:42</div><div style="padding-left:16px">ล็อกอินผิด 12 ครั้งจาก 10.2.4.18</div><span class="st x">บล็อก IP</span></div>
+<div class="row" style="grid-template-columns:96px 1fr 90px"><div class="due">08:10</div><div style="padding-left:16px">ส่งอีเมลแจ้งพนักงานไม่สำเร็จ 2 ฉบับ</div><span class="st p">ส่งใหม่</span></div>
+</section></div>
+</main></body></html>

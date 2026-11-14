@@ -241,7 +241,7 @@ export default function WithdrawClient({
                     <Sheet aria-labelledby="sec-applicant" className="flex flex-col gap-3.5 p-5">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <h2 id="sec-applicant" className="text-16 font-semibold">
-                                1. ชื่อผู้ส่งคำขอ
+                                1. ข้อมูลผู้ส่งคำขอ
                             </h2>
                             {canProxy ? (
                                 <div role="group" aria-label="ยื่นให้ใคร" className="flex rounded-full bg-slate-100 p-[3px]">
@@ -249,7 +249,7 @@ export default function WithdrawClient({
                                         ยื่นให้ตัวเอง
                                     </button>
                                     <button type="button" aria-pressed={proxy} onClick={() => !proxy && switchPerson(true)} className={segment(proxy)}>
-                                        ยื่นแทนคนในแผนก
+                                        ยื่นแทน
                                     </button>
                                 </div>
                             ) : null}

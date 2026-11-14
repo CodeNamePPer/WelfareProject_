@@ -569,10 +569,16 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
 
   let amountApproved: number | null = null;
   let payRoundId: string | null = null;
-  if (input.action === "finance_approve") {
+  // ปรับยอดได้เฉพาะ HR ตอนอนุมัติ (ดีไซน์ H02) การเงินอนุมัติจ่ายตามยอดที่ HR กำหนด
+  if (input.action === "hr_approve") {
     amountApproved = input.amountApproved ?? claim.amountRequested;
-    if (!(amountApproved >= 0) || amountApproved > claim.amountRequested) throw new ClaimInputError("ยอดอนุมัติต้องไม่เกินยอดขอเบิก");
+    if (!(amountApproved > 0) || amountApproved > claim.amountRequested) throw new ClaimInputError("ยอดอนุมัติต้องมากกว่า 0 และไม่เกินยอดขอเบิก");
     if (amountApproved !== claim.amountRequested && !note) throw new ClaimInputError("กรุณาระบุเหตุผลที่ปรับยอด");
+  }
+  if (input.action === "finance_approve") {
+    const hrAmount = claim.amountApproved ?? claim.amountRequested;
+    if (input.amountApproved !== undefined && input.amountApproved !== hrAmount) throw new ClaimInputError("การเงินปรับยอดไม่ได้ ถ้ายอดไม่ถูกต้องให้ส่งกลับ HR");
+    amountApproved = hrAmount;
     payRoundId = await ensurePayRound(claim.submittedAt ?? new Date().toISOString());
   }
 

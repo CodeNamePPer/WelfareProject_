@@ -90,7 +90,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
     profileHref: '/employee/profile',
     // The number here is how many claims wait on the requester (sent back for revision), shown on "ติดตามสถานะ".
     items: (todoCount) => [
-      { id: 'home', label: 'ภาพรวมสวัสดิการของฉัน', icon: LayoutDashboard, href: '/employee' },
+      { id: 'home', label: 'หน้าหลัก', icon: LayoutDashboard, href: '/employee' },
       { id: 'welfare', label: 'สิทธิ์สวัสดิการ', icon: Gift, href: '/employee/welfare' },
       { id: 'withdraw', label: 'ยื่นคำขอ', icon: FilePlus2, href: '/employee/withdraw' },
       { id: 'status', label: 'ติดตามสถานะ', icon: ListChecks, href: '/employee/status', badge: todoCount, badgeLabel: 'รอคุณแก้ไข' },
