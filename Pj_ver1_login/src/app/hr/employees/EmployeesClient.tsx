@@ -134,7 +134,7 @@ export function EmployeesClient({ rows, maxClaimsTotal, initialQuery }: { rows: 
       </Card>
       <p className="text-12 text-muted">
         พนักงานที่พ้นสภาพ: ยื่นเบิกและยื่นแทนไม่ได้ทุกกรณี ·{' '}
-        <Link href="/employee/organization" className="text-[#1D4ED8] hover:underline">
+        <Link href="/hr/employees/organization" className="text-[#1D4ED8] hover:underline">
           ดูโครงสร้างองค์กร
         </Link>{' '}
         ·{' '}
