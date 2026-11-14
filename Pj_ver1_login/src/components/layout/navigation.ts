@@ -96,7 +96,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
     items: (notificationCount) => [
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
       { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp, href: '/hr/proposals', badgeLabel: 'รออนุมัติ' },
-      { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText },
+      { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText, href: '/hr/hr-claims', badgeLabel: 'รอตรวจ' },
       { id: 'visibility', label: 'การแสดงสวัสดิการ', icon: Eye },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },

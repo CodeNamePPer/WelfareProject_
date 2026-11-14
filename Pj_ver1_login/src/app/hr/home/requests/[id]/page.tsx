@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployees } from "@/lib/hr/employees";
+import { isHrHead } from "@/lib/hr/hrHead";
+import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getBenefitMaxClaims, getClaimReviewFields, type DocKind } from "@/lib/hr/claimReview";
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
@@ -95,6 +97,10 @@ export default async function ReviewPage({ params }: { params: Params }) {
   // เพดานรวมชุดเดียวกับหน้ารายชื่อพนักงาน (H05) เพื่อให้ตัวเลข "เบิกปีนี้" ตรงกันทุกหน้า
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
 
+  // HH4: หัวหน้า HR ตรวจคำขอของ HR คนอื่น (ไม่ใช่ของตัวเอง) ที่ยังรอตรวจ
+  const hrClaim =
+    tab === "pending" && session !== null && claim.employeeCode !== session.sub && (await isHrHead(session)) && ((await getHrStaffCodes())?.has(claim.employeeCode) ?? false);
+
   const insurancePaid = fields?.insurancePaid ?? null;
   const insured = insurancePaid !== null && insurancePaid > 0;
   const receiptTotal = claim.receipts.reduce((sum, item) => sum + (item.amount ?? 0), 0);
@@ -139,7 +145,10 @@ export default async function ReviewPage({ params }: { params: Params }) {
     status: claim.status,
     statusLabel: CLAIM_STATUS_LABEL[claim.status],
     tab,
-    subtitle: [claim.benefitName, claimKindOf({ insurancePaid }).long, claim.submittedAt ? `ยื่น ${thaiDate(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
+    subtitle: hrClaim
+      ? `${claim.benefitName} · คำขอของ HR ต้องให้หัวหน้า HR ตรวจ`
+      : [claim.benefitName, claimKindOf({ insurancePaid }).long, claim.submittedAt ? `ยื่น ${thaiDate(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
+    hrClaim,
     person: {
       name,
       code: claim.employeeCode,

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { countClaimsForHr } from "@/lib/claims/service";
 import { isHrHead } from "@/lib/hr/hrHead";
+import { countHrClaimsForHead } from "@/lib/hr/hrClaims";
 import { countPendingProposals } from "@/lib/hr/proposals";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -29,7 +30,7 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
 
   const [waiting, head] = await Promise.all([countClaimsForHr(), isHrHead(session)]);
   // หัวหน้า HR เห็นเมนูของหัวหน้า HR พร้อมจำนวนข้อเสนอที่รออนุมัติ
-  const proposals = head ? await countPendingProposals() : 0;
+  const [proposals, hrClaims] = head ? await Promise.all([countPendingProposals(), countHrClaimsForHead(session.sub)]) : [0, 0];
 
   return (
     <ToastProvider>
@@ -37,7 +38,7 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
       <AppShell
         section={head ? "hr_head" : "hr"}
         notificationCount={waiting}
-        badges={head ? { proposals } : undefined}
+        badges={head ? { proposals, "hr-claims": hrClaims } : undefined}
         user={{ name: session.name, roleLabel: head ? "หัวหน้าฝ่ายบุคคล" : (ROLE_LABELS[session.role] ?? session.role) }}
       >
         <div className="hr-app">{children}</div>

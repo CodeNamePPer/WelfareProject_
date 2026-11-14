@@ -17,6 +17,8 @@ export type ReviewData = {
   statusLabel: string;
   tab: RowTab;
   subtitle: string;
+  /** คำขอของ HR ที่หัวหน้า HR กำลังตรวจ (ดีไซน์ HH4) */
+  hrClaim?: boolean;
   person: RequesterDetail;
   /** คำขอที่หัวหน้าแผนกยื่นแทน: ใช้วงเงิน จำนวนครั้ง และบัญชีของเจ้าของสิทธิ์ */
   proxy: { by: string; reason: string | null; owner: string; account: string | null } | null;
@@ -98,10 +100,10 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   return (
     <>
       <PageHeader
-        crumbs={[{ label: 'คิวคำขอ', href: '/hr/home' }, { label: data.claimNo }]}
+        crumbs={[data.hrClaim ? { label: 'คำขอเบิกของ HR', href: '/hr/hr-claims' } : { label: 'คิวคำขอ', href: '/hr/home' }, { label: data.claimNo }]}
         title={data.tab === 'pending' ? `ตรวจคำขอ ${data.claimNo}` : `คำขอ ${data.claimNo}`}
         description={data.subtitle}
-        actions={<StatusBadge status={data.status} />}
+        actions={<StatusBadge status={data.status} label={data.hrClaim ? 'รอหัวหน้า HR ตรวจ' : undefined} />}
       />
 
       <div className="flex flex-wrap items-start gap-4">
