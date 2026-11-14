@@ -1,28 +1,35 @@
 import { listClaims } from "@/lib/claims/service";
-import { hrStatusOf, toBangkokDate } from "@/lib/claims/mappers";
-import { HR_STATUSES } from "../home/statusRows";
-import ReportsClient, { type ReportRequest } from "./ReportsClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
+import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
+import { bangkokToday, thaiDate } from "@/lib/claims/requester";
+import ReportsClient, { type ReportClaim } from "./ReportsClient";
 
 export const dynamic = "force-dynamic";
 
+// H06 รายงานและสถิติ: คำนวณจาก welfare_claim ทั้งหมด (ยกเว้นฉบับร่าง) แล้วให้ client สลับช่วงเวลา
 export default async function ReportsPage() {
-  const claims = await listClaims({ statuses: HR_STATUSES });
-  if (!claims) return <p className="queue-alert" role="alert">โหลดรายงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
+  const claims = await listClaims();
+  if (!claims) return <p className="text-13 text-status-rejected">โหลดรายงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
-  const requests = claims.map((claim): ReportRequest => {
-    const status = hrStatusOf(claim.status);
-    return {
-      id: claim.employeeCode,
-      requestNumber: claim.claimNo,
-      documentNumber: claim.approvalNo ?? "-",
-      name: claim.employeeName,
-      department: claim.department ?? "-",
+  const rows: ReportClaim[] = claims
+    .filter((claim) => claim.status !== "draft" && claim.submittedAt)
+    .map((claim) => ({
+      claimNo: claim.claimNo,
+      employeeCode: claim.employeeCode,
+      employeeName: claim.employeeName,
+      department: claim.department ?? "ไม่ระบุแผนก",
       benefit: claim.benefitName,
+      status: claim.status,
+      statusLabel: CLAIM_STATUS_LABEL[claim.status],
       amount: claim.amountApproved ?? claim.amountRequested,
-      date: toBangkokDate(claim.submittedAt ?? claim.createdAt),
-      status: status === "approved" ? "อนุมัติแล้ว" : status === "rejected" ? "ปฏิเสธแล้ว" : "รอตรวจสอบ",
-    };
-  });
+      submitted: toBangkokDate(claim.submittedAt!),
+      paid: claim.status === "paid" && claim.payment?.paidAt ? toBangkokDate(claim.payment.paidAt) : null,
+    }));
 
-  return <ReportsClient requests={requests} />;
+  const today = bangkokToday();
+  return (
+    <div className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
+      <ReportsClient claims={rows} today={today} todayLabel={thaiDate(`${today}T00:00:00+07:00`)} />
+    </div>
+  );
 }

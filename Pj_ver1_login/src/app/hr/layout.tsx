@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
+import { countClaimsForHr } from "@/lib/claims/service";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -24,11 +25,12 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
     redirect("/access-denied?reason=role");
   }
 
+  const waiting = await countClaimsForHr();
+
   return (
     <ToastProvider>
       <NavigationProgress />
-      {/* ยังไม่มีระบบแจ้งเตือนของ HR จึงยังไม่แสดงตัวเลข */}
-      <AppShell section="hr" notificationCount={0} user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}>
+      <AppShell section="hr" notificationCount={waiting} user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}>
         <div className="hr-app">{children}</div>
       </AppShell>
     </ToastProvider>

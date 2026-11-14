@@ -94,7 +94,7 @@ export function HrQueueClient({ rows, stats, initialTab }: { rows: QueueRow[]; s
                 </div>
 
                 {shown.length === 0 ? (
-                    <EmptyNote>{rows.length === 0 ? 'ยังไม่มีคำขอ' : 'ไม่มีคำขอในแท็บนี้ที่ตรงกับตัวกรอง'}</EmptyNote>
+                    <EmptyNote>{rows.length === 0 ? 'ยังไม่มีคำขอ' : filtered.length === rows.length ? `ไม่มีคำขอ${QUEUE_TABS.find((item) => item.id === tab)?.label ?? ''}` : 'ไม่มีคำขอในแท็บนี้ที่ตรงกับตัวกรอง'}</EmptyNote>
                 ) : (
                     <div className="overflow-x-auto">
                         <div className="min-w-[900px]">

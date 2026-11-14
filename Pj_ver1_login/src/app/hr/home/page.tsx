@@ -30,14 +30,17 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const proxy = claim.submittedByCode !== claim.employeeCode;
     const reason = proxy ? proxyReasonOf(claim.note) : null;
     const revision = [...claim.events].reverse().find((event) => event.kind === "revision_requested" || event.kind === "returned");
+    const decision = tab === "approved" || tab === "rejected" ? [...claim.events].reverse().find((event) => event.kind === (tab === "approved" ? "hr_approved" : "rejected")) : undefined;
     const left = claim.limit > 0 ? Math.max(claim.limit - claim.used - claim.amountRequested, 0) : null;
     const hint: QueueRow["hint"] =
       claim.status === "needs_revision"
         ? { text: revision?.note ? `รอผู้ขอแก้: ${revision.note}` : "รอผู้ขอแก้ไข", tone: "muted" }
         : claim.status === "finance_returned"
           ? { text: `การเงินส่งกลับ${revision?.note ? `: ${revision.note}` : ""}`, tone: "amber" }
-          : reason
+          : reason && tab === "pending"
             ? { text: `เหตุที่ยื่นแทน: ${reason}`, tone: "amber" }
+            : decision
+              ? { text: `${tab === "rejected" ? "ไม่อนุมัติ" : "HR อนุมัติ"}โดย ${decision.actorName ?? "HR"} · ${thaiDate(decision.at)}${tab === "rejected" && decision.note ? ` · ${decision.note}` : ""}`, tone: "muted" }
             : { text: left !== null ? `เหลือ ${baht(left)} หลังเบิก` : "ไม่มีเพดานวงเงินรายปี", tone: "muted" };
     const own = claim.employeeCode === viewer;
     return [

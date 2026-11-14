@@ -88,7 +88,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
         <>
             <PageHead
                 crumbs={[{ label: 'คิวคำขอ', href: '/hr/home' }, { label: TAB_LABEL[data.tab], href: `/hr/home?tab=${data.tab}` }, { label: data.claimNo }]}
-                title={`ตรวจคำขอ ${data.claimNo}`}
+                title={data.tab === 'pending' ? `ตรวจคำขอ ${data.claimNo}` : `คำขอ ${data.claimNo}`}
                 description={data.subtitle}
             >
                 <ClaimPill status={data.status} />
@@ -267,15 +267,16 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                                 ) : null}
                                 <div className="flex flex-wrap gap-2">
                                     <button type="button" disabled={busy !== null} onClick={() => void decide('hr_approve')} className={pill.primary}>
-                                        {busy === 'hr_approve' ? 'กำลังบันทึก...' : 'อนุมัติ ส่งต่อการเงิน'}
+                                        {busy === 'hr_approve' ? 'กำลังบันทึก...' : 'อนุมัติ'}
                                     </button>
                                     <button
                                         type="button"
                                         disabled={busy !== null}
                                         onClick={() => void decide('hr_return')}
-                                        className={cx(pill.outline, '!border-orange-600 !text-orange-700 hover:!bg-orange-50')}
+                                        aria-label="ส่งกลับให้ผู้ขอแก้ไข"
+                                        className={cx(pill.primary, '!bg-[#FF8A00] hover:!bg-[#E67A00]')}
                                     >
-                                        {busy === 'hr_return' ? 'กำลังบันทึก...' : 'ส่งกลับให้แก้ไข'}
+                                        {busy === 'hr_return' ? 'กำลังบันทึก...' : 'แก้ไข'}
                                     </button>
                                     <button type="button" disabled={busy !== null} onClick={() => void decide('hr_reject')} className={cx(pill.primary, '!bg-red-800 hover:!bg-red-900')}>
                                         {busy === 'hr_reject' ? 'กำลังบันทึก...' : 'ไม่อนุมัติ'}

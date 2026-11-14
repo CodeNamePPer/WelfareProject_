@@ -1,8 +1,17 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
+
+// ระยะห่างและมุมโค้งแบบ rem คูณด้วย --sp (ค่าเริ่มต้น 1rem = ผลเท่าเดิมทุกหน้า)
+// ส่วนผู้ส่งคำขอและ HR ตั้ง --sp ให้เท่า 16px (AppShell) เพราะดีไซน์ "แบบ C" วัดเป็น px บน root 16px
+// ขณะที่ทั้งระบบใช้ root 14px ตาม Admin – ถ้าไม่ปรับ p-5, gap-4 ฯลฯ จะเล็กกว่าดีไซน์ 12.5%
+const scaled = (scale: Record<string, string>) =>
+  Object.fromEntries(Object.entries(scale).map(([key, value]) => [key, value.endsWith("rem") ? `calc(var(--sp, 1rem) * ${parseFloat(value)})` : value]));
 
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
+    spacing: scaled(defaultTheme.spacing as Record<string, string>),
+    borderRadius: scaled(defaultTheme.borderRadius as Record<string, string>),
     extend: {
       colors: {
         ink: { DEFAULT: "#18253F", soft: "#33415C", mute: "#6B778C" },
