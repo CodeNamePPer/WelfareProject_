@@ -371,7 +371,7 @@ type FieldDef = {
 
 type Values = Record<string, string>;
 
-export type SectionId = "account" | "personal" | "family" | "contact" | "work";
+export type SectionId = "account" | "employment" | "personal" | "family" | "contact" | "work";
 
 /** ฟอร์มแก้ไขของแต่ละส่วน */
 function SectionForm({
@@ -742,6 +742,23 @@ export function UserPanel({
     },
   ];
 
+  // HR เปลี่ยนได้เฉพาะสถานะการทำงาน (บัญชีล็อกอินและบทบาทเป็นงานของ Admin)
+  const employmentSection: (typeof sections)[number] = {
+    id: "employment",
+    title: "สถานะการทำงาน",
+    rows: [
+      ["สถานะ", <Badge key="status" tone={user.status === "ACTIVE" ? "approved" : "neutral"}>{statusLabel(user.status)}</Badge>],
+      ...(endDate
+        ? ([
+            [user.status === "DECEASED" ? "วันที่เสียชีวิต" : "วันที่ลาออก", formatThaiDate(endDate)],
+            ["เหตุผล", p.statusReason],
+          ] as InfoRow[])
+        : ([["หมายเหตุ", "ถ้าเปลี่ยนเป็น “ลาออก” ระบบจะบันทึกวันที่ลาออกเป็นวันนี้ และพนักงานจะหมดสิทธิ์เบิกสวัสดิการ"]] as InfoRow[])),
+    ],
+    fields: [{ key: "status", label: "สถานะ", type: "select", wide: true, options: statusChoices }],
+    initial: { status: user.status },
+  };
+
   const renderSectionCard = (s: (typeof sections)[number]) => {
     const isEditing = editing === s.id;
     return (
@@ -754,7 +771,7 @@ export function UserPanel({
           <h2 className="text-15 font-semibold text-ink">{s.title}</h2>
           {isEditing ? (
             <Badge tone="review">กำลังแก้ไข</Badge>
-          ) : s.id === "account" && !user.hasAccount ? null : (
+          ) : (s.id === "account" && !user.hasAccount) || (s.id === "employment" && user.status === "DECEASED") ? null : (
             <Button
               size="sm"
               variant="quiet"
@@ -784,7 +801,7 @@ export function UserPanel({
     );
   };
 
-  const visibleSections = mode === "hr" ? sections.slice(1) : sections;
+  const visibleSections = mode === "hr" ? [employmentSection, ...sections.slice(1)] : sections;
 
   return (
     <div className="flex flex-wrap items-start gap-4">

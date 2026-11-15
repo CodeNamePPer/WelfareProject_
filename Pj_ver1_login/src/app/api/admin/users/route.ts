@@ -78,7 +78,7 @@ const EMPLOYEE_SECTIONS: Record<"personal" | "family" | "contact" | "work", Reco
   },
 };
 
-type Section = "account" | "unlock" | keyof typeof EMPLOYEE_SECTIONS;
+type Section = "account" | "employment" | "unlock" | keyof typeof EMPLOYEE_SECTIONS;
 
 class InputError extends Error {}
 
@@ -102,10 +102,13 @@ export async function PUT(req: NextRequest) {
     if (!employeeId || typeof employeeId !== "string") {
       return NextResponse.json({ error: "ไม่พบรหัสพนักงาน" }, { status: 400 });
     }
+    if (section === "employment" && employeeId === session.sub) {
+      return NextResponse.json({ error: "เปลี่ยนสถานะการทำงานของตัวเองไม่ได้" }, { status: 403 });
+    }
     if (!reason) {
       return NextResponse.json({ error: "กรุณาระบุเหตุผลการเปลี่ยนแปลง" }, { status: 400 });
     }
-    if (section !== "account" && section !== "unlock" && !(section in EMPLOYEE_SECTIONS)) {
+    if (section !== "account" && section !== "employment" && section !== "unlock" && !(section in EMPLOYEE_SECTIONS)) {
       return NextResponse.json({ error: "ส่วนข้อมูลไม่ถูกต้อง" }, { status: 400 });
     }
 
@@ -116,6 +119,9 @@ export async function PUT(req: NextRequest) {
           : null
         : section === "account"
           ? await saveAccount(employeeId, values, reason)
+          : section === "employment"
+            // HR เปลี่ยนได้เฉพาะสถานะการทำงาน ไม่แตะชื่อล็อกอินหรือบทบาท
+            ? await saveAccount(employeeId, { status: values.status }, reason)
           : await saveEmployee(employeeId, EMPLOYEE_SECTIONS[section], values);
 
     if (changes === null) {
