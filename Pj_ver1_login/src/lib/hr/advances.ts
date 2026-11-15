@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getClaim } from "@/lib/claims/service";
+import { cancelClaimForOverdueAdvance, getClaim } from "@/lib/claims/service";
 import type { ClaimRecord } from "@/lib/claims/types";
 
 // ตรวจใบเสร็จเบิกล่วงหน้า (ดีไซน์ H13) อ่านและบันทึกตาราง welfare_claim_advance (migration 20261114100000)
@@ -172,6 +172,12 @@ export async function settleAdvance(claimNo: string, input: { action: AdvanceAct
   const { data: updated, error } = await supabaseAdmin.from("welfare_claim_advance").update(patch).eq("id", advance.id).eq("status", advance.status).select("id");
   if (error) throw error;
   if (!updated || updated.length === 0) throw new AdvanceInputError("รายการนี้ถูกบันทึกไปแล้ว กรุณารีเฟรชหน้า", 409);
+
+  if (input.action === "cancel_overdue") {
+    // ยกเลิกทั้งคำขอ คืนวงเงินเต็มจำนวน (ประวัติ advance_cancelled เขียนในขั้นนี้)
+    await cancelClaimForOverdueAdvance({ id: claim.id, status: claim.status }, { id: reviewer.id, role: "HR" }, event.note ?? "เกินกำหนดแนบใบเสร็จ", advance.advanceAmount);
+    return { status: patch.status as AdvanceStatus };
+  }
 
   const { error: eventError } = await supabaseAdmin
     .from("welfare_claim_event")

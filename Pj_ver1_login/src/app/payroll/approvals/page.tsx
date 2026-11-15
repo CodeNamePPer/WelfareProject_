@@ -14,7 +14,8 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   if (!data) return <p className="text-13 text-status-rejected-ink">โหลดรายการคำขอไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   const current = data.rounds.get(currentRoundKey(data.today));
-  const rows: ApprovalRow[] = data.claims.map(({ claim, person, roundKey, payDate, amount, hrApprovedAt }) => {
+  // คำขอที่ยกเลิกหลังโอน (เบิกล่วงหน้าเกินกำหนด) ไม่ใช่งานอนุมัติ ดูได้ที่ประวัติและเงินที่ต้องคืน
+  const rows: ApprovalRow[] = data.claims.filter(({ claim }) => claim.status !== "cancelled").map(({ claim, person, roundKey, payDate, amount, hrApprovedAt }) => {
     const returned = [...claim.events].reverse().find((event) => event.kind === "returned");
     return {
       claimNo: claim.claimNo,

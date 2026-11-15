@@ -375,7 +375,7 @@ export default function WithdrawClient({
                             <div className="flex flex-col gap-0.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-13 text-amber-800">
                                 <span>• วันที่เกิดค่าใช้จ่าย ให้ระบุวันที่คาดว่าจะใช้จ่าย</span>
                                 <span>• ต้องแนบใบเสร็จจริงภายใน {benefit.advanceReceiptDays} วันหลังได้รับเงิน ที่หน้าติดตามสถานะ</span>
-                                <span>• ไม่แนบภายในกำหนด ระบบยกเลิกรายการและต้องคืนเงินล่วงหน้าทั้งหมด</span>
+                                <span>• ไม่แนบภายในกำหนด ระบบยกเลิกคำขอ คืนวงเงินให้ และต้องคืนเงินล่วงหน้าทั้งหมด</span>
                             </div>
                         ) : null}
 

@@ -109,16 +109,22 @@ export type FinanceData = {
 /** สถานะของรอบตามวันนี้: ยังไม่เริ่ม / เปิดอยู่ / ปิดรอบแล้ว / จ่ายแล้ว */
 function stateOf(round: Omit<FinRound, "state" | "count" | "total">, today: string, dbStatus: PayRoundRow["status"] | null, items: FinClaim[]): RoundState {
   if (dbStatus === "paid") return "paid";
-  if (items.length > 0 && items.every((item) => item.claim.status === "paid")) return "paid";
+  if (items.length > 0 && items.every((item) => item.claim.status === "paid" || item.claim.status === "cancelled")) return "paid";
   if (today < round.start) return "not_started";
   if (today > round.cutoff || dbStatus === "closed") return "closed";
   return "open";
 }
 
+/** โอนเงินแล้ว: จ่ายแล้ว หรือยกเลิกหลังโอน (เบิกล่วงหน้าเกินกำหนด เงินออกไปแล้วจริง) */
+export function isTransferred(claim: { status: ClaimDbStatus; payment?: { paidAt: string | null } | null }) {
+  return claim.status === "paid" || (claim.status === "cancelled" && Boolean(claim.payment?.paidAt));
+}
+
 /** โหลดข้อมูลทั้งหมดที่หน้าการเงินใช้ (null = โหลดไม่สำเร็จ) */
 export async function getFinanceData(): Promise<FinanceData | null> {
   const [claims, employees, settings, roundsRes, claimRoundsRes, paymentsRes] = await Promise.all([
-    listClaims({ statuses: FIN_STATUSES }),
+    // รวมคำขอที่ยกเลิกหลังโอนแล้ว (เบิกล่วงหน้าเกินกำหนด) เพื่อให้ประวัติรอบจ่ายยังเห็นยอดที่โอนไปจริง
+    listClaims({ statuses: [...FIN_STATUSES, "cancelled"] }),
     getHrEmployees(),
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
     supabaseAdmin.from("welfare_pay_round").select("id, year, month, round_no, pay_date, status").returns<PayRoundRow[]>(),
@@ -155,7 +161,7 @@ export async function getFinanceData(): Promise<FinanceData | null> {
 
   const finClaims: FinClaim[] = claims
     // คำขอที่ HR ปฏิเสธโดยไม่เคยผ่านการเงินไม่เกี่ยวกับการเงิน
-    .filter((claim) => claim.status !== "rejected")
+    .filter((claim) => claim.status !== "rejected" && (claim.status !== "cancelled" || Boolean(claim.payment?.paidAt)))
     .map((claim) => {
       const employee = byCode.get(claim.employeeCode);
       const roundId = roundIdOf.get(claim.claimNo);
@@ -194,7 +200,7 @@ export async function getFinanceData(): Promise<FinanceData | null> {
 
   for (const item of finClaims) {
     const round = item.roundKey ? rounds.get(item.roundKey) : null;
-    item.payDate = item.claim.status === "paid" && item.claim.payment?.paidAt ? item.claim.payment.paidAt.slice(0, 10) : (item.claim.payDateOverride ?? round?.payDate ?? null);
+    item.payDate = (item.claim.status === "paid" || item.claim.status === "cancelled") && item.claim.payment?.paidAt ? item.claim.payment.paidAt.slice(0, 10) : (item.claim.payDateOverride ?? round?.payDate ?? null);
   }
 
   const payments: PaymentRow[] = paymentsRes.data.map((row) => ({
