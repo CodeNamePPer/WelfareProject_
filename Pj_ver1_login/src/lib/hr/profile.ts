@@ -91,3 +91,88 @@ export async function getHrProfileExtras(code: string): Promise<HrProfileExtras 
     return null;
   }
 }
+
+// -----------------------------------------------------------------------------
+// ข้อมูลส่วนตัว การตั้งค่าแจ้งเตือน และคำขอแก้ไขข้อมูลของตัวเอง (P01/P02)
+// -----------------------------------------------------------------------------
+
+export const EMPLOYMENT_TYPE_LABEL: Record<string, string> = { permanent: "พนักงานประจำ", probation: "ทดลองงาน", contract: "สัญญาจ้าง", part_time: "ไม่เต็มเวลา" };
+
+/** ช่องติดต่อที่ขอแก้ได้จากหน้าโปรไฟล์ (ส่งเป็นคำขอให้ HR คนอื่นตรวจ) */
+export const CONTACT_FIELDS = ["phone", "emergency_contact_name", "emergency_contact_phone", "address_line"] as const;
+export type ContactField = (typeof CONTACT_FIELDS)[number];
+
+export type ProfileSettings = {
+  employmentType: string | null;
+  contact: Record<ContactField, string>;
+  maritalStatus: string | null;
+  childrenCount: number | null;
+  /** มีคำขอแก้ไขข้อมูลที่รอตรวจอยู่ (ยื่นเพิ่มไม่ได้จนกว่าจะตัดสิน) */
+  pendingEditRequest: boolean;
+  /** topic -> { inApp, email } (ไม่มี = แจ้งในระบบ ไม่ส่งอีเมล) */
+  notifications: Record<string, { inApp: boolean; email: boolean }>;
+};
+
+export async function getProfileSettings(code: string): Promise<ProfileSettings | null> {
+  const { data: me, error } = await supabaseAdmin
+    .from("employee")
+    .select("id, employment_type, phone, emergency_contact_name, emergency_contact_phone, address_line, marital_status, children_count")
+    .eq("employee_code", code)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (error || !me) return null;
+  const [pending, prefs] = await Promise.all([
+    supabaseAdmin.from("employee_edit_request").select("id", { count: "exact", head: true }).eq("employee_id", me.id).eq("status", "pending").is("deleted_at", null),
+    supabaseAdmin.from("hr_notification_preference").select("topic, in_app, email").eq("employee_id", me.id),
+  ]);
+  return {
+    employmentType: me.employment_type ? (EMPLOYMENT_TYPE_LABEL[me.employment_type as string] ?? (me.employment_type as string)) : null,
+    contact: Object.fromEntries(CONTACT_FIELDS.map((field) => [field, ((me as Record<string, unknown>)[field] as string | null) ?? ""])) as Record<ContactField, string>,
+    maritalStatus: (me.marital_status as string | null) ?? null,
+    childrenCount: (me.children_count as number | null) ?? null,
+    pendingEditRequest: (pending.count ?? 0) > 0,
+    notifications: Object.fromEntries((prefs.data ?? []).map((row) => [row.topic as string, { inApp: row.in_app as boolean, email: row.email as boolean }])),
+  };
+}
+
+export class ProfileError extends Error {
+  constructor(
+    message: string,
+    readonly status = 400,
+  ) {
+    super(message);
+  }
+}
+
+/** ยื่นคำขอแก้ไขข้อมูลติดต่อของตัวเอง เก็บค่าเดิมไว้ด้วยเพื่อให้ HR เห็นก่อน → หลัง (H12) */
+export async function submitOwnEditRequest(code: string, wanted: Partial<Record<ContactField, string>>, reason: string) {
+  if (!reason.trim()) throw new ProfileError("ระบุเหตุผลที่ขอแก้ไข");
+  const { data: me, error } = await supabaseAdmin.from("employee").select(`id, ${CONTACT_FIELDS.join(", ")}`).eq("employee_code", code).is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  if (!me) throw new ProfileError("ไม่พบข้อมูลพนักงาน", 404);
+  const current = me as unknown as Record<string, string | null> & { id: string };
+  const changes: Record<string, { old: string | null; new: string }> = {};
+  for (const field of CONTACT_FIELDS) {
+    const next = wanted[field]?.trim();
+    if (next === undefined) continue;
+    if (next !== (current[field] ?? "")) changes[field] = { old: current[field] ?? null, new: next };
+  }
+  if (Object.keys(changes).length === 0) throw new ProfileError("ยังไม่ได้เปลี่ยนข้อมูล");
+  const { error: insertError } = await supabaseAdmin
+    .from("employee_edit_request")
+    .insert({ employee_id: current.id, requested_by: current.id, requested_fields: changes, reason: reason.trim() });
+  if (insertError) {
+    if (insertError.code === "23505") throw new ProfileError("มีคำขอแก้ไขข้อมูลที่รอตรวจอยู่แล้ว รอให้ HR ตรวจก่อน", 409);
+    throw insertError;
+  }
+}
+
+/** บันทึกการตั้งค่าแจ้งเตือนรายเรื่อง */
+export async function saveNotificationPreferences(code: string, prefs: { topic: string; inApp: boolean; email: boolean }[]) {
+  const { data: me } = await supabaseAdmin.from("employee").select("id").eq("employee_code", code).is("deleted_at", null).maybeSingle();
+  if (!me) throw new ProfileError("ไม่พบข้อมูลพนักงาน", 404);
+  const rows = prefs.filter((pref) => pref.topic.trim()).map((pref) => ({ employee_id: me.id, topic: pref.topic.trim(), in_app: pref.inApp, email: pref.email }));
+  if (rows.length === 0) return;
+  const { error } = await supabaseAdmin.from("hr_notification_preference").upsert(rows, { onConflict: "employee_id,topic" });
+  if (error) throw error;
+}
