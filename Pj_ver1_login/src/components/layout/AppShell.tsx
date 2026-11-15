@@ -22,9 +22,9 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head'];
+const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head', 'finance'];
 // HR และหัวหน้า HR: เนื้อหาคอลัมน์เดียว กว้างสุด 1140px จัดกลาง (สเปกรีดีไซน์ HR)
-const HR_COLUMN: NavSection[] = ['hr', 'hr_head'];
+const HR_COLUMN: NavSection[] = ['hr', 'hr_head', 'finance'];
 
 export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, badges, user, children }: AppShellProps) {
   const pathname = usePathname();

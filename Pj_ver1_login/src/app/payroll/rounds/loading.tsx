@@ -1,13 +1,5 @@
-import { RoundsHeader } from "@/features/payroll/components/payroll/PageHeaders";
-import { RoundsSkeleton } from "@/features/payroll/components/payroll/RoundsSkeleton";
+import { FinLoading } from "@/features/finance/FinLoading";
 
-// แสดงทันทีที่กดเข้าหน้า "ตั้งค่ารอบจ่าย / เลื่อนวันจ่าย" ระหว่างที่ page.tsx ดึงข้อมูล
-// หัวหน้าเป็นข้อความจริง ส่วนเนื้อหาเป็น skeleton ที่วางโครงเหมือนหน้าจริง
 export default function Loading() {
-  return (
-    <>
-      <RoundsHeader />
-      <RoundsSkeleton />
-    </>
-  );
+  return <FinLoading title="ตั้งค่ารอบจ่าย / เลื่อนวันจ่าย" description="ค่าจาก system_setting.pay_schedule · ผู้ส่งคำขอเห็นวันจ่ายชุดเดียวกันนี้" />;
 }

@@ -28,7 +28,8 @@ export async function PUT(req: NextRequest) {
   try {
     const settings = (await req.json()) as PaySettings;
     const errors = validatePaySettings(settings);
-    if (errors.round1 || errors.round2) throw new ClaimInputError((errors.round1 ?? errors.round2) as string);
+    const first = errors.round1 ?? errors.round2 ?? errors.cutoff;
+    if (first) throw new ClaimInputError(first);
     await savePaySettings(settings);
     return NextResponse.json({ ok: true });
   } catch (err) {

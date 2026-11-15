@@ -525,11 +525,14 @@ export async function getPayrollState() {
 
 /** บันทึกวันจ่ายของแต่ละรอบ และปรับกำหนดจ่ายของรอบที่ยังเปิดอยู่ให้ตรงกัน */
 export async function savePaySettings(settings: PaySettings) {
+  const previous = await getPaySettings();
   const { error } = await supabaseAdmin.from("system_setting").update({ value: settings }).eq("key", "pay_schedule");
   if (error) throw error;
-  const { data, error: roundsError } = await supabaseAdmin.from("welfare_pay_round").select("id, year, month, round_no").eq("status", "open");
+  const { data, error: roundsError } = await supabaseAdmin.from("welfare_pay_round").select("id, year, month, round_no, pay_date").eq("status", "open");
   if (roundsError) throw roundsError;
   for (const round of data ?? []) {
+    // รอบที่การเงินเลื่อนวันจ่ายไว้ (วันจ่ายไม่ตรงกับค่าตั้งเดิม) คงวันที่เลื่อนไว้ (ดีไซน์ F07)
+    if (round.pay_date !== resolvePayDate(round.year, round.month, round.round_no as 1 | 2, previous)) continue;
     const { error: updateError } = await supabaseAdmin
       .from("welfare_pay_round")
       .update({ pay_date: resolvePayDate(round.year, round.month, round.round_no as 1 | 2, settings) })

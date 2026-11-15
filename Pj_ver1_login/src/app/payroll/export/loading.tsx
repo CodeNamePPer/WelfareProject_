@@ -1,13 +1,5 @@
-import { ExportHeader } from "@/features/payroll/components/payroll/PageHeaders";
-import { ExportSkeleton } from "@/features/payroll/components/payroll/PageSkeletons";
+import { FinLoading } from "@/features/finance/FinLoading";
 
-// แสดงทันทีที่กดเข้าหน้า "Export รายงาน (Excel)" ระหว่างที่ page.tsx ดึงข้อมูล
-// หัวหน้าเป็นข้อความจริง ส่วนเนื้อหาเป็น skeleton ที่วางโครงเหมือนหน้าจริง
 export default function Loading() {
-  return (
-    <>
-      <ExportHeader />
-      <ExportSkeleton />
-    </>
-  );
+  return <FinLoading title="Export รายงาน (Excel)" description="เลือกช่วงข้อมูล ตรวจรายการที่จะส่งออก แล้วดาวน์โหลดเป็น .xlsx หรือ .csv" />;
 }
