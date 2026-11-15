@@ -4,10 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { listClaims } from "@/lib/claims/service";
 import { HR_PENDING } from "@/features/hr/queue";
 import { isHrHead } from "@/lib/hr/hrHead";
+import { findEmployeeUuidByCode } from "@/lib/auth/users";
 
 // แจ้งเตือนของ HR (ดีไซน์ H07) สร้างจากข้อมูลจริง ไม่มีตารางแจ้งเตือนแยก:
 //   คำขอใหม่รอตรวจ · การเงินส่งคำขอกลับ · ผลข้อเสนอสวัสดิการ (ของผู้เสนอ) · ข้อเสนอรออนุมัติ (ของหัวหน้า HR)
-// สถานะอ่านแล้วยังไม่มีที่เก็บ (รอ migration hr_notification_read) ทุกรายการจึงนับเป็นยังไม่อ่าน
+// สถานะอ่านแล้วเก็บในตาราง hr_notification_read ตาม key ของแต่ละรายการ (key มีเวลาของเหตุการณ์ต่อท้าย
+// เพื่อให้เหตุการณ์ใหม่ของคำขอหรือข้อเสนอเดิม เช่น ยื่นใหม่หลังแก้ไข กลับมาเป็นยังไม่อ่าน)
 
 export type HrNoticeTone = "amber" | "orange" | "indigo" | "green" | "red";
 
@@ -19,6 +21,7 @@ export type HrNotice = {
   body: string;
   href: string;
   tone: HrNoticeTone;
+  read: boolean;
 };
 
 /** ผลข้อเสนอที่ตัดสินแล้วแสดงย้อนหลังกี่วัน */
@@ -66,10 +69,11 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
         : Promise.resolve({ data: [] as ProposalRow[], error: null }),
     ]);
     if (!claims) throw new Error("claims not loaded");
+    const readKeys = await getReadKeys(viewerCode);
     if (mine.error) throw mine.error;
     if (waiting.error) throw waiting.error;
 
-    const notices: HrNotice[] = [];
+    const notices: Omit<HrNotice, "read">[] = [];
     for (const claim of claims) {
       // คำขอของตัวเองตรวจเองไม่ได้ จึงไม่แจ้ง
       if (claim.employeeCode === viewerCode) continue;
@@ -77,7 +81,7 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
       if (claim.status === "finance_returned") {
         const returned = [...claim.events].reverse().find((event) => event.kind === "returned");
         notices.push({
-          id: `claim-returned-${claim.id}`,
+          id: `claim-returned-${claim.id}-${returned?.at ?? ""}`,
           at: returned?.at ?? claim.submittedAt ?? claim.createdAt,
           title: "การเงินส่งคำขอกลับ",
           body: [claim.claimNo, returned?.note].filter(Boolean).join(" "),
@@ -85,9 +89,10 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
           tone: "indigo",
         });
       } else {
+        const lastAt = claim.events.at(-1)?.at ?? claim.submittedAt ?? claim.createdAt;
         const proxy = claim.submittedByCode !== claim.employeeCode ? ` (ยื่นแทนโดย ${claim.submittedByName})` : "";
         notices.push({
-          id: `claim-new-${claim.id}`,
+          id: `claim-new-${claim.id}-${lastAt}`,
           at: claim.submittedAt ?? claim.createdAt,
           title: "คำขอใหม่รอตรวจ",
           body: `${claim.claimNo} ${claim.benefitName} ${claim.employeeName}${proxy}`,
@@ -98,15 +103,15 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
     }
     for (const row of mine.data ?? []) {
       if (row.status === "pending") continue;
-      notices.push({ id: `proposal-${row.status}-${row.id}`, at: row.decided_at ?? row.submitted_at ?? since, title: DECIDED[row.status].title, body: proposalLabel(row), href: `/hr/benefits/proposals/${row.id}`, tone: DECIDED[row.status].tone });
+      notices.push({ id: `proposal-${row.status}-${row.id}-${row.decided_at ?? ""}`, at: row.decided_at ?? row.submitted_at ?? since, title: DECIDED[row.status].title, body: proposalLabel(row), href: `/hr/benefits/proposals/${row.id}`, tone: DECIDED[row.status].tone });
     }
     for (const row of waiting.data ?? []) {
       // ผู้เสนออนุมัติข้อเสนอของตัวเองไม่ได้
       if (row.proposer?.employee_code === viewerCode) continue;
       const by = row.proposer ? ` จาก ${row.proposer.first_name_th} ${row.proposer.last_name_th === "-" ? "" : row.proposer.last_name_th}`.trimEnd() : "";
-      notices.push({ id: `proposal-pending-${row.id}`, at: row.submitted_at ?? since, title: "ข้อเสนอสวัสดิการใหม่รออนุมัติ", body: `${proposalLabel(row)}${by}`, href: `/hr/proposals/${row.id}`, tone: "amber" });
+      notices.push({ id: `proposal-pending-${row.id}-${row.submitted_at ?? ""}`, at: row.submitted_at ?? since, title: "ข้อเสนอสวัสดิการใหม่รออนุมัติ", body: `${proposalLabel(row)}${by}`, href: `/hr/proposals/${row.id}`, tone: "amber" });
     }
-    return notices.sort((a, b) => b.at.localeCompare(a.at));
+    return notices.map((notice) => ({ ...notice, read: readKeys.has(notice.id) })).sort((a, b) => b.at.localeCompare(a.at));
   } catch (err) {
     console.error("[hr notifications] load failed", err);
     return null;
@@ -115,5 +120,29 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
 
 /** ตัวเลขบนเมนูแจ้งเตือน โหลดไม่ได้คืน 0 */
 export async function countHrNotifications(viewerCode: string, role: string): Promise<number> {
-  return (await getHrNotifications(viewerCode, role))?.length ?? 0;
+  return (await getHrNotifications(viewerCode, role))?.filter((notice) => !notice.read).length ?? 0;
+}
+
+/** key ของแจ้งเตือนที่ผู้ใช้อ่านแล้ว */
+async function getReadKeys(viewerCode: string): Promise<Set<string>> {
+  const employeeId = await findEmployeeUuidByCode(viewerCode);
+  if (!employeeId) return new Set();
+  const { data, error } = await supabaseAdmin.from("hr_notification_read").select("notice_key").eq("employee_id", employeeId);
+  if (error) {
+    console.error("[hr notifications] read state failed", error);
+    return new Set();
+  }
+  return new Set((data ?? []).map((row) => row.notice_key as string));
+}
+
+/** บันทึกว่าอ่านแล้ว (อ่านซ้ำไม่เพิ่มแถว) */
+export async function markHrNotificationsRead(viewerCode: string, keys: string[]) {
+  const employeeId = await findEmployeeUuidByCode(viewerCode);
+  if (!employeeId) throw new Error("employee not found");
+  const unique = [...new Set(keys.map((key) => key.trim()).filter(Boolean))].slice(0, 500);
+  if (unique.length === 0) return;
+  const { error } = await supabaseAdmin
+    .from("hr_notification_read")
+    .upsert(unique.map((key) => ({ employee_id: employeeId, notice_key: key })), { onConflict: "employee_id,notice_key", ignoreDuplicates: true });
+  if (error) throw error;
 }

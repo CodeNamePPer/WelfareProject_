@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bell } from "lucide-react";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrNotifications, type HrNotice, type HrNoticeTone } from "@/lib/hr/notifications";
-import { Button, Card, HrPage, PageHeader } from "@/features/hr/ui";
+import { Card, HrPage, PageHeader } from "@/features/hr/ui";
+import { MarkAllRead, NoticeLink } from "./NoticeActions";
 
 export const metadata: Metadata = { title: "แจ้งเตือน" };
 export const dynamic = "force-dynamic";
@@ -29,13 +29,14 @@ function whenOf(at: string, today: string) {
     : date.toLocaleDateString("th-TH", { day: "numeric", month: "short", timeZone: TZ });
 }
 
-// H07 แจ้งเตือน: สร้างจากข้อมูลจริง ยังไม่มีที่เก็บสถานะอ่านแล้ว ทุกรายการจึงแสดงเป็นยังไม่อ่าน
+// H07 แจ้งเตือน: สร้างจากข้อมูลจริง สถานะอ่านแล้วเก็บใน hr_notification_read
 export default async function HrNotificationsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
   const notices = await getHrNotifications(session.sub, session.role);
   if (!notices) return <p className="text-13 text-status-rejected-ink">โหลดแจ้งเตือนไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
+  const unread = notices.filter((notice) => !notice.read).length;
   const today = dayOf(new Date());
   const weekAgo = dayOf(new Date(Date.now() - 6 * 86_400_000));
   const groups: { label: string; items: HrNotice[] }[] = [
@@ -48,12 +49,8 @@ export default async function HrNotificationsPage() {
     <HrPage>
       <PageHeader
         title="แจ้งเตือน"
-        description={notices.length > 0 ? `ยังไม่ได้อ่าน ${notices.length} รายการ` : "ไม่มีรายการที่ยังไม่ได้อ่าน"}
-        actions={
-          <Button variant="quiet" className="!px-4" disabled title="ยังบันทึกสถานะอ่านแล้วไม่ได้ รอเปิดใช้ตารางสถานะการอ่าน">
-            อ่านทั้งหมดแล้ว
-          </Button>
-        }
+        description={unread > 0 ? `ยังไม่ได้อ่าน ${unread} รายการ` : "ไม่มีรายการที่ยังไม่ได้อ่าน"}
+        actions={<MarkAllRead unread={unread} />}
       />
       <Card className="overflow-hidden">
         {groups.length === 0 ? (
@@ -65,20 +62,22 @@ export default async function HrNotificationsPage() {
               <ul className="m-0 list-none p-0">
                 {group.items.map((notice) => (
                   <li key={notice.id}>
-                    <Link
+                    <NoticeLink
+                      id={notice.id}
                       href={notice.href}
-                      className="flex items-start gap-3.5 border-t border-[#F1F5F9] bg-[#F8FAFF] px-4 py-3.5 text-ink no-underline hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none sm:px-5"
+                      read={notice.read}
+                      className={`flex items-start gap-3.5 border-t border-[#F1F5F9] px-4 py-3.5 text-ink no-underline hover:bg-primary-50 focus-visible:bg-primary-50 focus-visible:outline-none sm:px-5 ${notice.read ? "bg-white" : "bg-[#F8FAFF]"}`}
                     >
                       <span aria-hidden="true" className={`flex size-9 shrink-0 items-center justify-center rounded-full ${TONE[notice.tone].bg}`}>
                         <Bell className={`size-4 ${TONE[notice.tone].ink}`} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-semibold">{notice.title}</span>
+                        <span className={`block ${notice.read ? "font-medium" : "font-semibold"}`}>{notice.title}</span>
                         <span className="block break-words text-13 text-ink-soft">{notice.body}</span>
                       </span>
                       <span className="text-12 whitespace-nowrap text-muted">{whenOf(notice.at, today)}</span>
-                      <span role="img" aria-label="ยังไม่อ่าน" className="mt-1.5 size-2 shrink-0 rounded-full bg-[#1D4ED8]" />
-                    </Link>
+                      {notice.read ? <span aria-hidden="true" className="size-2 shrink-0" /> : <span role="img" aria-label="ยังไม่อ่าน" className="mt-1.5 size-2 shrink-0 rounded-full bg-[#1D4ED8]" />}
+                    </NoticeLink>
                   </li>
                 ))}
               </ul>
