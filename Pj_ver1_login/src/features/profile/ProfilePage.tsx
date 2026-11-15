@@ -61,7 +61,7 @@ export function ProfilePage({
 }) {
   if (!user) {
     return (
-      <div className="flex w-full max-w-[960px] flex-col gap-[20px]">
+      <div className="flex w-full max-w-[960px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-[20px]">
         <PageHeader title="โปรไฟล์ของฉัน" />
         <p className="rounded-[10px] border border-line bg-white p-[20px] text-13 text-muted">
           ไม่พบข้อมูลพนักงานของบัญชี {fallbackName} ในระบบ ลองออกจากระบบแล้วเข้าใหม่ หรือติดต่อผู้ดูแลฐานข้อมูล
@@ -167,7 +167,7 @@ export function ProfilePage({
   ];
 
   return (
-    <div className="flex w-full max-w-[960px] flex-col gap-[20px]">
+    <div className="flex w-full max-w-[960px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-[20px]">
       <PageHeader
         title="โปรไฟล์ของฉัน"
         description="ข้อมูลของบัญชีที่เข้าระบบอยู่"

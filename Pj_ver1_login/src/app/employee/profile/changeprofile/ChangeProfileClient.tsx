@@ -122,7 +122,7 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
   }
 
   return (
-    <div className="mx-auto max-w-[1160px] px-1 pb-8 pt-2 text-13 text-ink">
+    <div className="mx-auto max-w-[1160px] group-data-[nav=collapsed]/shell:max-w-none px-1 pb-8 pt-2 text-13 text-ink">
       <nav aria-label="เส้นทางนำทาง" className="mb-3 text-12 text-muted">
         <Link href="/employee/profile" className="underline-offset-4 hover:text-ink hover:underline">
           พนักงาน

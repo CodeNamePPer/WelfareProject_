@@ -7,7 +7,7 @@ const COLS = "grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_140px_110px_120px]";
 // โครงหน้าจัดการพนักงาน (H05) ระหว่างรอข้อมูล
 export default function EmployeesLoading() {
   return (
-    <SkeletonScreen className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
+    <SkeletonScreen className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">
       <PageHead title="จัดการพนักงานและสิทธิ์">
         <Skeleton className="h-[38px] w-28 rounded-full" />
       </PageHead>
