@@ -6,11 +6,12 @@ import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
 import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
-import { Search } from 'lucide-react';
+import { Lock, Search } from 'lucide-react';
+import type { FadedBenefit } from '@/lib/hr/benefitVisibility';
 
 const ALL = 'ทั้งหมด';
 
-export default function WelfareClient({ benefits, roleNote }: { benefits: EmployeeBenefit[]; roleNote: string }) {
+export default function WelfareClient({ benefits, roleNote, faded = [] }: { benefits: EmployeeBenefit[]; roleNote: string; faded?: FadedBenefit[] }) {
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState(ALL);
 
@@ -21,6 +22,9 @@ export default function WelfareClient({ benefits, roleNote }: { benefits: Employ
     // จำนวนบนแต่ละหมวดนับตามคำค้นปัจจุบัน จะได้รู้ว่าผลค้นหาอยู่หมวดไหน
     const searched = benefits.filter(matchesQuery);
     const shown = searched.filter((benefit) => category === ALL || benefit.category === category);
+    const fadedShown = faded.filter(
+        (benefit) => (!q || `${benefit.name} ${benefit.code} ${benefit.category} ${benefit.description ?? ''}`.toLowerCase().includes(q)) && (category === ALL || benefit.category === category),
+    );
     const chips = [{ id: ALL, count: searched.length }, ...categories.map((name) => ({ id: name, count: searched.filter((benefit) => benefit.category === name).length }))];
 
     return (
@@ -108,6 +112,28 @@ export default function WelfareClient({ benefits, roleNote }: { benefits: Employ
                     })}
                 </ul>
             )}
+
+            {/* สวัสดิการที่ใช้ไม่ได้ แสดงเป็นการ์ดสีเทา ยื่นคำขอไม่ได้ (หัวหน้า HR ตั้งค่าที่หน้า HH3) */}
+            {fadedShown.length > 0 ? (
+                <ul aria-label="สวัสดิการที่ใช้ไม่ได้" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {fadedShown.map((benefit) => (
+                            <li key={benefit.code} aria-disabled="true" className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface opacity-60">
+                                <BenefitThumb category={benefit.category} className="h-[140px] grayscale" />
+                                <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
+                                    <p className="text-12 text-muted">
+                                        {benefit.code} · {benefit.category}
+                                    </p>
+                                    <h2 className="flex items-center gap-1.5 text-16 font-semibold text-ink-soft">
+                                        <Lock className="size-4 shrink-0" aria-hidden="true" />
+                                        {benefit.name}
+                                    </h2>
+                                    {benefit.description ? <p className="text-13 text-muted">{benefit.description}</p> : null}
+                                    <p className="mt-auto pt-1.5 text-12 text-muted">ใช้ไม่ได้ · {benefit.reason}</p>
+                                </div>
+                            </li>
+                        ))}
+                </ul>
+            ) : null}
         </>
     );
 }
