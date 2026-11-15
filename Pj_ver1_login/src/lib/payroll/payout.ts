@@ -1,6 +1,6 @@
 import "server-only";
 import { thaiDate } from "@/lib/claims/requester";
-import { accountLabel, getPrimaryAccounts, isTransferred, type FinRound, type FinanceData, type FinPerson } from "./finance";
+import { accountLabel, getPrimaryAccounts, type FinRound, type FinanceData, type FinPerson } from "./finance";
 
 // ข้อมูลหน้าบันทึกการโอน (F06) และรายการของรอบในข้อมูลย้อนหลัง (F08)
 
@@ -41,13 +41,13 @@ export function defaultPayoutKey(data: FinanceData): string | null {
 export async function buildPayout(data: FinanceData, key: string): Promise<Payout | null> {
   const round = data.rounds.get(key);
   if (!round) return null;
-  const items = data.claims.filter((item) => item.roundKey === key && (item.claim.status === "awaiting_payment" || isTransferred(item.claim)));
+  const items = data.claims.filter((item) => item.roundKey === key && (item.claim.status === "awaiting_payment" || item.claim.status === "paid"));
   const accounts = await getPrimaryAccounts([...new Set(items.map((item) => item.person.code))]);
 
   const rows: PayoutRow[] = items.map((item) => {
     const payments = data.payments.filter((payment) => payment.claimNo === item.claim.claimNo && payment.roundId === round.id);
     const latest = payments[payments.length - 1] ?? null;
-    const result: PayoutResult = isTransferred(item.claim) ? "success" : latest?.status === "failed" ? "failed" : "none";
+    const result: PayoutResult = item.claim.status === "paid" ? "success" : latest?.status === "failed" ? "failed" : "none";
     const fromPayment = latest ? { bankCode: latest.bankCode, accountMasked: latest.accountMasked } : null;
     const account = (result === "success" ? fromPayment : null) ?? accounts.get(item.person.code) ?? fromPayment;
     return {

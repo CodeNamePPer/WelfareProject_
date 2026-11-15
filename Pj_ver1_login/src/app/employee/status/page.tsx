@@ -40,7 +40,7 @@ function advanceOf(claim: ClaimRecord): AdvanceInfo | null {
     facts,
     returnNote: advance.status === "receipt_returned" ? (lastEventOf(claim, "receipt_returned")?.note ?? null) : null,
     canSubmit: open && paid && advance.receiptDueDate >= today,
-    waitingNote: open && !paid ? "แนบใบเสร็จได้หลังการเงินโอนเงินล่วงหน้าแล้ว" : advance.status === "cancelled_overdue" ? "เกินกำหนดแนบใบเสร็จ ระบบยกเลิกคำขอและคืนวงเงินเต็มจำนวนแล้ว ต้องคืนเงินล่วงหน้าทั้งหมด การเงินจะติดต่อเรื่องการคืนเงิน" : null,
+    waitingNote: open && !paid ? "แนบใบเสร็จได้หลังการเงินโอนเงินล่วงหน้าแล้ว" : advance.status === "cancelled_overdue" ? "เกินกำหนดแนบใบเสร็จ ต้องคืนเงินล่วงหน้าทั้งหมด การเงินจะติดต่อเรื่องการคืนเงิน" : null,
     today,
   };
 }

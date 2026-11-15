@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAdvanceItems, getFinanceData, getPrimaryAccounts, isTransferred, parseRoundKey } from "@/lib/payroll/finance";
+import { getAdvanceItems, getFinanceData, getPrimaryAccounts, parseRoundKey } from "@/lib/payroll/finance";
 import { thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 import { HrPage } from "@/features/hr/ui";
@@ -17,7 +17,7 @@ export default async function ExportPage() {
   const claims: ExportClaim[] = data.claims.flatMap((item) => {
     const round = item.roundKey ? parseRoundKey(item.roundKey) : null;
     if (!round || item.claim.status === "finance_returned") return [];
-    const paidTo = isTransferred(item.claim) ? item.claim.payment : null;
+    const paidTo = item.claim.status === "paid" ? item.claim.payment : null;
     // การโอนที่บันทึกตอนไม่มีบัญชีหลักเก็บ "ไม่ระบุ" / "-" ไว้ ให้เป็นช่องว่าง
     const account = paidTo ? (paidTo.bankCode === "ไม่ระบุ" ? null : { bankCode: paidTo.bankCode, accountMasked: paidTo.accountMasked }) : accounts.get(item.person.code);
     return [

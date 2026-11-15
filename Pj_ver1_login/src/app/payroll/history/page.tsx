@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/get-session";
-import { getFinanceData, isTransferred } from "@/lib/payroll/finance";
+import { getFinanceData } from "@/lib/payroll/finance";
 import { thaiDate } from "@/lib/claims/requester";
 import { HrPage } from "@/features/hr/ui";
 import { HistoryClient, type HistoryRound } from "./HistoryClient";
@@ -17,7 +17,7 @@ export default async function HistoryPage() {
     .filter((round) => (round.state === "paid" || round.payDate < data.today) && round.count > 0)
     .sort((a, b) => b.payDate.localeCompare(a.payDate))
     .map((round) => {
-      const items = data.claims.filter((item) => item.roundKey === round.key && isTransferred(item.claim));
+      const items = data.claims.filter((item) => item.roundKey === round.key && item.claim.status === "paid");
       return {
         key: round.key,
         year: Number(round.payDate.slice(0, 4)) + 543,
@@ -29,7 +29,7 @@ export default async function HistoryPage() {
     });
 
   // โอนไม่สำเร็จแยกตามปี (พ.ศ.) และแก้แล้วหรือยัง (ภายหลังโอนสำเร็จ)
-  const paidNos = new Set(data.claims.filter((item) => isTransferred(item.claim)).map((item) => item.claim.claimNo));
+  const paidNos = new Set(data.claims.filter((item) => item.claim.status === "paid").map((item) => item.claim.claimNo));
   const failures = data.payments
     .filter((payment) => payment.status === "failed")
     .map((payment) => ({ year: Number(payment.createdAt.slice(0, 4)) + 543, fixed: paidNos.has(payment.claimNo) }));

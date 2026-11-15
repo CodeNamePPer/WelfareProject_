@@ -839,37 +839,6 @@ export async function emailOwnerStatus(claimNo: string, actorCode: string) {
   emailHr("my_claim_status", { subject: `คำขอ ${claim.claimNo}: ${word}`, lines: [`${claim.claimNo} ${claim.benefitName}`, `สถานะ: ${word}`], path: `/employee/status?id=${encodeURIComponent(claim.claimNo)}` }, { only: [claim.employeeCode] });
 }
 
-/**
- * เงินล่วงหน้าเกินกำหนด: ยกเลิกทั้งคำขอ (paid -> cancelled) คำขอที่ยกเลิกไม่นับวงเงินและจำนวนครั้ง จึงคืนวงเงินเต็มจำนวน
- * เรียกหลังตั้ง welfare_claim_advance เป็น cancelled_overdue แล้วเท่านั้น (guard_welfare_claim ตรวจ)
- * ยอดที่ผู้ขอต้องคืนบริษัทยังอยู่ที่ refund_amount ให้การเงินบันทึกรับคืน
- */
-export async function cancelClaimForOverdueAdvance(
-  claim: { id: string; status: ClaimDbStatus },
-  actor: { id: string | null; role: string },
-  note: string,
-  amount: number,
-) {
-  if (claim.status === "paid") {
-    const { error } = await supabaseAdmin.rpc("welfare_claim_transition", {
-      p_claim_id: claim.id,
-      p_from: "paid",
-      p_to: "cancelled",
-      p_kind: "advance_cancelled",
-      p_actor: actor.id,
-      p_actor_role: actor.role,
-      p_note: note,
-    });
-    if (error) throw error;
-    return;
-  }
-  // ยังไม่ได้จ่าย (ไม่ควรเกิด เพราะนับกำหนดหลังโอนเงิน) บันทึกประวัติไว้อย่างเดียว
-  const { error } = await supabaseAdmin
-    .from("welfare_claim_event")
-    .insert({ claim_id: claim.id, kind: "advance_cancelled", from_status: claim.status, to_status: claim.status, actor_employee_id: actor.id, actor_role: actor.role, note, amount_before: amount, amount_after: 0 });
-  if (error) throw error;
-}
-
 let lastOverdueSweep = 0;
 
 /**
@@ -892,7 +861,7 @@ export async function cancelOverdueAdvances(force = false): Promise<number> {
     let cancelled = 0;
     for (const row of data ?? []) {
       const now = new Date().toISOString();
-      const note = "เกินกำหนดแนบใบเสร็จ ระบบยกเลิกคำขออัตโนมัติ คืนวงเงินเต็มจำนวน ผู้ขอต้องคืนเงินล่วงหน้าทั้งหมด";
+      const note = "เกินกำหนดแนบใบเสร็จ ระบบยกเลิกอัตโนมัติ ผู้ขอต้องคืนยอดล่วงหน้าทั้งหมด";
       const amount = Number(row.advance_amount);
       const { data: updated, error: updateError } = await supabaseAdmin
         .from("welfare_claim_advance")
@@ -903,11 +872,10 @@ export async function cancelOverdueAdvances(force = false): Promise<number> {
       if (updateError) throw updateError;
       if (!updated?.length) continue;
       cancelled += 1;
-      try {
-        await cancelClaimForOverdueAdvance({ id: row.claim_id, status: row.claim.status }, { id: null, role: "SYSTEM" }, note, amount);
-      } catch (cancelError) {
-        console.error("[claims] overdue claim cancel failed", { advanceId: row.id }, cancelError);
-      }
+      const { error: eventError } = await supabaseAdmin
+        .from("welfare_claim_event")
+        .insert({ claim_id: row.claim_id, kind: "advance_cancelled", from_status: row.claim.status, to_status: row.claim.status, actor_employee_id: null, actor_role: "SYSTEM", note, amount_before: amount, amount_after: 0 });
+      if (eventError) console.error("[claims] overdue event write failed", { advanceId: row.id }, eventError);
     }
     return cancelled;
   } catch (err) {
