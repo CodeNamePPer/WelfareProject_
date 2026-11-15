@@ -4,6 +4,7 @@ import { listClaims } from "@/lib/claims/service";
 import { bangkokToday } from "@/lib/claims/requester";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { HrPage } from "@/features/hr/ui";
+import { countPendingEditRequests } from "@/lib/hr/editRequests";
 import { EmployeesClient, type EmployeeRow } from "./EmployeesClient";
 
 export const metadata: Metadata = { title: "จัดการพนักงานและสิทธิ์" };
@@ -17,6 +18,7 @@ const NOT_COUNTED = new Set(["draft", "cancelled", "rejected"]);
 // H05 จัดการพนักงานและสิทธิ์
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
   const [employees, claims, maxClaims, params] = await Promise.all([getHrEmployees(), listClaims(), getBenefitMaxClaims().catch(() => null), searchParams]);
+  const editRequests = await countPendingEditRequests().catch(() => 0);
   if (!employees) return <p className="text-13 text-status-rejected">โหลดรายชื่อพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   const year = bangkokToday().slice(0, 4);
@@ -47,7 +49,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const initialQuery = typeof params.q === "string" ? params.q : "";
   return (
     <HrPage>
-      <EmployeesClient rows={rows} maxClaimsTotal={maxTotal} initialQuery={initialQuery} />
+      <EmployeesClient rows={rows} maxClaimsTotal={maxTotal} initialQuery={initialQuery} editRequests={editRequests} />
     </HrPage>
   );
 }
