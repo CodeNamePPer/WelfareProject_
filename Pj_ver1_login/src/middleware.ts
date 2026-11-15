@@ -15,7 +15,8 @@ function isPublic(pathname: string) {
 }
 
 /*
- * session ที่ออกก่อนเปลี่ยน/รีเซ็ตรหัสผ่านต้องใช้ไม่ได้ จึงเทียบ pwd ใน token กับ password_changed_at ในตาราง
+ * session ที่ออกก่อนเปลี่ยน/รีเซ็ตรหัสผ่าน หรือก่อนกด "ออกจากระบบทุกอุปกรณ์" ต้องใช้ไม่ได้
+ * จึงเทียบ pwd ใน token กับ max(password_changed_at, sessions_revoked_at) ในตาราง
  * เก็บผลไว้สั้น ๆ ต่อ instance เพื่อไม่ให้ทุก request ต้องถามฐานข้อมูล (รหัสที่ถูกรีเซ็ตมีผลภายใน ~15 วินาที)
  */
 const STATE_TTL_MS = 15_000;

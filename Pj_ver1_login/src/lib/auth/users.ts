@@ -261,7 +261,7 @@ export async function findUserByIdentifier(identifier: string): Promise<User | n
 
       const { data: cred, error: credError } = await supabaseAdmin
         .from("employee_credential")
-        .select("password_hash, password_changed_at, must_change_password")
+        .select("password_hash, password_changed_at, sessions_revoked_at, must_change_password")
         .eq("employee_id", data.employee_uuid)
         .single();
       if (credError) throw credError;

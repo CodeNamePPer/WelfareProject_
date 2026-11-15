@@ -116,7 +116,7 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'welfare', label: 'สิทธิ์สวัสดิการ', icon: Gift, href: '/employee/welfare' },
       { id: 'withdraw', label: 'ยื่นคำขอ', icon: FilePlus2, href: '/employee/withdraw' },
       { id: 'status', label: 'ติดตามสถานะ', icon: ListChecks, href: '/employee/status', badge: todoCount, badgeLabel: 'รอคุณแก้ไข' },
-      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/employee/notifications' },
+      { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/employee/notifications', badgeLabel: 'ยังไม่อ่าน' },
       { id: 'organization', label: 'โครงสร้างองค์กร', icon: Network, href: '/employee/organization' },
       { id: 'back-hr', label: 'กลับไปหน้า HR', icon: ArrowLeft, href: '/hr' },
       { id: 'back-finance', label: 'กลับไปหน้าการเงิน', icon: ArrowLeft, href: '/payroll' },

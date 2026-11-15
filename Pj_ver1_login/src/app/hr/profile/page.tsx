@@ -9,6 +9,7 @@ import { getHrHeadCode, isHrHead } from "@/lib/hr/hrHead";
 import { getHrProfileExtras, getProfileSettings } from "@/lib/hr/profile";
 import { DEFAULT_PAY_SETTINGS } from "@/features/payroll/lib/pay-settings";
 import { HrPage } from "@/features/hr/ui";
+import { isEmailConfigured } from "@/lib/email/resend";
 import { ProfileClient, type ProfileData } from "./ProfileClient";
 
 export const metadata: Metadata = { title: "โปรไฟล์ของฉัน" };
@@ -63,6 +64,7 @@ export default async function HrProfilePage() {
 
   const data: ProfileData = {
     head,
+    emailEnabled: isEmailConfigured(),
     name: profile.name,
     initials: profile.initials,
     code: profile.code,

@@ -7,7 +7,7 @@ import { BenefitThumb } from '@/features/requester/ui';
 import type { ProposalStatus, ProposalSummary } from '@/lib/hr/proposals';
 import { Badge, ButtonLink, Card, EmptyState, PageHeader, Tabs, type BadgeTone } from '@/features/hr/ui';
 
-export type BenefitRow = { code: string; name: string; category: string; amount: number; claims: string; active: boolean };
+export type BenefitRow = { code: string; name: string; category: string; imageUrl: string | null; amount: number; claims: string; active: boolean };
 
 type Tab = 'active' | 'closed' | 'all';
 
@@ -105,8 +105,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
                   href={`/hr/benefits/${encodeURIComponent(row.code)}`}
                   className={cx('grid items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline transition-colors hover:bg-surface motion-reduce:transition-none', COLS)}
                 >
-                  {/* ภาพแทนสวัสดิการชุดเดียวกับหน้าผู้ส่งคำขอ (ยังไม่มีรูปจริงในฐานข้อมูล) */}
-                  <BenefitThumb category={row.category} className="h-12 w-16 rounded-[6px]" />
+                  <BenefitThumb category={row.category} imageUrl={row.imageUrl} className="h-12 w-16 rounded-[6px]" />
                   <span className="min-w-0">
                     <span className="block font-medium">{row.name}</span>
                     <span className="block text-12 text-muted">{row.code}</span>

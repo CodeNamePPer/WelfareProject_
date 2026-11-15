@@ -1,10 +1,49 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { listClaims } from "@/lib/claims/service";
-import { toBangkokDate } from "@/lib/claims/mappers";
+import { ADVANCE_STATUS_LABEL, toBangkokDate } from "@/lib/claims/mappers";
 import { CLAIM_STATUS_LABEL, type ClaimRecord } from "@/lib/claims/types";
 import { APPROVED, RESERVED, baht, countedAmount, lastEventOf, payDateOf } from "@/lib/claims/requester";
 import StatusClient, { type ApprovalStep, type RequestStatus, type WelfareRequest } from "./StatusClient";
+import type { AdvanceInfo } from "./AdvanceReceiptPanel";
+
+const bangkokToday = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+
+/** สรุปเงินล่วงหน้าสำหรับผู้ขอ และบอกว่าตอนนี้แนบใบเสร็จได้หรือยัง */
+function advanceOf(claim: ClaimRecord): AdvanceInfo | null {
+  if (!claim.isAdvance) return null;
+  const today = bangkokToday();
+  const advance = claim.advance;
+  if (!advance) {
+    return {
+      statusLabel: claim.status === "draft" ? "ฉบับร่าง" : "รอพิจารณาเบิกล่วงหน้า",
+      facts: [{ label: "ยอดขอล่วงหน้า", value: baht(claim.amountRequested) }],
+      returnNote: null,
+      canSubmit: false,
+      waitingNote: claim.status === "draft" ? null : "แนบใบเสร็จได้หลังการเงินโอนเงินล่วงหน้าแล้ว",
+      today,
+    };
+  }
+  const due = thaiDate(`${advance.receiptDueDate}T00:00:00+07:00`);
+  const open = advance.status === "awaiting_receipt" || advance.status === "receipt_returned";
+  const paid = advance.advancePaidAt !== null;
+  const facts = [
+    { label: "ยอดล่วงหน้า", value: baht(advance.advanceAmount) },
+    { label: "วันที่ได้รับเงิน", value: paid ? thaiDate(advance.advancePaidAt!) : "รอการเงินโอน" },
+    { label: "กำหนดแนบใบเสร็จ", value: paid ? due : "นับจากวันที่ได้รับเงิน" },
+    ...(advance.receiptAmount !== null ? [{ label: "ยอดตามใบเสร็จ", value: baht(advance.receiptAmount) }] : []),
+    ...(advance.extraAmountApproved ? [{ label: "จ่ายเพิ่มให้", value: baht(advance.extraAmountApproved) }] : []),
+    ...(advance.refundAmount ? [{ label: "ต้องคืนบริษัท", value: baht(advance.refundAmount) }] : []),
+  ];
+  return {
+    statusLabel: paid || !open ? (ADVANCE_STATUS_LABEL[advance.status] ?? advance.status) : "อนุมัติแล้ว · รอการเงินโอนเงินล่วงหน้า",
+    facts,
+    returnNote: advance.status === "receipt_returned" ? (lastEventOf(claim, "receipt_returned")?.note ?? null) : null,
+    canSubmit: open && paid && advance.receiptDueDate >= today,
+    waitingNote: open && !paid ? "แนบใบเสร็จได้หลังการเงินโอนเงินล่วงหน้าแล้ว" : advance.status === "cancelled_overdue" ? "เกินกำหนดแนบใบเสร็จ ต้องคืนเงินล่วงหน้าทั้งหมด การเงินจะติดต่อเรื่องการคืนเงิน" : null,
+    today,
+  };
+}
 
 const STATUS_MAP: Record<ClaimRecord["status"], RequestStatus> = {
   draft: "draft",
@@ -128,6 +167,7 @@ function toRequest(claim: ClaimRecord): WelfareRequest {
     lastStep: LAST_STEP[claim.status],
     canEdit: claim.status === "draft" || claim.status === "needs_revision",
     canCancel: claim.status === "draft" || claim.status === "pending_hr" || claim.status === "needs_revision",
+    advance: advanceOf(claim),
   };
 }
 

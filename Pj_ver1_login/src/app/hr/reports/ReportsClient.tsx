@@ -39,7 +39,18 @@ const OUTSTANDING = [...WAITING_HR, ...WAITING_FINANCE, ...WAITING_PAY];
 const NOT_COUNTED: ClaimDbStatus[] = ['cancelled', 'rejected'];
 const CSV_COLUMNS = ['เลขคำขอ', 'รหัสพนักงาน', 'ชื่อ-นามสกุล', 'แผนก', 'สวัสดิการ', 'ยอด (บาท)', 'สถานะ', 'วันที่ยื่น', 'วันที่โอน'];
 
-export default function ReportsClient({ claims, today, todayLabel }: { claims: ReportClaim[]; today: string; todayLabel: string }) {
+export default function ReportsClient({
+    claims,
+    advances,
+    today,
+    todayLabel,
+}: {
+    claims: ReportClaim[];
+    /** เงินล่วงหน้าที่ยังไม่เคลียร์ใบเสร็จ */
+    advances: { count: number; overdue: number; reviewing: number };
+    today: string;
+    todayLabel: string;
+}) {
     const [period, setPeriod] = useState<Period>('month');
     const [exporting, setExporting] = useState(false);
 
@@ -66,8 +77,12 @@ export default function ReportsClient({ claims, today, todayLabel }: { claims: R
         { label: 'รายการคงค้าง', value: String(outstanding.length), note: `รอ HR ${countIn(WAITING_HR)} · รอการเงิน ${countIn(WAITING_FINANCE)} · รอจ่าย ${countIn(WAITING_PAY)}`, warn: outstanding.length > 0 },
         { label: `เบิก${word}`, value: baht(total), note: `${counted.length} คำขอ` },
         { label: 'จ่ายแล้วทั้งปี', value: baht(sum(paidYear)), note: `${paidYear.length} คำขอ` },
-        // ยังไม่มีตารางเบิกล่วงหน้า จึงแสดงสถานะว่าง
-        { label: 'ค้างใบเสร็จเบิกล่วงหน้า', value: '—', note: 'ยังไม่เปิดเบิกล่วงหน้าในระบบ' },
+        {
+            label: 'ค้างใบเสร็จเบิกล่วงหน้า',
+            value: String(advances.count),
+            note: advances.count === 0 ? 'ไม่มีรายการค้าง' : `รอ HR ตรวจ ${advances.reviewing} · เกินกำหนด ${advances.overdue}`,
+            warn: advances.overdue > 0,
+        },
     ];
 
     function exportCsv() {

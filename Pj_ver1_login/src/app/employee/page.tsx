@@ -140,7 +140,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                       const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
                       return (
                         <li key={benefit.code} className="flex items-center gap-3.5 rounded-lg border border-line px-3.5 py-3">
-                          <BenefitThumb category={benefit.category} className="size-16 rounded-lg" />
+                          <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="size-16 rounded-lg" />
                           <div className="flex min-w-0 flex-1 flex-col gap-1">
                             <p className="break-words font-semibold">{benefit.name}</p>
                             <p className="text-12 text-muted">

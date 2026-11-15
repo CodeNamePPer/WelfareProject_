@@ -97,8 +97,12 @@ const CATEGORY_ICON: [RegExp, LucideIcon][] = [
   [/กีฬา|ออกกำลัง/, Activity],
 ];
 
-/** ภาพแทนสวัสดิการ ฐานข้อมูลยังไม่มีรูปของแต่ละรายการ จึงใช้ไอคอนตามหมวด */
-export function BenefitThumb({ category, className }: { category: string; className?: string }) {
+/** รูปประกอบสวัสดิการ (ลิงก์ชั่วคราวจาก storage) ถ้ายังไม่มีรูปใช้ไอคอนตามหมวดแทน */
+export function BenefitThumb({ category, imageUrl, className }: { category: string; imageUrl?: string | null; className?: string }) {
+  if (imageUrl) {
+    // eslint-disable-next-line @next/next/no-img-element -- รูปจาก storage ผ่านลิงก์ชั่วคราว
+    return <img src={imageUrl} alt="" className={cx('shrink-0 bg-mist object-cover', className)} />;
+  }
   const Icon = CATEGORY_ICON.find(([pattern]) => pattern.test(category))?.[1] ?? Gift;
   return (
     <div aria-hidden="true" className={cx('flex shrink-0 items-center justify-center bg-mist text-muted', className)}>

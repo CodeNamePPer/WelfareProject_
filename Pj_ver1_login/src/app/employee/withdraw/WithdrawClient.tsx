@@ -19,6 +19,8 @@ export type WithdrawInitial = {
     receiptDate: string;
     attachments: string[];
     revisionNote: string | null;
+    /** คำขอนี้ยื่นเป็นเบิกล่วงหน้า */
+    isAdvance: boolean;
 };
 
 export type Person = { code: string; fullName: string; department: string; position: string; manager: string };
@@ -78,6 +80,7 @@ export default function WithdrawClient({
     const [note, setNote] = useState(initial?.note ?? '');
     const [receiptNo, setReceiptNo] = useState(initial?.receiptNo ?? '');
     const [receiptDate, setReceiptDate] = useState(initial?.receiptDate ?? '');
+    const [advanceChoice, setAdvanceChoice] = useState(initial?.isAdvance ?? false);
     const [files, setFiles] = useState<File[]>([]);
     const [dragging, setDragging] = useState(false);
     const [agreed, setAgreed] = useState(false);
@@ -96,6 +99,9 @@ export default function WithdrawClient({
     // คำขอที่ส่งกลับมาแก้ไขถูกนับอยู่แล้ว จึงไม่กันซ้ำที่หน้าจอ ฐานข้อมูลตรวจอีกชั้นตอนส่ง
     const outOfClaims = Boolean(benefit) && benefit!.maxClaims !== null && benefit!.claimsThisYear >= benefit!.maxClaims! && !initial;
     const revising = Boolean(initial?.revisionNote);
+    // ยื่นล่วงหน้าได้เฉพาะสวัสดิการที่เปิดไว้ ระหว่างแก้ไขเปลี่ยนประเภทไม่ได้
+    const advance = advanceChoice && Boolean(benefit?.allowAdvance);
+    const typeLocked = revising;
     const firstName = person.fullName.replace(/^(นาย|นางสาว|นาง|น\.ส\.)/, '').split(' ')[0];
 
     const setValue = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
@@ -107,6 +113,7 @@ export default function WithdrawClient({
         setBenefitCode(firstSelectable(nextList));
         setValues({});
         setClaimNo('');
+        setAdvanceChoice(false);
         setError('');
         setNotice('');
     }
@@ -140,7 +147,17 @@ export default function WithdrawClient({
             const body = new FormData();
             body.append(
                 'payload',
-                JSON.stringify({ ...payload, claimNo, ...(proxy ? { employeeCode: person.code } : {}), benefitCode: benefit.code, note: fullNote, receiptNo, receiptDate, submit }),
+                JSON.stringify({
+                    ...payload,
+                    claimNo,
+                    ...(proxy ? { employeeCode: person.code } : {}),
+                    benefitCode: benefit.code,
+                    note: fullNote,
+                    receiptNo: advance ? '' : receiptNo,
+                    receiptDate: advance ? '' : receiptDate,
+                    advance,
+                    submit,
+                }),
             );
             files.forEach((file) => body.append('files', file));
             const response = await fetch('/api/claims', { method: 'POST', body });
@@ -180,8 +197,10 @@ export default function WithdrawClient({
     function submit() {
         const problem = validateFields();
         if (problem) return setError(problem);
-        if (!receiptNo.trim() || !receiptDate) return setError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
-        if (files.length + (initial?.attachments.length ?? 0) === 0) return setError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
+        if (!advance) {
+            if (!receiptNo.trim() || !receiptDate) return setError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
+            if (files.length + (initial?.attachments.length ?? 0) === 0) return setError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
+        }
         if (!agreed) return setError('กรุณายืนยันความถูกต้องของข้อมูลก่อนส่งคำขอ');
         void send(true);
     }
@@ -197,14 +216,14 @@ export default function WithdrawClient({
         { label: 'ตำแหน่ง', value: person.position },
         { label: 'หัวหน้า', value: person.manager },
     ];
-    const documents = ['ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน', ...(benefit?.documents ?? [])];
+    const documents = advance ? ['ใบเสนอราคาหรือใบแจ้งค่าใช้จ่าย (ถ้ามี)', ...(benefit?.documents ?? [])] : ['ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน', ...(benefit?.documents ?? [])];
     // ผู้ยื่นคือคนที่กรอกฟอร์มเสมอ ส่วนผู้รับสิทธิ์คือเจ้าของวงเงินที่ถูกหัก (ตัวเอง หรือพนักงานที่ยื่นแทน)
     const remainingAfter = benefit ? Math.max(benefit.remaining - (initial ? 0 : amount), 0) : 0;
     const summary: { label: string; value: string; strong?: boolean; danger?: boolean }[] = [
         { label: 'ผู้ยื่น', value: proxy ? `${applicant.fullName} (หัวหน้าแผนก)` : applicant.fullName },
         { label: 'ผู้รับสิทธิ์', value: proxy ? `${person.fullName} · ${person.code}` : 'ตัวเอง' },
         { label: 'สวัสดิการ', value: benefit?.name ?? '—' },
-        { label: 'ประเภท', value: proxy ? 'ยื่นเบิก · ยื่นแทน' : 'ยื่นเบิก' },
+        { label: 'ประเภท', value: `${advance ? 'ยื่นล่วงหน้า' : 'ยื่นเบิก'}${proxy ? ' · ยื่นแทน' : ''}` },
         { label: 'ยอดขอเบิก', value: baht2(amount), strong: true },
         ...(benefit
             ? [
@@ -322,16 +341,43 @@ export default function WithdrawClient({
                             2. ประเภทการยื่นและสวัสดิการ
                         </h2>
                         <div role="radiogroup" aria-label="ประเภทการยื่น" className="grid grid-cols-2 gap-2.5">
-                            <button type="button" role="radio" aria-checked="true" className={choice(true)}>
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={!advance}
+                                aria-disabled={typeLocked && advance}
+                                onClick={() => !typeLocked && setAdvanceChoice(false)}
+                                className={cx(choice(!advance), typeLocked && advance && 'cursor-not-allowed')}
+                            >
                                 <span className="block font-semibold">ยื่นเบิก</span>
                                 <span className="block text-12 text-muted">จ่ายเงินไปแล้ว มีใบเสร็จพร้อมแนบ</span>
                             </button>
-                            {/* ระบบยังไม่มีตารางเบิกล่วงหน้า จึงแสดงไว้แต่ยังเลือกไม่ได้ */}
-                            <button type="button" role="radio" aria-checked="false" aria-disabled="true" className={cx(choice(false), 'cursor-not-allowed border-dashed bg-surface text-slate-400')}>
-                                <span className="block font-semibold">ยื่นล่วงหน้า</span>
-                                <span className="block text-12">ยังไม่เปิดให้ยื่นล่วงหน้าในระบบ</span>
-                            </button>
+                            {benefit?.allowAdvance ? (
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={advance}
+                                    aria-disabled={typeLocked && !advance}
+                                    onClick={() => !typeLocked && setAdvanceChoice(true)}
+                                    className={cx(choice(advance), typeLocked && !advance && 'cursor-not-allowed')}
+                                >
+                                    <span className="block font-semibold">ยื่นล่วงหน้า</span>
+                                    <span className="block text-12 text-muted">รับเงินก่อน แนบใบเสร็จภายใน {benefit.advanceReceiptDays} วันหลังได้รับเงิน</span>
+                                </button>
+                            ) : (
+                                <button type="button" role="radio" aria-checked="false" aria-disabled="true" className={cx(choice(false), 'cursor-not-allowed border-dashed bg-surface text-slate-400')}>
+                                    <span className="block font-semibold">ยื่นล่วงหน้า</span>
+                                    <span className="block text-12">สวัสดิการนี้ยื่นล่วงหน้าไม่ได้</span>
+                                </button>
+                            )}
                         </div>
+                        {advance && benefit ? (
+                            <div className="flex flex-col gap-0.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-13 text-amber-800">
+                                <span>• วันที่เกิดค่าใช้จ่าย ให้ระบุวันที่คาดว่าจะใช้จ่าย</span>
+                                <span>• ต้องแนบใบเสร็จจริงภายใน {benefit.advanceReceiptDays} วันหลังได้รับเงิน ที่หน้าติดตามสถานะ</span>
+                                <span>• ไม่แนบภายในกำหนด ระบบยกเลิกรายการและต้องคืนเงินล่วงหน้าทั้งหมด</span>
+                            </div>
+                        ) : null}
 
                         <p className="-mb-1.5 mt-1 text-13 font-medium text-ink-soft">
                             สวัสดิการ
@@ -339,9 +385,14 @@ export default function WithdrawClient({
                         </p>
                         {benefit ? (
                             <div className="flex flex-wrap items-center gap-3.5 rounded-[10px] border-[1.5px] border-primary-600 bg-primary-50 p-3">
-                                <div aria-hidden="true" className="flex h-[72px] w-24 shrink-0 items-center justify-center rounded-lg bg-mist text-muted">
-                                    <ImageIcon className="size-6" strokeWidth={1.5} />
-                                </div>
+                                {benefit.imageUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element -- รูปจาก storage ผ่านลิงก์ชั่วคราว
+                                    <img src={benefit.imageUrl} alt="" className="h-[72px] w-24 shrink-0 rounded-lg bg-mist object-cover" />
+                                ) : (
+                                    <div aria-hidden="true" className="flex h-[72px] w-24 shrink-0 items-center justify-center rounded-lg bg-mist text-muted">
+                                        <ImageIcon className="size-6" strokeWidth={1.5} />
+                                    </div>
+                                )}
                                 <div className="min-w-0 flex-[1_1_260px]">
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}
@@ -413,20 +464,24 @@ export default function WithdrawClient({
                                     </div>
                                 );
                             })}
-                            <div>
-                                <label htmlFor="receiptNo" className={labelClass}>
-                                    เลขที่ใบเสร็จ
-                                    <Required />
-                                </label>
-                                <input id="receiptNo" value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className={inputClass} />
-                            </div>
-                            <div>
-                                <label htmlFor="receiptDate" className={labelClass}>
-                                    วันที่ในใบเสร็จ
-                                    <Required />
-                                </label>
-                                <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className={inputClass} />
-                            </div>
+                            {advance ? null : (
+                                <>
+                                    <div>
+                                        <label htmlFor="receiptNo" className={labelClass}>
+                                            เลขที่ใบเสร็จ
+                                            <Required />
+                                        </label>
+                                        <input id="receiptNo" value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className={inputClass} />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="receiptDate" className={labelClass}>
+                                            วันที่ในใบเสร็จ
+                                            <Required />
+                                        </label>
+                                        <input id="receiptDate" type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className={inputClass} />
+                                    </div>
+                                </>
+                            )}
                         </div>
                         {amountField ? (
                             <div className="sm:max-w-[50%] sm:pr-[7px]">
@@ -466,7 +521,7 @@ export default function WithdrawClient({
                     {/* 4. เอกสารแนบ */}
                     <Sheet aria-labelledby="sec-docs" className="flex flex-col gap-3 p-5">
                         <h2 id="sec-docs" className="text-16 font-semibold">
-                            4. เอกสารแนบ
+                            4. เอกสารแนบ{advance ? ' (ไม่บังคับ)' : ''}
                         </h2>
                         <label
                             htmlFor="claim-files"
@@ -567,6 +622,7 @@ export default function WithdrawClient({
                 onPick={(code) => {
                     if (code !== benefitCode) {
                         setBenefitCode(code);
+                        setAdvanceChoice(false);
                         setValues({});
                         setError('');
                     }

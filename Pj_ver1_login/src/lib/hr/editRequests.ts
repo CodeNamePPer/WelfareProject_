@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
+import { emailHr } from "./emailNotify";
 
 // คำขอแก้ไขข้อมูลพนักงาน (ดีไซน์ H12) ตาราง employee_edit_request
 //   พนักงานขอแก้ข้อมูลส่วนตัว -> HR คนอื่นตรวจ -> อนุมัติ = บันทึกค่าใหม่ลง employee จริง / ไม่อนุมัติ = ต้องมีข้อความถึงพนักงาน
@@ -119,6 +120,11 @@ export async function submitEmployeeEditRequest(code: string, topic: EmployeeCha
     if (insertError.code === "23505") throw new EditRequestError("มีคำขอเปลี่ยนข้อมูลที่รอฝ่ายบุคคลตรวจอยู่แล้ว รอผลก่อนจึงส่งคำขอใหม่ได้", 409);
     throw insertError;
   }
+  emailHr(
+    "employee_edit_request",
+    { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอเปลี่ยน ${Object.keys(changes).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`], path: "/hr/employees/requests" },
+    { exclude: [code] },
+  );
 }
 
 /** ลิงก์ชั่วคราว (60 วินาที) ให้ HR เปิดดูหลักฐานของคำขอ */

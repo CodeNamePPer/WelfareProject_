@@ -54,6 +54,8 @@ export type ClaimEventRecord = {
 export type ClaimAdvanceRecord = {
   status: string;
   advanceAmount: number;
+  /** วันที่การเงินโอนเงินล่วงหน้า (null = ยังไม่โอน) */
+  advancePaidAt: string | null;
   receiptDueDate: string;
   receiptAmount: number | null;
   settlement: string | null;
@@ -77,6 +79,8 @@ export type ClaimRecord = {
   insurancePaid?: number | null;
   insurerName?: string | null;
   advance?: ClaimAdvanceRecord | null;
+  /** ผู้ขอเลือกยื่นล่วงหน้า */
+  isAdvance: boolean;
   benefitCode: string;
   benefitName: string;
   budgetType: BudgetKind;
@@ -123,6 +127,12 @@ export type EmployeeBenefit = {
   eligibilityNote: string | null;
   /** เอกสารที่แอดมินกำหนดให้แนบเพิ่มจากใบเสร็จ */
   documents: string[];
+  /** ลิงก์ชั่วคราวของรูปประกอบ (null = ยังไม่มีรูป) */
+  imageUrl: string | null;
+  /** ยื่นเบิกล่วงหน้าได้ แล้วแนบใบเสร็จภายหลัง */
+  allowAdvance: boolean;
+  /** ต้องแนบใบเสร็จภายในกี่วันหลังได้รับเงินล่วงหน้า */
+  advanceReceiptDays: number;
   limit: number;
   used: number;
   pending: number;

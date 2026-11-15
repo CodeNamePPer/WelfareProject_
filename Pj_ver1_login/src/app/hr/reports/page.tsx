@@ -27,9 +27,16 @@ export default async function ReportsPage() {
     }));
 
   const today = bangkokToday();
+  // เงินล่วงหน้าที่โอนแล้วแต่ยังไม่เคลียร์ใบเสร็จ (ค้างแนบ / HR ส่งกลับ / รอ HR ตรวจ)
+  const openAdvances = claims.filter((claim) => claim.advance?.advancePaidAt && ["awaiting_receipt", "receipt_returned", "receipt_submitted"].includes(claim.advance.status));
+  const advances = {
+    count: openAdvances.length,
+    overdue: openAdvances.filter((claim) => claim.advance!.status !== "receipt_submitted" && claim.advance!.receiptDueDate < today).length,
+    reviewing: openAdvances.filter((claim) => claim.advance!.status === "receipt_submitted").length,
+  };
   return (
     <div className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">
-      <ReportsClient claims={rows} today={today} todayLabel={thaiDate(`${today}T00:00:00+07:00`)} />
+      <ReportsClient claims={rows} advances={advances} today={today} todayLabel={thaiDate(`${today}T00:00:00+07:00`)} />
     </div>
   );
 }

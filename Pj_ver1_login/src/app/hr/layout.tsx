@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
-import { countClaimsForHr } from "@/lib/claims/service";
+import { cancelOverdueAdvances, countClaimsForHr } from "@/lib/claims/service";
 import { isHrHead } from "@/lib/hr/hrHead";
 import { countHrClaimsForHead } from "@/lib/hr/hrClaims";
 import { countHrNotifications } from "@/lib/hr/notifications";
@@ -25,6 +25,8 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
   if (!session) {
     redirect("/login");
   }
+  // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
+  await cancelOverdueAdvances();
   if (session.role !== "HR" && session.role !== "SUPER_ADMIN") {
     redirect("/access-denied?reason=role");
   }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { supabaseAdmin } from "@/lib/supabase";
+import { cancelOverdueAdvances } from "@/lib/claims/service";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -21,7 +22,7 @@ const ADMIN_HIDDEN_NAV = ["approvals", "payout", "rounds", "advances", "refunds"
 async function financeBadges() {
   const [claims, advances] = await Promise.all([
     supabaseAdmin.from("welfare_claim").select("id", { count: "exact", head: true }).in("status", ["pending_finance", "awaiting_payment"]).is("deleted_at", null),
-    supabaseAdmin.from("welfare_claim_advance").select("id", { count: "exact", head: true }).in("status", ["awaiting_receipt", "receipt_returned"]),
+    supabaseAdmin.from("welfare_claim_advance").select("id", { count: "exact", head: true }).in("status", ["awaiting_receipt", "receipt_returned"]).not("advance_paid_at", "is", null),
   ]);
   return { approvals: claims.count ?? 0, advances: advances.count ?? 0 };
 }
@@ -32,6 +33,8 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
   if (!session) {
     redirect("/login");
   }
+  // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
+  await cancelOverdueAdvances();
   const admin = session.role === "SUPER_ADMIN";
   const badges = admin ? undefined : await financeBadges().catch(() => undefined);
 

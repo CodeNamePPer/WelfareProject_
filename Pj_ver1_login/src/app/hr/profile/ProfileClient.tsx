@@ -10,6 +10,8 @@ import { Button, ButtonLink, Card, Input, ReadOnlyInput } from '@/features/hr/ui
 
 export type ProfileData = {
   head: boolean;
+  /** ระบบตั้งค่าการส่งอีเมล (Resend) แล้ว */
+  emailEnabled: boolean;
   name: string;
   initials: string;
   code: string;
@@ -114,6 +116,25 @@ export function ProfileClient({ data }: { data: ProfileData }) {
   const topics = data.head ? HEAD_TOPICS : HR_TOPICS;
   const router = useRouter();
   const { notify } = useToast();
+
+  // ออกจากระบบทุกอุปกรณ์: กดครั้งแรกถามยืนยัน เครื่องนี้ยังใช้งานต่อได้
+  const [confirmLogoutAll, setConfirmLogoutAll] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+  async function logoutAll() {
+    if (loggingOutAll) return;
+    setLoggingOutAll(true);
+    try {
+      const response = await fetch('/api/auth/logout-all', { method: 'POST' });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) return notify(body.error ?? 'ออกจากระบบทุกอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      setConfirmLogoutAll(false);
+      notify('ออกจากระบบทุกอุปกรณ์แล้ว เครื่องนี้ยังเข้าใช้งานต่อได้');
+    } catch {
+      notify('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoggingOutAll(false);
+    }
+  }
 
   // ข้อมูลติดต่อ: แก้แล้วส่งเป็นคำขอให้ HR คนอื่นตรวจ (H12)
   const [contact, setContact] = useState(data.contact);
@@ -369,12 +390,25 @@ export function ProfileClient({ data }: { data: ProfileData }) {
                   ))}
                 </ul>
               )}
-              {/* ต้องเปลี่ยนระบบเข้าสู่ระบบ (session) ก่อน รอเจ้าของระบบตัดสินใจ */}
               <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#F1F5F9] pt-3">
-                <Button variant="reject" disabled>
-                  ออกจากระบบทุกอุปกรณ์
-                </Button>
-                <span className="text-12 text-muted">ยังไม่เปิดใช้ ต้องปรับระบบเข้าสู่ระบบก่อน</span>
+                {confirmLogoutAll ? (
+                  <>
+                    <span className="text-13">ออกจากระบบบนเครื่องอื่นทั้งหมด? เครื่องนี้ยังใช้งานต่อได้</span>
+                    <Button variant="reject" onClick={() => void logoutAll()} disabled={loggingOutAll}>
+                      {loggingOutAll ? 'กำลังดำเนินการ...' : 'ยืนยัน'}
+                    </Button>
+                    <Button variant="quiet" onClick={() => setConfirmLogoutAll(false)} disabled={loggingOutAll}>
+                      ยกเลิก
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="reject" onClick={() => setConfirmLogoutAll(true)}>
+                      ออกจากระบบทุกอุปกรณ์
+                    </Button>
+                    <span className="text-12 text-muted">เครื่องอื่นจะถูกให้เข้าสู่ระบบใหม่ภายในไม่กี่วินาที</span>
+                  </>
+                )}
               </div>
             </Card>
           </div>
@@ -417,7 +451,9 @@ export function ProfileClient({ data }: { data: ProfileData }) {
               <Button onClick={() => void savePrefs()} disabled={savingPrefs}>
                 {savingPrefs ? 'กำลังบันทึก...' : 'บันทึก'}
               </Button>
-              <span className="text-12 text-muted">ระบบยังไม่ได้ส่งอีเมล การตั้งค่าอีเมลจะมีผลเมื่อเปิดใช้การส่งอีเมล</span>
+              <span className="text-12 text-muted">
+                {data.emailEnabled ? 'อีเมลส่งไปที่อีเมลติดต่อในโปรไฟล์ของคุณ' : 'ผู้ดูแลระบบยังไม่ได้ตั้งค่าการส่งอีเมล ตัวเลือกอีเมลจะมีผลเมื่อเปิดใช้'}
+              </span>
             </div>
           </Card>
         ) : null}

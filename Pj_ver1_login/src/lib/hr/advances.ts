@@ -112,7 +112,8 @@ export function summarizeAdvance(claim: ClaimRecord, advance: ClaimAdvance, toda
     maxExtra: round2(maxExtra),
     overLimit: round2(extraWanted - maxExtra),
     refund: difference !== null && difference < 0 ? round2(-difference) : 0,
-    overdue: (advance.status === "awaiting_receipt" || advance.status === "receipt_returned") && advance.receiptDueDate < today,
+    // ยังไม่โอนเงินล่วงหน้า = ยังไม่เริ่มนับกำหนดแนบใบเสร็จ
+    overdue: (advance.status === "awaiting_receipt" || advance.status === "receipt_returned") && advance.advancePaidAt !== null && advance.receiptDueDate < today,
   };
 }
 
