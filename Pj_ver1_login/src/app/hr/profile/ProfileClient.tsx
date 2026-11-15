@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { cx } from '@/lib/cx';
@@ -29,6 +31,12 @@ export type ProfileData = {
   budget: { title: string; remaining: string; note: string; usedPercent: number; claims: string; reviewer: string; nextPay: string } | null;
   account: { bank: string; number: string } | null;
   logins: { label: string; at: string }[];
+  employmentType: string | null;
+  contact: { phone: string; emergency_contact_name: string; emergency_contact_phone: string; address_line: string };
+  maritalStatus: string | null;
+  childrenCount: number | null;
+  pendingEditRequest: boolean;
+  notifications: Record<string, { inApp: boolean; email: boolean }>;
 };
 
 const TABS = ['ข้อมูลส่วนตัว', 'การทำงานและสิทธิ์', 'สวัสดิการของฉัน', 'ความปลอดภัย', 'การแจ้งเตือน'] as const;
@@ -42,20 +50,20 @@ const HR_RIGHTS = [
 ];
 const HEAD_RIGHTS = ['อนุมัติ ขอข้อมูลเพิ่ม หรือไม่อนุมัติข้อเสนอสวัสดิการจาก HR และ Admin', 'ตรวจคำขอเบิกของ HR', 'ตั้งค่าซ่อนหรือแสดงสวัสดิการที่ใช้ไม่ได้', 'ทำงานทุกอย่างของ HR'];
 
-// เรื่องที่แจ้งตามดีไซน์ (ยังไม่มีที่เก็บการตั้งค่า จึงแสดงค่าที่ระบบใช้อยู่: แจ้งในระบบ ไม่ส่งอีเมล)
-const HR_TOPICS: [string, string][] = [
-  ['คำขอใหม่รอตรวจ', 'คำขอที่ส่งถึงคุณ'],
-  ['ผู้ขอแก้ไขแล้วส่งกลับ', 'คำขอที่คุณส่งกลับ'],
-  ['ใบเสร็จเบิกล่วงหน้ารอตรวจ', ''],
-  ['คำขอแก้ไขข้อมูลพนักงาน', ''],
-  ['ผลข้อเสนอสวัสดิการ', 'หัวหน้า HR อนุมัติหรือขอข้อมูลเพิ่ม'],
-  ['สถานะคำขอเบิกของฉัน', 'ในฐานะพนักงาน'],
+// เรื่องที่แจ้งตามดีไซน์ [key, ชื่อเรื่อง, คำอธิบาย] การตั้งค่าเก็บใน hr_notification_preference (ไม่มีแถว = แจ้งในระบบ ไม่ส่งอีเมล)
+const HR_TOPICS: [string, string, string][] = [
+  ['claim_new', 'คำขอใหม่รอตรวจ', 'คำขอที่ส่งถึงคุณ'],
+  ['claim_resubmitted', 'ผู้ขอแก้ไขแล้วส่งกลับ', 'คำขอที่คุณส่งกลับ'],
+  ['advance_receipt', 'ใบเสร็จเบิกล่วงหน้ารอตรวจ', ''],
+  ['employee_edit_request', 'คำขอแก้ไขข้อมูลพนักงาน', ''],
+  ['proposal_decided', 'ผลข้อเสนอสวัสดิการ', 'หัวหน้า HR อนุมัติหรือขอข้อมูลเพิ่ม'],
+  ['my_claim_status', 'สถานะคำขอเบิกของฉัน', 'ในฐานะพนักงาน'],
 ];
-const HEAD_TOPICS: [string, string][] = [
-  ['ข้อเสนอสวัสดิการใหม่', 'จาก HR และ Admin'],
-  ['คำขอเบิกของ HR รอตรวจ', ''],
-  ['คำขอใหม่รอตรวจ', 'คิว HR'],
-  ['สถานะคำขอเบิกของฉัน', 'ในฐานะพนักงาน'],
+const HEAD_TOPICS: [string, string, string][] = [
+  ['proposal_pending', 'ข้อเสนอสวัสดิการใหม่', 'จาก HR และ Admin'],
+  ['hr_claim_pending', 'คำขอเบิกของ HR รอตรวจ', ''],
+  ['claim_new', 'คำขอใหม่รอตรวจ', 'คิว HR'],
+  ['my_claim_status', 'สถานะคำขอเบิกของฉัน', 'ในฐานะพนักงาน'],
 ];
 
 const chipClass = (role: string) => cx('rounded-[999px] px-2.5 py-px text-12 font-medium', role === 'พนักงาน' ? 'bg-[#F1F5F9] text-[#475569]' : 'bg-[#DBEAFE] text-[#1E40AF]');
@@ -104,6 +112,52 @@ export function ProfileClient({ data }: { data: ProfileData }) {
   };
   const rights = data.head ? [...HEAD_RIGHTS, ...(data.directReports > 0 ? [`ยื่นคำขอแทนคนในแผนก (${data.directReports} คน)`] : [])] : HR_RIGHTS;
   const topics = data.head ? HEAD_TOPICS : HR_TOPICS;
+  const router = useRouter();
+  const { notify } = useToast();
+
+  // ข้อมูลติดต่อ: แก้แล้วส่งเป็นคำขอให้ HR คนอื่นตรวจ (H12)
+  const [contact, setContact] = useState(data.contact);
+  const [editReason, setEditReason] = useState('');
+  const [editError, setEditError] = useState('');
+  const [sending, setSending] = useState(false);
+  const contactChanged = (Object.keys(contact) as (keyof typeof contact)[]).some((key) => contact[key].trim() !== data.contact[key]);
+  async function sendEditRequest() {
+    if (sending) return;
+    if (!contactChanged) return setEditError('ยังไม่ได้เปลี่ยนข้อมูล');
+    if (!editReason.trim()) return setEditError('ระบุเหตุผลที่ขอแก้ไข');
+    setSending(true);
+    setEditError('');
+    try {
+      const response = await fetch('/api/hr/profile/edit-request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ changes: contact, reason: editReason }) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) return setEditError(body.error ?? 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      notify('ส่งคำขอแก้ไขข้อมูลแล้ว รอ HR คนอื่นตรวจ');
+      setEditReason('');
+      router.refresh();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  // การตั้งค่าแจ้งเตือน
+  const [prefs, setPrefs] = useState<Record<string, { inApp: boolean; email: boolean }>>(() =>
+    Object.fromEntries(topics.map(([key]) => [key, data.notifications[key] ?? { inApp: true, email: false }])),
+  );
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  async function savePrefs() {
+    if (savingPrefs) return;
+    setSavingPrefs(true);
+    try {
+      const response = await fetch('/api/hr/profile/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefs: Object.entries(prefs).map(([topic, value]) => ({ topic, ...value })) }),
+      });
+      notify(response.ok ? 'บันทึกการตั้งค่าแจ้งเตือนแล้ว' : 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setSavingPrefs(false);
+    }
+  }
 
   return (
     <>
@@ -163,20 +217,36 @@ export function ProfileClient({ data }: { data: ProfileData }) {
                 <ReadOnlyInput label="รหัสพนักงาน" value={data.code} />
                 <ReadOnlyInput label="อีเมลเข้าสู่ระบบ" value={data.loginEmail} />
                 <ReadOnlyInput label="วันเริ่มงาน" value={data.hireDate} />
+                <ReadOnlyInput label="ประเภทพนักงาน" value={data.employmentType ?? "ยังไม่ระบุ"} />
                 <ReadOnlyInput label="สถานะ" value={data.statusLabel} />
               </div>
             </Card>
             <Card className="p-5">
               <SectionTitle title="ข้อมูลติดต่อ" note={`${data.head ? '' : 'HR '}แก้ข้อมูลตัวเองไม่ได้ ส่งคำขอให้ HR คนอื่นตรวจ`} />
               <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                <Input label="โทรศัพท์" value={data.phone ?? ''} readOnly />
-                <Input label="ผู้ติดต่อฉุกเฉิน" value={data.emergencyContact ?? ''} readOnly />
+                <Input label="โทรศัพท์" value={contact.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} readOnly={data.pendingEditRequest} />
+                <Input label="ผู้ติดต่อฉุกเฉิน" value={contact.emergency_contact_name} onChange={(event) => setContact({ ...contact, emergency_contact_name: event.target.value })} readOnly={data.pendingEditRequest} />
+                <Input label="โทรผู้ติดต่อฉุกเฉิน" value={contact.emergency_contact_phone} onChange={(event) => setContact({ ...contact, emergency_contact_phone: event.target.value })} readOnly={data.pendingEditRequest} />
               </div>
-              <Input className="mt-3.5" label="ที่อยู่" value={data.address ?? ''} readOnly />
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button disabled>ส่งคำขอแก้ไขข้อมูล</Button>
-                <span className="text-12 text-muted">ยังส่งคำขอในระบบไม่ได้ ระหว่างนี้แจ้ง HR คนอื่นให้แก้ไขให้</span>
-              </div>
+              <Input className="mt-3.5" label="ที่อยู่" value={contact.address_line} onChange={(event) => setContact({ ...contact, address_line: event.target.value })} readOnly={data.pendingEditRequest} />
+              {data.pendingEditRequest ? (
+                <p className="mt-4 rounded-[8px] bg-[#FEF3C7] px-3 py-2.5 text-13 text-[#92400E]">มีคำขอแก้ไขข้อมูลที่รอ HR ตรวจอยู่ ยื่นเพิ่มได้หลังตัดสินแล้ว</p>
+              ) : (
+                <>
+                  {contactChanged ? <Input className="mt-3.5" label="เหตุผลที่ขอแก้ไข" value={editReason} onChange={(event) => setEditReason(event.target.value)} /> : null}
+                  {editError ? (
+                    <p role="alert" className="mt-2 text-13 text-[#991B1B]">
+                      {editError}
+                    </p>
+                  ) : null}
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <Button onClick={() => void sendEditRequest()} disabled={sending || !contactChanged}>
+                      {sending ? 'กำลังส่ง...' : 'ส่งคำขอแก้ไขข้อมูล'}
+                    </Button>
+                    <span className="text-12 text-muted">แก้ช่องด้านบนแล้วส่ง HR คนอื่นจะตรวจก่อนบันทึกจริง</span>
+                  </div>
+                </>
+              )}
             </Card>
           </>
         ) : null}
@@ -263,7 +333,14 @@ export function ProfileClient({ data }: { data: ProfileData }) {
               </Card>
               <Card className="min-w-0 flex-[1_1_320px] p-5">
                 <SectionTitle title="ครอบครัวที่เบิกสวัสดิการได้" note="บุตรสูงสุด 2 คน" />
-                <p className="text-13 text-muted">ยังไม่ได้ลงทะเบียนครอบครัว เพิ่มได้ผ่าน HR</p>
+                {data.maritalStatus || data.childrenCount ? (
+                  <dl className="grid grid-cols-2 gap-3.5">
+                    <Fact label="สถานภาพสมรส" value={data.maritalStatus} />
+                    <Fact label="บุตร" value={data.childrenCount != null ? `${data.childrenCount} คน` : null} />
+                  </dl>
+                ) : (
+                  <p className="text-13 text-muted">ยังไม่ได้ลงทะเบียนครอบครัว เพิ่มได้ผ่าน HR</p>
+                )}
               </Card>
             </div>
           </>
@@ -292,6 +369,13 @@ export function ProfileClient({ data }: { data: ProfileData }) {
                   ))}
                 </ul>
               )}
+              {/* ต้องเปลี่ยนระบบเข้าสู่ระบบ (session) ก่อน รอเจ้าของระบบตัดสินใจ */}
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[#F1F5F9] pt-3">
+                <Button variant="reject" disabled>
+                  ออกจากระบบทุกอุปกรณ์
+                </Button>
+                <span className="text-12 text-muted">ยังไม่เปิดใช้ ต้องปรับระบบเข้าสู่ระบบก่อน</span>
+              </div>
             </Card>
           </div>
         ) : null}
@@ -303,23 +387,37 @@ export function ProfileClient({ data }: { data: ProfileData }) {
               <span className="text-center">ในระบบ</span>
               <span className="text-center">อีเมล</span>
             </div>
-            {topics.map(([title, note]) => (
-              <div key={title} className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-3 border-t border-[#F1F5F9] px-5 py-3">
+            {topics.map(([key, title, note]) => (
+              <div key={key} className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-3 border-t border-[#F1F5F9] px-5 py-3">
                 <span className="min-w-0">
                   <span className="block font-medium">{title}</span>
                   {note ? <span className="block text-12 text-muted">{note}</span> : null}
                 </span>
                 <span className="flex justify-center">
-                  <input type="checkbox" checked disabled readOnly aria-label={`${title}: แจ้งในระบบ`} className="size-4" />
+                  <input
+                    type="checkbox"
+                    checked={prefs[key]?.inApp ?? true}
+                    onChange={(event) => setPrefs({ ...prefs, [key]: { ...prefs[key], inApp: event.target.checked } })}
+                    aria-label={`${title}: แจ้งในระบบ`}
+                    className="size-4 accent-[#1D4ED8]"
+                  />
                 </span>
                 <span className="flex justify-center">
-                  <input type="checkbox" checked={false} disabled readOnly aria-label={`${title}: ส่งอีเมล`} className="size-4" />
+                  <input
+                    type="checkbox"
+                    checked={prefs[key]?.email ?? false}
+                    onChange={(event) => setPrefs({ ...prefs, [key]: { ...prefs[key], email: event.target.checked } })}
+                    aria-label={`${title}: ส่งอีเมล`}
+                    className="size-4 accent-[#1D4ED8]"
+                  />
                 </span>
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3 border-t border-[#F1F5F9] px-5 py-4">
-              <Button disabled>บันทึก</Button>
-              <span className="text-12 text-muted">ยังปรับการตั้งค่าไม่ได้ ตอนนี้ระบบแจ้งในหน้าแจ้งเตือนทุกเรื่อง และยังไม่ส่งอีเมล</span>
+              <Button onClick={() => void savePrefs()} disabled={savingPrefs}>
+                {savingPrefs ? 'กำลังบันทึก...' : 'บันทึก'}
+              </Button>
+              <span className="text-12 text-muted">ระบบยังไม่ได้ส่งอีเมล การตั้งค่าอีเมลจะมีผลเมื่อเปิดใช้การส่งอีเมล</span>
             </div>
           </Card>
         ) : null}

@@ -6,7 +6,7 @@ import { getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
 import { nextPayDate, thaiDate } from "@/lib/claims/requester";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getHrHeadCode, isHrHead } from "@/lib/hr/hrHead";
-import { getHrProfileExtras } from "@/lib/hr/profile";
+import { getHrProfileExtras, getProfileSettings } from "@/lib/hr/profile";
 import { DEFAULT_PAY_SETTINGS } from "@/features/payroll/lib/pay-settings";
 import { HrPage } from "@/features/hr/ui";
 import { ProfileClient, type ProfileData } from "./ProfileClient";
@@ -41,7 +41,7 @@ export default async function HrProfilePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [profile, extras, head, headCode, benefits, account, settings] = await Promise.all([
+  const [profile, extras, head, headCode, benefits, account, settings, personal] = await Promise.all([
     getMyProfile(session.sub),
     getHrProfileExtras(session.sub),
     isHrHead(session),
@@ -49,6 +49,7 @@ export default async function HrProfilePage() {
     getEmployeeBenefits(session.sub).catch(() => null),
     getPrimaryBankAccount(session.sub).catch(() => null),
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
+    getProfileSettings(session.sub).catch(() => null),
   ]);
   if (!profile || !extras) return <p className="text-13 text-status-rejected-ink">โหลดข้อมูลโปรไฟล์ไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
@@ -96,11 +97,17 @@ export default async function HrProfilePage() {
             note: `ใช้ได้ จาก ฿${plain(limit)}${profile.jobLevel ? ` ตามระดับ ${profile.jobLevel}` : ""}`,
             usedPercent: limit > 0 ? Math.min(100, Math.max(0, ((limit - remaining) / limit) * 100)) : 0,
             claims: maxClaims > 0 ? `เบิกแล้ว ${claims}/${maxClaims} ครั้ง` : `เบิกแล้ว ${claims} ครั้ง`,
-            reviewer: head ? "ผู้ตรวจคำขอของคุณ: หัวหน้า HR คนอื่น หรือ Admin กำหนด" : `ผู้ตรวจคำขอของคุณ: ${headName ? `${headName} (หัวหน้า HR)` : "หัวหน้า HR"}`,
+            reviewer: head ? "ผู้ตรวจคำขอของคุณ: HR คนอื่น (ตรวจคำขอของตัวเองไม่ได้)" : `ผู้ตรวจคำขอของคุณ: HR คนอื่น หรือ ${headName ? `${headName} (หัวหน้า HR)` : "หัวหน้า HR"}`,
             nextPay: `รอบจ่ายถัดไป ${thaiDate(nextPayDate(settings))}`,
           }
         : null,
     account: account ? { bank: account.bankCode, number: account.accountMasked } : null,
+    employmentType: personal?.employmentType ?? null,
+    contact: personal?.contact ?? { phone: profile.phone ?? "", emergency_contact_name: "", emergency_contact_phone: "", address_line: profile.address ?? "" },
+    maritalStatus: personal?.maritalStatus ?? null,
+    childrenCount: personal?.childrenCount ?? null,
+    pendingEditRequest: personal?.pendingEditRequest ?? false,
+    notifications: personal?.notifications ?? {},
     logins: extras.logins.map((item) => ({ label: `เข้าสู่ระบบสำเร็จ${item.ip ? ` · IP ${item.ip}` : ""}`, at: loginTime(item.at) })),
   };
 

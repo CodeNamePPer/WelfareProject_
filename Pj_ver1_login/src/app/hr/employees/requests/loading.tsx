@@ -1,28 +1,28 @@
-import { Skeleton } from "@/components/Skeleton";
-import { PersonRequestsSkeleton, type SkeletonColumn } from "../../HrSkeletons";
+import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
+import { Card, PageHeader } from "@/features/hr/ui";
 
-const COLUMNS: SkeletonColumn[] = [
-  { label: "เลขที่คำขอ", cell: <Skeleton className="h-4 w-28" /> },
-  { label: "ชื่อพนักงานใหม่", cell: <Skeleton className="h-4 w-32" /> },
-  { label: "แผนก", cell: <Skeleton className="h-4 w-20" /> },
-  { label: "ตำแหน่ง", cell: <Skeleton className="h-4 w-24" /> },
-  { label: "วันที่ยื่นคำขอ", cell: <Skeleton className="h-4 w-24" /> },
-  { label: "เอกสาร", cell: <Skeleton className="h-4 w-20" /> },
-  { label: "สถานะ", cell: <Skeleton className="h-6 w-20 rounded-full" /> },
-  { label: "รายละเอียด", hideLabel: true, cell: <Skeleton className="h-8 w-24 rounded-md" /> },
-];
-
-export default function EmployeeRequestsLoading() {
+// โครงหน้าคำขอแก้ไขข้อมูล (H12) ระหว่างรอข้อมูล
+export default function EmployeeEditRequestsLoading() {
   return (
-    <PersonRequestsSkeleton
-      parent={{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }}
-      title="ติดตามคำขอเพิ่มพนักงาน"
-      contentClassName=""
-      filtersClassName="person-request-filters"
-      filters={["ค้นหา", "แผนก:", "ตำแหน่ง:", "สถานะ:"]}
-      tableClassName="person-requests-table employee-requests-table"
-      columns={COLUMNS}
-      showFooter
-    />
+    <SkeletonScreen className="flex w-full flex-col gap-4 text-14 leading-[1.55] text-ink">
+      <PageHeader title="คำขอแก้ไขข้อมูลพนักงาน" description="พนักงานขอแก้ข้อมูลส่วนตัว HR ตรวจก่อนบันทึกจริง" />
+      {Array.from({ length: 2 }).map((_, index) => (
+        <Card key={index} className="flex flex-col gap-3.5 p-5">
+          <div className="flex items-center gap-2.5">
+            <Skeleton className="size-10 rounded-full" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+          </div>
+          <Skeleton className="h-24 w-full rounded-[8px]" />
+          <Skeleton className="h-9 w-full rounded-[8px]" />
+          <div className="flex gap-2">
+            <Skeleton className="h-[38px] w-36 rounded-full" />
+            <Skeleton className="h-[38px] w-28 rounded-full" />
+          </div>
+        </Card>
+      ))}
+    </SkeletonScreen>
   );
 }

@@ -28,7 +28,7 @@ type Tab = 'active' | 'left' | 'edits';
 const COLS = 'grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_140px_110px_120px]';
 const unique = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b, 'th'));
 
-export function EmployeesClient({ rows, maxClaimsTotal, initialQuery }: { rows: EmployeeRow[]; maxClaimsTotal: number | null; initialQuery: string }) {
+export function EmployeesClient({ rows, maxClaimsTotal, initialQuery, editRequests = 0 }: { rows: EmployeeRow[]; maxClaimsTotal: number | null; initialQuery: string; editRequests?: number }) {
   const [tab, setTab] = useState<Tab>('active');
   const [query, setQuery] = useState(initialQuery);
   const [department, setDepartment] = useState('');
@@ -62,13 +62,18 @@ export function EmployeesClient({ rows, maxClaimsTotal, initialQuery }: { rows: 
           items={[
             { id: 'active', label: 'ทำงานอยู่', count: activeCount },
             { id: 'left', label: 'พ้นสภาพ', count: rows.length - activeCount },
-            { id: 'edits', label: 'คำขอแก้ไขข้อมูล' },
+            { id: 'edits', label: 'คำขอแก้ไขข้อมูล', count: editRequests },
           ]}
         />
 
         {tab === 'edits' ? (
-          // ยังไม่มีตารางคำขอแก้ไขข้อมูลพนักงาน (H12 อยู่ในข้อ 7)
-          <EmptyState>ยังไม่เปิดให้พนักงานส่งคำขอแก้ไขข้อมูลในระบบ ตอนนี้ HR แก้ข้อมูลได้โดยตรงจากหน้าโปรไฟล์พนักงาน</EmptyState>
+          // คำขอแก้ไขข้อมูล (H12) ตรวจที่หน้าของตัวเอง
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-6 text-13">
+            <span className="text-muted">{editRequests > 0 ? `มีคำขอแก้ไขข้อมูลรอตรวจ ${editRequests} รายการ` : 'ไม่มีคำขอแก้ไขข้อมูลที่รอตรวจ'}</span>
+            <ButtonLink href="/hr/employees/requests" variant="secondary" size="sm">
+              เปิดหน้าคำขอแก้ไขข้อมูล
+            </ButtonLink>
+          </div>
         ) : (
           <>
             <div className="flex flex-wrap gap-2 px-5 py-3">
@@ -138,9 +143,9 @@ export function EmployeesClient({ rows, maxClaimsTotal, initialQuery }: { rows: 
           ดูโครงสร้างองค์กร
         </Link>{' '}
         ·{' '}
-        <button type="button" onClick={() => setTab('edits')} className="text-[#1D4ED8] hover:underline">
-          คำขอแก้ไขข้อมูล
-        </button>
+        <Link href="/hr/employees/requests" className="text-[#1D4ED8] hover:underline">
+          คำขอแก้ไขข้อมูล{editRequests > 0 ? ` (${editRequests})` : ''}
+        </Link>
       </p>
     </>
   );

@@ -625,6 +625,10 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
   if (!rule.roles.includes(actor.role)) throw new ClaimInputError("ไม่มีสิทธิ์ดำเนินการ");
   if (!rule.from.includes(claim.status)) throw new ClaimInputError("สถานะคำขอเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่");
   if (rule.needsNote && !note) throw new ClaimInputError(rule.needsNote);
+  // HR ตัดสินคำขอของตัวเอง (หรือที่ตัวเองยื่นแทนคนอื่น) ไม่ได้ ต้องให้ HR คนอื่นหรือหัวหน้า HR ตัดสิน
+  if (rule.roles.includes("HR") && (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub)) {
+    throw new ClaimInputError("ตัดสินคำขอของตัวเองไม่ได้ ต้องให้ HR คนอื่นหรือหัวหน้า HR ตรวจ");
+  }
 
   let amountApproved: number | null = null;
   let payRoundId: string | null = null;
