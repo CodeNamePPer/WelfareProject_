@@ -97,83 +97,128 @@ export default function ProfileClient({ profile, roleLabel }: { profile: MyProfi
       </Sheet>
 
       <div role="tabpanel" id={`profile-panel-${tab}`} aria-labelledby={`profile-tab-${tab}`} className="flex flex-col gap-4">
-        {tab === "personal" ? (
-          <>
-            <Sheet className="flex flex-col gap-3.5 p-5">
-              <div>
-                <h2 className="text-16 font-semibold">ข้อมูลที่ระบบกำหนด</h2>
-                <p className="text-12 text-muted">แก้ไขไม่ได้ ติดต่อ HR ถ้าข้อมูลไม่ถูกต้อง</p>
-              </div>
-              <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                <LockedField label="ชื่อ-นามสกุล" value={profile.name} />
-                <LockedField label="รหัสพนักงาน" value={profile.code} />
-                <LockedField label="อีเมลเข้าสู่ระบบ" value={profile.email} />
-                <LockedField label="วันเริ่มงาน" value={profile.hireDate} />
-                <LockedField label="สถานะ" value={profile.statusLabel} />
-              </div>
-            </Sheet>
-
-            <Sheet className="flex flex-col gap-3.5 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-16 font-semibold">ข้อมูลติดต่อ</h2>
-                  <p className="text-12 text-muted">ส่งคำขอแล้ว HR ตรวจก่อนบันทึกจริง</p>
-                </div>
-                <Link href="/employee/profile/changeprofile" className={pill.outline}>
-                  ส่งคำขอแก้ไขข้อมูล
-                </Link>
-              </div>
-              <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
-                <Fact label="โทรศัพท์">{profile.phone ?? EMPTY}</Fact>
-                <Fact label="ผู้ติดต่อฉุกเฉิน">{profile.emergencyContact ?? EMPTY}</Fact>
-                <div className="sm:col-span-2">
-                  <Fact label="ที่อยู่">{profile.address ?? EMPTY}</Fact>
-                </div>
-              </dl>
-            </Sheet>
-
-            <Sheet className="p-5">
-              <h2 className="mb-2 text-16 font-semibold">การแก้ไขล่าสุด</h2>
-              {profile.lastEdit ? (
-                <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-3">
-                  <Fact label="วันที่และเวลา">{profile.lastEdit.at} น.</Fact>
-                  <Fact label="ผู้แก้ไขข้อมูล">
-                    {profile.lastEdit.editorName ?? "ระบบ"}
-                    {profile.lastEdit.editorPosition ? ` · ${profile.lastEdit.editorPosition}` : ""}
-                  </Fact>
-                  <Fact label="เหตุผล">{profile.lastEdit.reason ?? EMPTY}</Fact>
-                </dl>
-              ) : (
-                <p className="text-13 text-muted">ยังไม่มีประวัติการแก้ไขข้อมูล</p>
-              )}
-            </Sheet>
-          </>
-        ) : null}
-
-        {tab === "work" ? (
-          <Sheet className="p-5">
-            <h2 className="mb-3 text-16 font-semibold">การทำงาน</h2>
-            <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">
-              <Fact label="แผนก">{profile.department ?? EMPTY}</Fact>
-              <Fact label="ตำแหน่ง">{profile.position ?? EMPTY}</Fact>
-              <Fact label="หัวหน้าโดยตรง">{profile.managerName ?? EMPTY}</Fact>
-              <Fact label="วันเริ่มงาน">{profile.hireDate}</Fact>
-              <Fact label="สถานะ">{profile.statusLabel}</Fact>
-              <Fact label="บทบาทในระบบ">{roleLabel}</Fact>
-            </dl>
-            <p className="mt-4 border-t border-slate-100 pt-3 text-12 text-muted">บทบาทกำหนดโดย Admin · หัวหน้าโดยตรงกำหนดจากโครงสร้างองค์กร</p>
-          </Sheet>
-        ) : null}
-
-        {tab === "security" ? (
-          <Sheet className="p-5">
-            <h2 className="mb-3 text-16 font-semibold">เปลี่ยนรหัสผ่าน</h2>
-            <div className="max-w-md">
-              <ChangePasswordForm employeeId={profile.code} loginName={profile.email} />
-            </div>
-          </Sheet>
-        ) : null}
+        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} />
       </div>
     </>
+  );
+}
+
+type ProfileProps = { profile: MyProfile; roleLabel: string };
+
+/** เนื้อหาของแต่ละส่วนในโปรไฟล์ ใช้ทั้งหน้าโปรไฟล์และแท็บข้อมูลส่วนตัวในหน้าหลัก */
+function ProfileSection({ tab, profile, roleLabel }: ProfileProps & { tab: TabId }) {
+  return (
+    <>
+    {tab === "personal" ? (
+      <>
+        <Sheet className="flex flex-col gap-3.5 p-5">
+          <div>
+            <h2 className="text-16 font-semibold">ข้อมูลที่ระบบกำหนด</h2>
+            <p className="text-12 text-muted">แก้ไขไม่ได้ ติดต่อ HR ถ้าข้อมูลไม่ถูกต้อง</p>
+          </div>
+          <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <LockedField label="ชื่อ-นามสกุล" value={profile.name} />
+            <LockedField label="รหัสพนักงาน" value={profile.code} />
+            <LockedField label="อีเมลเข้าสู่ระบบ" value={profile.email} />
+            <LockedField label="วันเริ่มงาน" value={profile.hireDate} />
+            <LockedField label="สถานะ" value={profile.statusLabel} />
+          </div>
+        </Sheet>
+
+        <Sheet className="flex flex-col gap-3.5 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-16 font-semibold">ข้อมูลติดต่อ</h2>
+              <p className="text-12 text-muted">ส่งคำขอแล้ว HR ตรวจก่อนบันทึกจริง</p>
+            </div>
+            <Link href="/employee/profile/changeprofile" className={pill.outline}>
+              ส่งคำขอแก้ไขข้อมูล
+            </Link>
+          </div>
+          <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
+            <Fact label="โทรศัพท์">{profile.phone ?? EMPTY}</Fact>
+            <Fact label="ผู้ติดต่อฉุกเฉิน">{profile.emergencyContact ?? EMPTY}</Fact>
+            <div className="sm:col-span-2">
+              <Fact label="ที่อยู่">{profile.address ?? EMPTY}</Fact>
+            </div>
+          </dl>
+        </Sheet>
+
+        <Sheet className="p-5">
+          <h2 className="mb-2 text-16 font-semibold">การแก้ไขล่าสุด</h2>
+          {profile.lastEdit ? (
+            <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-3">
+              <Fact label="วันที่และเวลา">{profile.lastEdit.at} น.</Fact>
+              <Fact label="ผู้แก้ไขข้อมูล">
+                {profile.lastEdit.editorName ?? "ระบบ"}
+                {profile.lastEdit.editorPosition ? ` · ${profile.lastEdit.editorPosition}` : ""}
+              </Fact>
+              <Fact label="เหตุผล">{profile.lastEdit.reason ?? EMPTY}</Fact>
+            </dl>
+          ) : (
+            <p className="text-13 text-muted">ยังไม่มีประวัติการแก้ไขข้อมูล</p>
+          )}
+        </Sheet>
+      </>
+    ) : null}
+
+    {tab === "work" ? (
+      <Sheet className="p-5">
+        <h2 className="mb-3 text-16 font-semibold">การทำงาน</h2>
+        <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">
+          <Fact label="แผนก">{profile.department ?? EMPTY}</Fact>
+          <Fact label="ตำแหน่ง">{profile.position ?? EMPTY}</Fact>
+          <Fact label="หัวหน้าโดยตรง">{profile.managerName ?? EMPTY}</Fact>
+          <Fact label="วันเริ่มงาน">{profile.hireDate}</Fact>
+          <Fact label="สถานะ">{profile.statusLabel}</Fact>
+          <Fact label="บทบาทในระบบ">{roleLabel}</Fact>
+        </dl>
+        <p className="mt-4 border-t border-slate-100 pt-3 text-12 text-muted">บทบาทกำหนดโดย Admin · หัวหน้าโดยตรงกำหนดจากโครงสร้างองค์กร</p>
+      </Sheet>
+    ) : null}
+
+    {tab === "security" ? (
+      <Sheet className="p-5">
+        <h2 className="mb-3 text-16 font-semibold">เปลี่ยนรหัสผ่าน</h2>
+        <div className="max-w-md">
+          <ChangePasswordForm employeeId={profile.code} loginName={profile.email} />
+        </div>
+      </Sheet>
+    ) : null}
+    </>
+  );
+}
+
+/** แท็บข้อมูลส่วนตัวในหน้าหลัก สลับส่วนย่อยในที่เดิม ไม่เปลี่ยนหน้า */
+export function ProfilePanels({ profile, roleLabel }: ProfileProps) {
+  const [tab, setTab] = useState<TabId>("personal");
+  return (
+    <div className="flex flex-col gap-4">
+      <div role="tablist" aria-label="ส่วนของข้อมูลส่วนตัว" className="flex flex-wrap gap-1.5">
+        {TABS.map((item) => {
+          const selected = item.id === tab;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              id={`home-profile-tab-${item.id}`}
+              aria-selected={selected}
+              aria-controls="home-profile-panel"
+              onClick={() => setTab(item.id)}
+              className={cx(
+                "h-8 rounded-full border px-3.5 text-13 transition-colors motion-reduce:transition-none",
+                selected ? "border-primary-600 bg-primary-50 font-semibold text-primary-700" : "border-line text-muted hover:text-ink",
+              )}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+      <div role="tabpanel" id="home-profile-panel" aria-labelledby={`home-profile-tab-${tab}`} className="flex flex-col gap-4">
+        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} />
+      </div>
+    </div>
   );
 }
