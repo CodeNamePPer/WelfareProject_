@@ -2,7 +2,7 @@ import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 
 export default function WelfareDetailLoading() {
   return (
-    <SkeletonScreen className="mx-auto max-w-[1080px] space-y-3 px-1 py-3">
+    <SkeletonScreen className="mx-auto max-w-[1080px] group-data-[nav=collapsed]/shell:max-w-none space-y-3 px-1 py-3">
       <Skeleton className="h-4 w-56" />
       <div className="rounded-lg border border-line bg-white">
         <div className="space-y-2 border-b border-line p-4 sm:p-5">

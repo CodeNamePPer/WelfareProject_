@@ -22,9 +22,9 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head'];
+const DESIGN_C: NavSection[] = ['employee', 'hr', 'hr_head', 'finance'];
 // HR และหัวหน้า HR: เนื้อหาคอลัมน์เดียว กว้างสุด 1140px จัดกลาง (สเปกรีดีไซน์ HR)
-const HR_COLUMN: NavSection[] = ['hr', 'hr_head'];
+const HR_COLUMN: NavSection[] = ['hr', 'hr_head', 'finance'];
 
 export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, badges, user, children }: AppShellProps) {
   const pathname = usePathname();
@@ -39,8 +39,10 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
 
   return (
     // ส่วนที่สร้างจากดีไซน์ "แบบ C" (ผู้ส่งคำขอและ HR): ระยะห่างเท่าดีไซน์ (ดู tailwind.config.ts) และพื้นหลัง #F3F4F6
+    // data-nav: หน้าย่อยใช้ group-data-[nav=collapsed]/shell:max-w-none เพื่อขยายเต็มเมื่อย่อเมนู
     <div
-      className={cx('min-h-screen', DESIGN_C.includes(section) && 'bg-[#F3F4F6]')}
+      data-nav={collapsed ? 'collapsed' : 'expanded'}
+      className={cx('group/shell min-h-screen', DESIGN_C.includes(section) && 'bg-[#F3F4F6]')}
       style={DESIGN_C.includes(section) ? ({ '--sp': 'calc(1rem * 16 / 14)' } as CSSProperties) : undefined}
     >
       <Sidebar
@@ -77,14 +79,14 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
           <span className="text-15 font-semibold">ระบบพนักงานและสวัสดิการ</span>
         </header>
 
-        {/* Collapsing the sidebar frees 188px (260 → 72); widen the cap by the same amount so the
-            content takes that space instead of leaving wider empty gutters on both sides. */}
+        {/* ย่อเมนูแล้ว: เนื้อหาทุกหน้าขยายเต็มพื้นที่ (เหลือแค่ระยะขอบ) ไม่เว้นช่องว่างซ้ายขวา
+            ตอนกางเมนูยังคงความกว้างสูงสุดเดิม (HR 1140px, ส่วนอื่น 1440px) */}
         <main
           className={cx(
             'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8',
             // ดีไซน์แบบ C เว้นขอบบน 24px ล่าง 40px ส่วน Admin คง 32px เดิม
             DESIGN_C.includes(section) ? 'lg:pb-10' : 'lg:py-8',
-            HR_COLUMN.includes(section) ? 'max-w-[1140px]' : collapsed ? 'max-w-[1628px]' : 'max-w-[1440px]',
+            collapsed ? 'max-w-none' : HR_COLUMN.includes(section) ? 'max-w-[1140px]' : 'max-w-[1440px]',
           )}
         >
           {children}

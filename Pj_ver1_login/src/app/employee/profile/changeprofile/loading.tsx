@@ -5,7 +5,7 @@ const REVIEW_ROWS = 6;
 
 export default function ChangeProfileLoading() {
   return (
-    <SkeletonScreen className="mx-auto max-w-[1160px] px-1 pb-8 pt-2 text-13 text-ink">
+    <SkeletonScreen className="mx-auto max-w-[1160px] group-data-[nav=collapsed]/shell:max-w-none px-1 pb-8 pt-2 text-13 text-ink">
       <Skeleton className="mb-3 h-4 w-72 max-w-full" />
 
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">

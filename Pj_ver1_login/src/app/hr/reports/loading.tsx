@@ -4,7 +4,7 @@ import { PageHead, Sheet } from "@/features/requester/ui";
 // โครงหน้ารายงาน (H06) ระหว่างรอข้อมูล
 export default function ReportsLoading() {
   return (
-    <SkeletonScreen className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
+    <SkeletonScreen className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">
       <PageHead title="รายงานและสถิติ">
         <Skeleton className="h-[38px] w-64 rounded-full" />
       </PageHead>

@@ -135,7 +135,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                 {shownBenefits.length === 0 ? (
                   <EmptyNote>ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้</EmptyNote>
                 ) : (
-                  <ul className="grid gap-3 px-5 pt-1 pb-5 md:grid-cols-2">
+                  <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,440px),1fr))] gap-3 px-5 pt-1 pb-5">
                     {shownBenefits.map((benefit) => {
                       const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
                       return (

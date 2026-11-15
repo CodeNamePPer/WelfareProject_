@@ -19,7 +19,7 @@ export default function WelfareLoading() {
         <Skeleton className="h-9 w-full rounded-lg sm:w-[260px]" />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
         {Array.from({ length: CARDS }).map((_, index) => (
           <div key={index} className="flex flex-col overflow-hidden rounded-lg border border-line bg-white">
             <div className="h-[140px] bg-mist" />

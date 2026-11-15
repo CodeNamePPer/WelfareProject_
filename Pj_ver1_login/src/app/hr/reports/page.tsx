@@ -28,7 +28,7 @@ export default async function ReportsPage() {
 
   const today = bangkokToday();
   return (
-    <div className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">
+    <div className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">
       <ReportsClient claims={rows} today={today} todayLabel={thaiDate(`${today}T00:00:00+07:00`)} />
     </div>
   );

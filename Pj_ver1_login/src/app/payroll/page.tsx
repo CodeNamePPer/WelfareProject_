@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// /payroll ไม่มีเนื้อหาของตัวเอง ส่งต่อไปเมนูแรกของฝ่ายการเงิน
+// /payroll ไม่มีเนื้อหาของตัวเอง ส่งต่อไปเมนูแรกของการเงิน (ดีไซน์ F01)
 export default function PayrollHome() {
-  redirect("/payroll/rounds");
+  redirect("/payroll/approvals");
 }

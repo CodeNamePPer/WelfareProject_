@@ -8,6 +8,6 @@ export { PageHeader, HrPage } from './PageHeader';
 export { Tabs, type TabItem } from './Tabs';
 export { Avatar } from './Avatar';
 export { RequesterCompact, RequesterFull, type RequesterSummary, type RequesterDetail } from './RequesterCard';
-export { StatTile, StatRow } from './StatTile';
+export { StatTile, StatRow, type StatTone } from './StatTile';
 export { FilterPill } from './FilterPill';
 export { BenefitPreview } from './BenefitPreview';

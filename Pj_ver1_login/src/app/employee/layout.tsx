@@ -39,7 +39,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
         user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}
       >
         {/* ความกว้างเนื้อหาและระยะห่างระหว่างส่วนตามดีไซน์ฝั่งผู้ส่งคำขอ */}
-        <div className="mx-auto flex w-full max-w-[1140px] flex-col gap-4 text-14 text-ink">{children}</div>
+        <div className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">{children}</div>
       </AppShell>
     </ToastProvider>
   );

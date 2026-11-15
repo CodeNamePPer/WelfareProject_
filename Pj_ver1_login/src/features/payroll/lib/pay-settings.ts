@@ -8,7 +8,11 @@ export interface PaySettings {
   round1MonthOffset: number; // ... ของเดือนไหน นับจากเดือนที่ยื่น (0 = เดือนเดียวกัน, 1 = เดือนถัดไป, 2 = อีก 2 เดือน ...)
   round2PayDay: number; // รอบที่ 2 (ยื่นวันที่ 16–สิ้นเดือน) จ่ายวันที่เท่าไร
   round2MonthOffset: number; // ... ของเดือนไหน (อย่างน้อย 1 เพราะรอบที่ 2 ปิดรอบสิ้นเดือน)
+  cutoffDays?: number; // ปิดรอบก่อนวันจ่ายกี่วัน (ดีไซน์ F02) การเงินอนุมัติหลังวันนี้ ผู้ขอได้เงินรอบถัดไป
 }
+
+/** ปิดรอบก่อนวันจ่ายได้มากสุดกี่วัน */
+export const MAX_CUTOFF_DAYS = 20;
 
 /** จ่ายช้าสุดได้กี่เดือนหลังเดือนที่ยื่น */
 export const MAX_MONTH_OFFSET = 6;
@@ -31,10 +35,15 @@ export function roundSetting(s: PaySettings, round: RoundNo) {
  *   รอบที่ 2 ปิดรอบสิ้นเดือน -> ต้องจ่ายเดือนถัดไปขึ้นไป
  * คืนข้อความ error ของแต่ละรอบ (ไม่มี = ผ่าน)
  */
-export function validatePaySettings(s: PaySettings): { round1?: string; round2?: string } {
-  const errors: { round1?: string; round2?: string } = {};
+export function validatePaySettings(s: PaySettings): { round1?: string; round2?: string; cutoff?: string } {
+  const errors: { round1?: string; round2?: string; cutoff?: string } = {};
   if (s.round1MonthOffset === 0 && s.round1PayDay <= 15) errors.round1 = "รอบที่ 1 ปิดรอบวันที่ 15 ถ้าจ่ายเดือนเดียวกันต้องเลือกวันที่ 16 ขึ้นไป";
   if (s.round2MonthOffset < 1) errors.round2 = "รอบที่ 2 ปิดรอบสิ้นเดือน ต้องจ่ายเดือนถัดไปขึ้นไป";
+  for (const [key, day] of [["round1", s.round1PayDay], ["round2", s.round2PayDay]] as const) {
+    if (!Number.isInteger(day) || day < 1 || day > 31) errors[key] = "วันจ่ายต้องเป็นวันที่ 1–31";
+  }
+  const cutoff = s.cutoffDays ?? DEFAULT_PAY_SETTINGS.cutoffDays ?? 0;
+  if (!Number.isInteger(cutoff) || cutoff < 0 || cutoff > MAX_CUTOFF_DAYS) errors.cutoff = `ปิดรอบก่อนวันจ่ายได้ 0–${MAX_CUTOFF_DAYS} วัน`;
   return errors;
 }
 
@@ -44,7 +53,16 @@ export const DEFAULT_PAY_SETTINGS: PaySettings = {
   round1MonthOffset: 0,
   round2PayDay: 10,
   round2MonthOffset: 1,
+  cutoffDays: 5,
 };
+
+/** วันปิดรอบ = วันจ่าย − cutoffDays ("YYYY-MM-DD") */
+export function cutoffDateOf(payDate: string, s: PaySettings) {
+  const days = s.cutoffDays ?? DEFAULT_PAY_SETTINGS.cutoffDays ?? 0;
+  const date = new Date(`${payDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
 
 const pad = (n: number) => String(n).padStart(2, "0");
 

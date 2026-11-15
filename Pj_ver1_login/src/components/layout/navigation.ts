@@ -15,6 +15,7 @@ import {
   Network,
   UserCog,
   Users,
+  Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -122,15 +123,18 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'back-admin', label: 'กลับไปหน้า Admin', icon: ArrowLeft, href: '/admin' },
     ],
   },
-  // Same menu as the payroll team's original sidebar.
+  // เมนูตามดีไซน์ F01–F09 · ตัวเลข: approvals = รออนุมัติ + รอจ่าย, advances = ค้างใบเสร็จ (ส่งผ่าน badges)
   finance: {
     basePath: '/payroll',
     subtitle: 'การเงิน',
     sectionLabel: 'PAYROLL',
     profileHref: '/employee/profile',
     items: () => [
+      { id: 'approvals', label: 'รายการอนุมัติ / รอจ่าย', icon: FilePlus2, href: '/payroll/approvals', badgeLabel: 'รอดำเนินการ' },
+      { id: 'payout', label: 'บันทึกการโอน', icon: Wallet, href: '/payroll/payout' },
       { id: 'rounds', label: 'ตั้งค่ารอบจ่าย / เลื่อนวันจ่าย', icon: CalendarDays, href: '/payroll/rounds' },
-      { id: 'approvals', label: 'ดูรายการอนุมัติ / รอจ่าย', icon: FileText, href: '/payroll/approvals' },
+      { id: 'advances', label: 'เบิกล่วงหน้า / ค้างใบเสร็จ', icon: Wallet, href: '/payroll/advances', badgeLabel: 'ค้างใบเสร็จ' },
+      { id: 'refunds', label: 'เงินที่ต้องคืน', icon: History, href: '/payroll/refunds' },
       { id: 'export', label: 'Export รายงาน (Excel)', icon: FileSpreadsheet, href: '/payroll/export' },
       { id: 'history', label: 'ดูข้อมูลย้อนหลัง', icon: History, href: '/payroll/history' },
       REQUEST_ITEM,

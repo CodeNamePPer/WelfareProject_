@@ -81,7 +81,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                     ) : null}
                 </Sheet>
             ) : (
-                <ul aria-label="รายการสวัสดิการ" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <ul aria-label="รายการสวัสดิการ" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
                     {shown.map((benefit) => {
                         const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
                         return (
@@ -115,7 +115,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
 
             {/* สวัสดิการที่ใช้ไม่ได้ แสดงเป็นการ์ดสีเทา ยื่นคำขอไม่ได้ (หัวหน้า HR ตั้งค่าที่หน้า HH3) */}
             {fadedShown.length > 0 ? (
-                <ul aria-label="สวัสดิการที่ใช้ไม่ได้" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <ul aria-label="สวัสดิการที่ใช้ไม่ได้" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
                     {fadedShown.map((benefit) => (
                             <li key={benefit.code} aria-disabled="true" className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface opacity-60">
                                 <BenefitThumb category={benefit.category} className="h-[140px] grayscale" />

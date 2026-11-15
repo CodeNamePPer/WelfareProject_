@@ -27,7 +27,7 @@ export default function EmployeeHomeLoading() {
         </div>
         <div className="border-t border-line">
           <h2 className="px-5 pt-4 pb-2 text-16 font-semibold">สิทธิ์สวัสดิการของฉัน</h2>
-          <div className="grid gap-3 px-5 pt-1 pb-5 md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,440px),1fr))] gap-3 px-5 pt-1 pb-5">
             {Array.from({ length: BENEFIT_CARDS }).map((_, index) => (
               <div key={index} className="flex items-center gap-3.5 rounded-lg border border-line px-3.5 py-3">
                 <Skeleton className="size-16 shrink-0 rounded-lg" />
