@@ -43,7 +43,8 @@ export default async function ExportPage() {
   });
 
   const outstanding: ExportAdvance[] = advances
-    .filter((item) => item.status === "awaiting_receipt" || item.status === "receipt_returned" || item.status === "receipt_submitted")
+    // ยังไม่โอนเงินล่วงหน้า = ยังไม่ค้างใบเสร็จ
+    .filter((item) => item.advancePaidAt !== null && (item.status === "awaiting_receipt" || item.status === "receipt_returned" || item.status === "receipt_submitted"))
     .map((item) => ({
       claimNo: item.claimNo,
       code: item.person.code,

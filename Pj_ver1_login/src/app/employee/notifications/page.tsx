@@ -7,6 +7,8 @@ import { baht, bangkokToday, thaiDayMonth, thaiTime } from "@/lib/claims/request
 import type { ClaimEventKind } from "@/lib/claims/types";
 import { cx } from "@/lib/cx";
 import { EmptyNote, PageHead, RowLink, Sheet } from "@/features/requester/ui";
+import { getNotificationsSeenAt } from "@/lib/employee/notifications";
+import { MarkAllSeen } from "./MarkAllSeen";
 
 export const metadata: Metadata = { title: "แจ้งเตือน" };
 
@@ -37,14 +39,14 @@ const GROUPS = ["วันนี้", "สัปดาห์นี้", "ก่�
 const MAX_ITEMS = 60;
 
 // แจ้งเตือนของผู้ส่งคำขอ สร้างจากประวัติการดำเนินการของคำขอ (welfare_claim_event)
-// ยังไม่มีตารางเก็บสถานะอ่านแล้วของพนักงาน จึงไม่มีจุด "ยังไม่อ่าน" และปุ่ม "อ่านทั้งหมดแล้ว"
+// สถานะอ่านแล้วเก็บเป็นเวลาที่อ่านล่าสุดต่อคน (employee_notification_seen) เหตุการณ์ที่ผู้ขอทำเองไม่นับเป็นยังไม่อ่าน
 export default async function EmployeeNotificationsPage() {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
 
-  const claims = await listClaims({ employeeCode: session.sub });
+  const [claims, seenAt] = await Promise.all([listClaims({ employeeCode: session.sub }), getNotificationsSeenAt(session.sub)]);
   if (!claims) {
     return <p className="text-13 text-status-rejected">โหลดแจ้งเตือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   }
@@ -57,12 +59,20 @@ export default async function EmployeeNotificationsPage() {
     .slice(0, MAX_ITEMS)
     .map((item) => {
       const day = new Date(item.event.at).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-      return { ...item, group: day === today ? GROUPS[0] : item.event.at >= weekAgo ? GROUPS[1] : GROUPS[2], time: day === today ? thaiTime(item.event.at) : thaiDayMonth(item.event.at) };
+      const unread = item.event.actorCode !== session.sub && (!seenAt || item.event.at > seenAt);
+      return { ...item, unread, group: day === today ? GROUPS[0] : item.event.at >= weekAgo ? GROUPS[1] : GROUPS[2], time: day === today ? thaiTime(item.event.at) : thaiDayMonth(item.event.at) };
     });
+
+  const unreadCount = items.filter((item) => item.unread).length;
 
   return (
     <>
-      <PageHead title="แจ้งเตือน" description="ความเคลื่อนไหวของคำขอสวัสดิการของคุณ เรียงจากล่าสุด" />
+      <PageHead
+        title="แจ้งเตือน"
+        description={unreadCount > 0 ? `ยังไม่ได้อ่าน ${unreadCount} รายการ · ความเคลื่อนไหวของคำขอสวัสดิการของคุณ เรียงจากล่าสุด` : "ความเคลื่อนไหวของคำขอสวัสดิการของคุณ เรียงจากล่าสุด"}
+      >
+        <MarkAllSeen unread={unreadCount} />
+      </PageHead>
 
       <Sheet className="overflow-hidden">
         {items.length === 0 ? (
@@ -74,7 +84,7 @@ export default async function EmployeeNotificationsPage() {
             return (
               <section key={group} aria-label={group}>
                 <h2 className="bg-surface px-5 py-2.5 text-12 font-semibold text-muted">{group}</h2>
-                {rows.map(({ key, claim, event, time }) => {
+                {rows.map(({ key, claim, event, time, unread }) => {
                   const visual = VISUAL[event.kind];
                   const Icon = visual.icon;
                   return (
@@ -83,14 +93,17 @@ export default async function EmployeeNotificationsPage() {
                         <Icon className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-medium">{visual.title}</span>
+                        <span className={cx("block", unread ? "font-semibold" : "font-medium")}>{visual.title}</span>
                         <span className="block text-13 text-ink-soft">
                           {claim.claimNo} {claim.benefitName} {baht(claim.amountRequested)}
                           {event.actorName && event.actorCode !== session.sub ? ` · โดย ${event.actorName}` : ""}
                           {event.note ? ` · ${event.note}` : ""}
                         </span>
                       </span>
-                      <span className="text-12 whitespace-nowrap text-muted">{time}</span>
+                      <span className="flex items-center gap-2 text-12 whitespace-nowrap text-muted">
+                        {time}
+                        {unread ? <span role="img" aria-label="ยังไม่อ่าน" className="size-2 shrink-0 rounded-full bg-[#1D4ED8]" /> : <span aria-hidden="true" className="size-2 shrink-0" />}
+                      </span>
                     </RowLink>
                   );
                 })}

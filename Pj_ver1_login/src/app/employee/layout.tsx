@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
-import { countClaimsToRevise } from "@/lib/claims/service";
+import { cancelOverdueAdvances, countClaimsToRevise } from "@/lib/claims/service";
+import { countUnreadNotifications } from "@/lib/employee/notifications";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -25,8 +26,10 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
   if (!session) {
     redirect("/login");
   }
+  // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
+  await cancelOverdueAdvances();
 
-  const todoCount = await countClaimsToRevise(session.sub);
+  const [todoCount, unreadCount] = await Promise.all([countClaimsToRevise(session.sub), countUnreadNotifications(session.sub)]);
   const hiddenNavIds = Object.values(BACK_LINK_BY_ROLE).filter((id) => id !== BACK_LINK_BY_ROLE[session.role]);
 
   return (
@@ -35,6 +38,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
       <AppShell
         section="employee"
         notificationCount={todoCount}
+        badges={{ notifications: unreadCount }}
         hiddenNavIds={hiddenNavIds}
         user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}
       >

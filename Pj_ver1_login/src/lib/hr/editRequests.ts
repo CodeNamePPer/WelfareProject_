@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
+import { emailHr } from "./emailNotify";
 
 // คำขอแก้ไขข้อมูลพนักงาน (ดีไซน์ H12) ตาราง employee_edit_request
 //   พนักงานขอแก้ข้อมูลส่วนตัว -> HR คนอื่นตรวจ -> อนุมัติ = บันทึกค่าใหม่ลง employee จริง / ไม่อนุมัติ = ต้องมีข้อความถึงพนักงาน
@@ -37,6 +38,110 @@ export class EditRequestError extends Error {
 
 type Change = { old: unknown; new: unknown };
 
+const EVIDENCE_BUCKET = "employee-edit-docs";
+const EVIDENCE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** ข้อมูลที่พนักงานเลือกขอเปลี่ยนในฟอร์ม changeprofile (อีเมลเป็นชื่อเข้าระบบ จึงต้องให้ Admin เปลี่ยน) */
+export type EmployeeChangeTopic = "phone" | "name" | "address";
+export const EMPLOYEE_CHANGE_TOPICS: EmployeeChangeTopic[] = ["phone", "name", "address"];
+
+/** คำขอที่ยังรอ HR ตรวจของพนักงานคนนี้ (มีได้ครั้งละ 1 คำขอ) */
+export type MyPendingEditRequest = { submittedAt: string; labels: string[] };
+
+export async function getMyPendingEditRequest(code: string): Promise<MyPendingEditRequest | null> {
+  const employeeId = await findEmployeeUuidByCode(code);
+  if (!employeeId) return null;
+  const { data, error } = await supabaseAdmin
+    .from("employee_edit_request")
+    .select("submitted_at, requested_fields")
+    .eq("employee_id", employeeId)
+    .eq("status", "pending")
+    .is("deleted_at", null)
+    .maybeSingle<{ submitted_at: string; requested_fields: Record<string, Change> }>();
+  if (error) {
+    console.error("[employee edit request] load pending failed", error);
+    return null;
+  }
+  if (!data) return null;
+  return { submittedAt: data.submitted_at, labels: Object.keys(data.requested_fields ?? {}).map((field) => EDITABLE_FIELDS[field] ?? field) };
+}
+
+/** พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง 1 เรื่องต่อคำขอ พร้อมหลักฐาน 1 ไฟล์ */
+export async function submitEmployeeEditRequest(code: string, topic: EmployeeChangeTopic, value: string, reason: string, evidence: File) {
+  const next = value.trim();
+  if (!next) throw new EditRequestError("ระบุค่าใหม่ที่ต้องการ");
+  if (!reason.trim()) throw new EditRequestError("ระบุเหตุผลในการขอเปลี่ยนข้อมูล");
+  if (reason.trim().length > 500) throw new EditRequestError("เหตุผลยาวเกิน 500 ตัวอักษร");
+  if (!EVIDENCE_TYPES.includes(evidence.type)) throw new EditRequestError("ไฟล์หลักฐานต้องเป็น PDF, JPG หรือ PNG");
+  if (evidence.size > EVIDENCE_MAX_BYTES) throw new EditRequestError("ไฟล์หลักฐานมีขนาดเกิน 10 MB");
+
+  const { data: me, error } = await supabaseAdmin
+    .from("employee")
+    .select("id, phone, first_name_th, last_name_th, address_line")
+    .eq("employee_code", code)
+    .is("deleted_at", null)
+    .maybeSingle<{ id: string; phone: string | null; first_name_th: string; last_name_th: string; address_line: string | null }>();
+  if (error) throw error;
+  if (!me) throw new EditRequestError("ไม่พบข้อมูลพนักงาน", 404);
+
+  const changes: Record<string, { old: string | null; new: string }> = {};
+  if (topic === "phone") {
+    if (!/^[0-9+\-\s()]{9,20}$/.test(next)) throw new EditRequestError("เบอร์โทรศัพท์ไม่ถูกต้อง");
+    if (next !== (me.phone ?? "")) changes.phone = { old: me.phone, new: next };
+  } else if (topic === "name") {
+    const [first, ...rest] = next.split(/\s+/);
+    // บัญชีที่ไม่มีนามสกุลเก็บเป็น "-" ตามข้อมูลเดิมในระบบ
+    const last = rest.join(" ") || "-";
+    if (first !== me.first_name_th) changes.first_name_th = { old: me.first_name_th, new: first };
+    if (last !== me.last_name_th) changes.last_name_th = { old: me.last_name_th, new: last };
+  } else {
+    if (next !== (me.address_line ?? "")) changes.address_line = { old: me.address_line, new: next };
+  }
+  if (Object.keys(changes).length === 0) throw new EditRequestError("ค่าใหม่ตรงกับข้อมูลเดิมในโปรไฟล์");
+
+  const ext = evidence.type === "application/pdf" ? ".pdf" : evidence.type === "image/png" ? ".png" : ".jpg";
+  const evidencePath = `${me.id}/${crypto.randomUUID()}${ext}`;
+  const { error: uploadError } = await supabaseAdmin.storage.from(EVIDENCE_BUCKET).upload(evidencePath, evidence, { contentType: evidence.type });
+  if (uploadError) throw uploadError;
+
+  const { error: insertError } = await supabaseAdmin.from("employee_edit_request").insert({
+    employee_id: me.id,
+    requested_by: me.id,
+    requested_fields: changes,
+    reason: reason.trim(),
+    evidence_path: evidencePath,
+    evidence_name: evidence.name.slice(0, 200),
+    evidence_mime: evidence.type,
+  });
+  if (insertError) {
+    // ไม่ให้ไฟล์ค้างใน bucket เมื่อบันทึกคำขอไม่ได้
+    await supabaseAdmin.storage.from(EVIDENCE_BUCKET).remove([evidencePath]);
+    if (insertError.code === "23505") throw new EditRequestError("มีคำขอเปลี่ยนข้อมูลที่รอฝ่ายบุคคลตรวจอยู่แล้ว รอผลก่อนจึงส่งคำขอใหม่ได้", 409);
+    throw insertError;
+  }
+  emailHr(
+    "employee_edit_request",
+    { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอเปลี่ยน ${Object.keys(changes).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`], path: "/hr/employees/requests" },
+    { exclude: [code] },
+  );
+}
+
+/** ลิงก์ชั่วคราว (60 วินาที) ให้ HR เปิดดูหลักฐานของคำขอ */
+export async function getEditRequestEvidenceUrl(id: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("employee_edit_request")
+    .select("evidence_path")
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle<{ evidence_path: string | null }>();
+  if (error) throw error;
+  if (!data?.evidence_path) return null;
+  const signed = await supabaseAdmin.storage.from(EVIDENCE_BUCKET).createSignedUrl(data.evidence_path, 60);
+  if (signed.error) throw signed.error;
+  return signed.data.signedUrl;
+}
+
 export type EditRequestItem = {
   id: string;
   employeeCode: string;
@@ -45,11 +150,13 @@ export type EditRequestItem = {
   line: string;
   submittedAt: string;
   reason: string;
+  /** ชื่อไฟล์หลักฐานที่แนบ (null = ไม่มี) */
+  evidenceName: string | null;
   changes: { field: string; label: string; old: string; new: string }[];
 };
 
 type Person = { employee_code: string; first_name_th: string; last_name_th: string; position: { name_th: string } | null; department: { name_th: string } | null } | null;
-type Row = { id: string; submitted_at: string; reason: string; requested_fields: Record<string, Change>; employee: Person };
+type Row = { id: string; submitted_at: string; reason: string; evidence_name: string | null; requested_fields: Record<string, Change>; employee: Person };
 
 const show = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : String(value));
 const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.last_name_th === "-" ? "" : person.last_name_th}`.trim() : "—");
@@ -58,7 +165,7 @@ const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.l
 export async function listPendingEditRequests(): Promise<EditRequestItem[] | null> {
   const { data, error } = await supabaseAdmin
     .from("employee_edit_request")
-    .select("id, submitted_at, reason, requested_fields, employee:employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th), department:department_id(name_th))")
+    .select("id, submitted_at, reason, evidence_name, requested_fields, employee:employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th), department:department_id(name_th))")
     .eq("status", "pending")
     .is("deleted_at", null)
     .order("submitted_at", { ascending: true })
@@ -74,6 +181,7 @@ export async function listPendingEditRequests(): Promise<EditRequestItem[] | nul
     line: [row.employee?.employee_code, row.employee?.position?.name_th, row.employee?.department?.name_th].filter(Boolean).join(" · "),
     submittedAt: row.submitted_at,
     reason: row.reason,
+    evidenceName: row.evidence_name,
     changes: Object.entries(row.requested_fields ?? {}).map(([field, change]) => ({ field, label: EDITABLE_FIELDS[field] ?? field, old: show(change?.old), new: show(change?.new) })),
   }));
 }

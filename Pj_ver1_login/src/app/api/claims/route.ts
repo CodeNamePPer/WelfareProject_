@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         receiptNo: text("receiptNo"),
         receiptDate: text("receiptDate"),
         submit: payload.submit === true,
+        advance: payload.advance === true,
         files,
       },
       { sub: session.sub, role: session.role },

@@ -7,7 +7,7 @@ import { BenefitThumb } from '@/features/requester/ui';
 import type { ProposalStatus, ProposalSummary } from '@/lib/hr/proposals';
 import { Badge, ButtonLink, Card, EmptyState, PageHeader, Tabs, type BadgeTone } from '@/features/hr/ui';
 
-export type BenefitRow = { code: string; name: string; category: string; amount: number; claims: string; active: boolean };
+export type BenefitRow = { code: string; name: string; category: string; imageUrl: string | null; amount: number; claims: string; active: boolean };
 
 type Tab = 'active' | 'closed' | 'all';
 
@@ -36,7 +36,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
         title="จัดการสวัสดิการ"
         description={
           isHead
-            ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้างสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
+            ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้าง แก้ไข หรือปิดสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
             : 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง'
         }
         actions={<ButtonLink href="/hr/benefits/propose">{isHead ? 'สร้างสวัสดิการใหม่' : 'เสนอสวัสดิการใหม่'}</ButtonLink>}
@@ -45,14 +45,14 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
       <Card aria-labelledby="my-proposals">
         <div className="flex flex-wrap justify-between gap-2 px-5 pt-3.5 pb-2">
           <h2 id="my-proposals" className="text-16 font-semibold">
-            ข้อเสนอของฉัน (สร้าง / แก้ไข / ปิด)
+            {isHead ? 'ข้อเสนอจาก HR และ Admin (สร้าง / แก้ไข / ปิด)' : 'ข้อเสนอของฉัน (สร้าง / แก้ไข / ปิด)'}
           </h2>
-          <span className="text-12 text-muted">ส่งให้หัวหน้า HR อนุมัติ</span>
+          <span className="text-12 text-muted">{isHead ? 'รอคุณพิจารณา' : 'ส่งให้หัวหน้า HR อนุมัติ'}</span>
         </div>
         {proposals === null ? (
           <EmptyState>โหลดข้อเสนอไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</EmptyState>
         ) : proposals.length === 0 ? (
-          <EmptyState>ยังไม่มีข้อเสนอที่รอหัวหน้า HR</EmptyState>
+          <EmptyState>{isHead ? 'ไม่มีข้อเสนอรอพิจารณา' : 'ยังไม่มีข้อเสนอที่รอหัวหน้า HR'}</EmptyState>
         ) : (
           proposals.map((item) => (
             <Link
@@ -105,8 +105,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
                   href={`/hr/benefits/${encodeURIComponent(row.code)}`}
                   className={cx('grid items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline transition-colors hover:bg-surface motion-reduce:transition-none', COLS)}
                 >
-                  {/* ภาพแทนสวัสดิการชุดเดียวกับหน้าผู้ส่งคำขอ (ยังไม่มีรูปจริงในฐานข้อมูล) */}
-                  <BenefitThumb category={row.category} className="h-12 w-16 rounded-[6px]" />
+                  <BenefitThumb category={row.category} imageUrl={row.imageUrl} className="h-12 w-16 rounded-[6px]" />
                   <span className="min-w-0">
                     <span className="block font-medium">{row.name}</span>
                     <span className="block text-12 text-muted">{row.code}</span>

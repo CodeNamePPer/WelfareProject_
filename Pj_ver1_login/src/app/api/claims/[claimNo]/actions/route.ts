@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
-import { applyClaimAction, claimErrorResponse } from "@/lib/claims/service";
+import { applyClaimAction, claimErrorResponse, emailOwnerStatus } from "@/lib/claims/service";
 
 export const runtime = "nodejs";
 
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cla
       },
       { sub: session.sub, role: session.role },
     );
+    await emailOwnerStatus(decodeURIComponent(claimNo), session.sub);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const { status, body } = claimErrorResponse(err);

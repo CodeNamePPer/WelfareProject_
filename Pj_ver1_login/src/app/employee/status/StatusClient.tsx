@@ -9,6 +9,7 @@ import type { ClaimDbStatus } from "@/lib/claims/types";
 import { baht } from "@/lib/claims/requester";
 import { cx } from "@/lib/cx";
 import { ClaimPill, EmptyNote, PageHead, Sheet, inputClass, pill } from "@/features/requester/ui";
+import { AdvanceReceiptPanel, type AdvanceInfo } from "./AdvanceReceiptPanel";
 
 
 export type RequestStatus = "pending" | "approved" | "draft" | "rejected" | "revision" | "processing" | "cancelled";
@@ -39,6 +40,8 @@ export type WelfareRequest = {
   lastStep: string;
   canEdit: boolean;
   canCancel: boolean;
+  /** คำขอเบิกล่วงหน้า (null = ยื่นเบิกปกติ) */
+  advance: AdvanceInfo | null;
 };
 
 // แท็บตามสิ่งที่ผู้ส่งคำขอต้องทำ ไม่ใช่ตามสถานะในฐานข้อมูล
@@ -299,6 +302,8 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
 
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+              {selectedRequest.advance ? <AdvanceReceiptPanel claimNo={selectedRequest.id} advance={selectedRequest.advance} /> : null}
+
               <Sheet className="p-5">
                 <h2 className="mb-3 text-16 font-semibold">รายละเอียดคำขอ</h2>
                 <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2 lg:grid-cols-3">

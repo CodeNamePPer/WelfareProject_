@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getMyProfile } from "@/lib/employee/profile";
+import { getMyPendingEditRequest } from "@/lib/hr/editRequests";
 import ChangeProfileClient from "./ChangeProfileClient";
 
 export default async function ChangeProfilePage() {
@@ -9,10 +10,10 @@ export default async function ChangeProfilePage() {
     redirect("/login");
   }
 
-  const profile = await getMyProfile(session.sub);
+  const [profile, pending] = await Promise.all([getMyProfile(session.sub), getMyPendingEditRequest(session.sub)]);
   if (!profile) {
     return <p className="text-13 text-status-rejected">โหลดข้อมูลโปรไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   }
 
-  return <ChangeProfileClient profile={profile} />;
+  return <ChangeProfileClient profile={profile} pending={pending} />;
 }

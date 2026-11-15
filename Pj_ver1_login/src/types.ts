@@ -243,18 +243,6 @@ export interface WelfareItem {
   unsaved?: boolean;
 }
 
-export type ImportStatus = 'approved' | 'needs-fix' | 'rejected';
-
-export interface ImportRecord {
-  id: string;
-  /** ISO date, YYYY-MM-DD */
-  date: string;
-  benefit: string;
-  claimant: string;
-  amount: number;
-  status: ImportStatus;
-}
-
 // ─── ประวัติการแก้ไข Log ────────────────────────────────────────────────────
 
 export type AuditCategory = 'settings' | 'import' | 'issue';

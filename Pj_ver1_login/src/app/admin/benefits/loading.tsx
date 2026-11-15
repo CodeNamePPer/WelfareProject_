@@ -2,7 +2,7 @@ import { Skeleton, SkeletonScreen } from "@/components/Skeleton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { table } from "@/components/ui/table";
 
-const TABS = ["สวัสดิการที่มีอยู่", "คำขอเบิก", "ประวัติการแก้ไข", "นำเข้าประวัติ"];
+const TABS = ["สวัสดิการที่มีอยู่", "ข้อเสนอสวัสดิการ", "คำขอเบิก"];
 const COLUMNS = ["รหัส", "ชื่อสวัสดิการ", "วงเงิน", "ประเภทงบ", "สถานะ"];
 const ROW_COUNT = 6;
 
@@ -10,7 +10,7 @@ const ROW_COUNT = 6;
 export default function AdminBenefitsLoading() {
   return (
     <SkeletonScreen className="flex flex-col gap-[20px]">
-      <PageHeader title="จัดการสวัสดิการ" description="เพิ่มและแก้ไขสวัสดิการได้ทันที ตัวอย่างการนำเข้าประวัติยังเป็นข้อมูลตัวอย่าง" />
+      <PageHeader title="จัดการสวัสดิการ" description="ข้อมูลชุดเดียวกับที่พนักงานและ HR เห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง" />
 
       {/* แถบแท็บ: ใช้ข้อความจริงแต่ยังกดไม่ได้ เพื่อให้ความสูงตรงกับหน้าจริง */}
       <div className="rounded-[10px] border border-line bg-white">

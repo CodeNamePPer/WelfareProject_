@@ -40,6 +40,7 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
         receiptNo: receipt?.receiptNo ?? "",
         receiptDate: receipt?.receiptDate ?? "",
         attachments: claim.attachments.map((file) => file.fileName),
+        isAdvance: claim.isAdvance,
         revisionNote: claim.status === "needs_revision" ? ([...claim.events].reverse().find((event) => event.kind === "revision_requested")?.note ?? null) : null,
       };
     }

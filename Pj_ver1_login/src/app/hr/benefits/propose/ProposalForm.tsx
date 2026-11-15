@@ -218,7 +218,7 @@ export function ProposalForm({
       found.documents = 'กรุณาเลือกหรือเพิ่มเอกสารที่ต้องแนบอย่างน้อย 1 รายการ';
     }
     if (upTo >= 3 && !reason.trim()) {
-      found.reason = mode === 'direct' ? 'กรุณาระบุเหตุผลในการสร้างสวัสดิการ' : 'กรุณาระบุเหตุผลในการเสนอเพื่อให้หัวหน้า HR พิจารณา';
+      found.reason = mode === 'direct' ? `กรุณาระบุเหตุผลในการ${kind === 'update' ? 'แก้ไข' : 'สร้าง'}สวัสดิการ` : 'กรุณาระบุเหตุผลในการเสนอเพื่อให้หัวหน้า HR พิจารณา';
     }
     return found;
   }
@@ -307,7 +307,7 @@ export function ProposalForm({
         if (field !== 'form') setStep(firstStepWithError({ [field]: 'x' }));
         return;
       }
-      notify(mode === 'direct' ? `สร้างสวัสดิการ ${body.benefitCode} แล้ว` : kindType === 'draft' ? 'บันทึกฉบับร่างแล้ว' : 'ส่งข้อเสนอให้หัวหน้า HR พิจารณาแล้ว');
+      notify(mode === 'direct' ? `${kind === 'update' ? 'บันทึกการแก้ไข' : 'สร้าง'}สวัสดิการ ${body.benefitCode} แล้ว` : kindType === 'draft' ? 'บันทึกฉบับร่างแล้ว' : 'ส่งข้อเสนอให้หัวหน้า HR พิจารณาแล้ว');
       if (onSuccess) {
         onSuccess();
       } else {
@@ -342,13 +342,13 @@ export function ProposalForm({
 
   const title =
     kind === 'update'
-      ? `เสนอแก้ไขสวัสดิการ ${benefitCode ?? ''}`
+      ? `${mode === 'direct' ? 'แก้ไข' : 'เสนอแก้ไข'}สวัสดิการ ${benefitCode ?? ''}`
       : mode === 'direct'
         ? 'สร้างสวัสดิการใหม่'
         : initial?.id
           ? 'แก้ฉบับร่างข้อเสนอ'
           : 'เสนอสวัสดิการใหม่';
-  const lastLabel = mode === 'direct' ? 'สร้างและเปิดใช้ทันที' : 'ส่งข้อเสนอให้หัวหน้า HR';
+  const lastLabel = mode === 'direct' ? (kind === 'update' ? 'บันทึกการแก้ไข' : 'สร้างและเปิดใช้ทันที') : 'ส่งข้อเสนอให้หัวหน้า HR';
 
   return (
     <div className="flex flex-col gap-4">
@@ -357,7 +357,7 @@ export function ProposalForm({
         title={title}
         description={
           mode === 'direct'
-            ? 'กรอกข้อมูล 4 ขั้นตอน ด้านขวาแสดงตัวอย่างการ์ดที่พนักงานจะเห็นจริง · หัวหน้า HR สร้างแล้วเปิดใช้ได้ทันที'
+            ? `กรอกข้อมูล 4 ขั้นตอน ด้านขวาแสดงตัวอย่างการ์ดที่พนักงานจะเห็นจริง · ${kind === 'update' ? 'บันทึกแล้วมีผลทันทีโดยไม่ต้องรออนุมัติ' : 'หัวหน้า HR สร้างแล้วเปิดใช้ได้ทันที'}`
             : 'กรอกข้อมูล 4 ขั้นตอน ด้านขวาแสดงตัวอย่างการ์ดที่พนักงานจะเห็นจริง · ส่งให้หัวหน้า HR อนุมัติ'
         }
         actions={
@@ -862,7 +862,7 @@ export function ProposalForm({
           {step === 3 ? (
             <>
               <div>
-                <h2 className="text-16 font-semibold text-ink">{mode === 'direct' ? '4. ตรวจทานและสร้างสวัสดิการ' : '4. ตรวจทานและส่งให้หัวหน้า HR อนุมัติ'}</h2>
+                <h2 className="text-16 font-semibold text-ink">{mode === 'direct' ? (kind === 'update' ? '4. ตรวจทานและบันทึกการแก้ไข' : '4. ตรวจทานและสร้างสวัสดิการ') : '4. ตรวจทานและส่งให้หัวหน้า HR อนุมัติ'}</h2>
                 <p className="mt-0.5 text-12 text-muted">ตรวจสอบความถูกต้องของข้อมูลและระบุเหตุผลประกอบการพิจารณา</p>
               </div>
 
@@ -892,7 +892,7 @@ export function ProposalForm({
                 <Textarea
                   label={
                     <>
-                      {mode === 'direct' ? 'เหตุผลในการสร้างสวัสดิการ' : 'เหตุผลในการเสนอให้หัวหน้า HR พิจารณา'} <span className="text-[#B3261E]">*</span>
+                      {mode === 'direct' ? (kind === 'update' ? 'เหตุผลในการแก้ไขสวัสดิการ' : 'เหตุผลในการสร้างสวัสดิการ') : 'เหตุผลในการเสนอให้หัวหน้า HR พิจารณา'} <span className="text-[#B3261E]">*</span>
                     </>
                   }
                   rows={3}

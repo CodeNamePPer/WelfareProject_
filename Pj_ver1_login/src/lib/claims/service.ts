@@ -6,6 +6,8 @@ import { findEmployeeUuidByCode } from "../auth/users";
 import { getSubordinates } from "../employee/subordinates";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, maxClaimsLabel } from "./forms";
+import { emailHr, isHrEmployee } from "../hr/emailNotify";
+import { signBenefitImages } from "../benefitImages";
 import type { BudgetKind, ClaimAction, ClaimDbStatus, ClaimEventKind, ClaimRecord, EmployeeBenefit } from "./types";
 
 export class ClaimInputError extends Error {
@@ -32,14 +34,23 @@ const COUNTED: ClaimDbStatus[] = ["pending_hr", "needs_revision", "pending_finan
 const APPROVED: ClaimDbStatus[] = ["awaiting_payment", "paid"];
 const FINANCE_VISIBLE: ClaimDbStatus[] = ["pending_finance", "finance_returned", "awaiting_payment", "paid", "rejected"];
 
-const SELECT = `id, claim_no, status, amount_requested, amount_approved, expense_date, submitted_at, created_at, provider_name, note, details, pay_date_override, approval_no, accounting_ref, employee_id,
+/** ค่ากลางของระบบเมื่อสวัสดิการไม่ได้กำหนด advance_receipt_days */
+export const DEFAULT_ADVANCE_RECEIPT_DAYS = 30;
+
+const addDays = (date: string, days: number) => {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+};
+
+const SELECT = `id, claim_no, status, is_advance, amount_requested, amount_approved, expense_date, submitted_at, created_at, provider_name, note, details, pay_date_override, approval_no, accounting_ref, employee_id,
   benefit_id, proxy_reason, beneficiary_relation, beneficiary_name, total_cost, insurance_paid, insurer_name,
   owner:employee_id(employee_code, title_th, first_name_th, last_name_th, department:department_id(name_th)),
   submitter:submitted_by(employee_code, title_th, first_name_th, last_name_th),
   benefit:benefit_id(code, name_th, budget_type, form_type),
   benefit_limit:benefit_limit_id(amount),
   pay_round:pay_round_id(pay_date),
-  advance:welfare_claim_advance(status, advance_amount, receipt_due_date, receipt_amount, settlement, extra_amount_approved, refund_amount),
+  advance:welfare_claim_advance(status, advance_amount, advance_paid_at, receipt_due_date, receipt_amount, settlement, extra_amount_approved, refund_amount),
   receipts:welfare_claim_receipt(receipt_no, receipt_date, issuer_name, amount),
   attachments:welfare_claim_attachment(id, file_name, mime_type, size_bytes, doc_kind, is_restricted, deleted_at),
   events:welfare_claim_event(id, kind, created_at, note, actor_role, actor:actor_employee_id(employee_code, title_th, first_name_th, last_name_th)),
@@ -48,6 +59,7 @@ const SELECT = `id, claim_no, status, amount_requested, amount_approved, expense
 interface AdvanceRow {
   status: string;
   advance_amount: number | string;
+  advance_paid_at: string | null;
   receipt_due_date: string;
   receipt_amount: number | string | null;
   settlement: string | null;
@@ -59,6 +71,7 @@ interface ClaimRow {
   id: string;
   claim_no: string;
   status: ClaimDbStatus;
+  is_advance: boolean | null;
   amount_requested: number | string | null;
   amount_approved: number | string | null;
   expense_date: string | null;
@@ -149,6 +162,7 @@ function toRecord(row: ClaimRow, usage: UsageRow[]): ClaimRecord {
       ? {
           status: advRow.status,
           advanceAmount: Number(advRow.advance_amount),
+          advancePaidAt: advRow.advance_paid_at,
           receiptDueDate: advRow.receipt_due_date,
           receiptAmount: advRow.receipt_amount === null ? null : Number(advRow.receipt_amount),
           settlement: advRow.settlement,
@@ -156,6 +170,7 @@ function toRecord(row: ClaimRow, usage: UsageRow[]): ClaimRecord {
           refundAmount: advRow.refund_amount === null ? null : Number(advRow.refund_amount),
         }
       : null,
+    isAdvance: Boolean(row.is_advance),
     benefitCode: row.benefit.code,
     benefitName: row.benefit.name_th,
     budgetType: row.benefit.budget_type,
@@ -279,6 +294,9 @@ interface BenefitRow {
   max_claims_note: string | null;
   eligibility_note: string | null;
   required_documents: string[] | null;
+  allow_advance: boolean | null;
+  advance_receipt_days: number | null;
+  image_path: string | null;
 }
 
 /** สวัสดิการที่พนักงานคนนี้ใช้ได้ พร้อมยอดคงเหลือ คืน null เมื่อโหลดไม่สำเร็จ */
@@ -295,7 +313,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
     if (!employee || employee.employment_status !== "active") return [];
 
     const [benefits, limits, restrictions, usage] = await Promise.all([
-      supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type, max_claims, max_claims_note, eligibility_note, required_documents").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
+      supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type, max_claims, max_claims_note, eligibility_note, required_documents, allow_advance, advance_receipt_days, image_path").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
       supabaseAdmin.from("v_welfare_benefit_current").select("id, current_amount").returns<{ id: string; current_amount: number | string | null }[]>(),
       supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department_id").returns<{ benefit_id: string; department_id: string }[]>(),
       fetchUsage([employee.id]),
@@ -308,6 +326,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
     const limitOf = new Map((limits.data ?? []).map((row) => [row.id, row.current_amount]));
     const memberOf = [employee.department_id, employee.department?.parent_department_id].filter(Boolean);
 
+    const images = await signBenefitImages((benefits.data ?? []).map((benefit) => benefit.image_path));
     return (benefits.data ?? []).flatMap((benefit): EmployeeBenefit[] => {
       const allowed = (restrictions.data ?? []).filter((row) => row.benefit_id === benefit.id).map((row) => row.department_id);
       if (allowed.length > 0 && !allowed.some((id) => memberOf.includes(id))) return [];
@@ -331,6 +350,9 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         claimsThisYear: usage.filter((u) => u.benefit_id === benefit.id && u.expense_date.slice(0, 4) === today.slice(0, 4)).length,
         eligibilityNote: benefit.eligibility_note,
         documents: benefit.required_documents ?? [],
+        imageUrl: benefit.image_path ? (images.get(benefit.image_path) ?? null) : null,
+        allowAdvance: Boolean(benefit.allow_advance),
+        advanceReceiptDays: benefit.advance_receipt_days ?? DEFAULT_ADVANCE_RECEIPT_DAYS,
         limit,
         used,
         pending,
@@ -357,6 +379,8 @@ export interface SaveClaimInput {
   receiptNo: string;
   receiptDate: string;
   submit: boolean;
+  /** ยื่นเบิกล่วงหน้า: ไม่ต้องมีใบเสร็จตอนยื่น แนบภายหลังเมื่อได้รับเงิน */
+  advance?: boolean;
   files: File[];
 }
 
@@ -404,8 +428,9 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     findEmployeeUuidByCode(input.employeeCode),
     findEmployeeUuidByCode(actor.sub),
     getEmployeeBenefits(input.employeeCode),
-    supabaseAdmin.from("welfare_benefit").select("id").eq("code", input.benefitCode).is("deleted_at", null).maybeSingle(),
+    supabaseAdmin.from("welfare_benefit").select("id, allow_advance, advance_receipt_days").eq("code", input.benefitCode).is("deleted_at", null).maybeSingle(),
   ]);
+  const advance = input.advance === true;
   if (benefitRow.error) throw benefitRow.error;
   if (!ownerId || !submitterId) throw new ClaimInputError("ไม่พบข้อมูลพนักงาน");
   if (!benefitRow.data || !benefits?.some((benefit) => benefit.code === input.benefitCode)) {
@@ -413,9 +438,13 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   }
 
   if (input.expenseDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.expenseDate)) throw new ClaimInputError("วันที่เกิดค่าใช้จ่ายไม่ถูกต้อง");
-  if (input.expenseDate && input.expenseDate > bangkokDate()) throw new ClaimInputError("วันที่เกิดค่าใช้จ่ายต้องไม่อยู่ในอนาคต");
+  if (advance && !benefitRow.data.allow_advance) throw new ClaimInputError("สวัสดิการนี้ยื่นเบิกล่วงหน้าไม่ได้");
+  // คำขอล่วงหน้าใช้วันที่คาดว่าจะใช้จ่าย จึงเป็นวันในอนาคตได้ (ไม่เกิน 1 ปี)
+  if (input.expenseDate && !advance && input.expenseDate > bangkokDate()) throw new ClaimInputError("วันที่เกิดค่าใช้จ่ายต้องไม่อยู่ในอนาคต");
+  if (input.expenseDate && advance && input.expenseDate > addDays(bangkokDate(), 365)) throw new ClaimInputError("วันที่คาดว่าจะใช้จ่ายต้องไม่เกิน 1 ปีจากวันนี้");
 
   const values = {
+    is_advance: advance,
     benefit_id: benefitRow.data.id,
     amount_requested: input.amount > 0 ? input.amount : null,
     expense_date: input.expenseDate || null,
@@ -429,6 +458,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     const existing = await getClaim(input.claimNo);
     if (!existing || (existing.employeeCode !== actor.sub && existing.submittedByCode !== actor.sub)) throw new ClaimInputError("ไม่พบคำขอนี้");
     if (existing.status !== "draft" && existing.status !== "needs_revision") throw new ClaimInputError("คำขอนี้แก้ไขไม่ได้แล้ว");
+    if (existing.advance && !advance) throw new ClaimInputError("คำขอนี้ยื่นเป็นเบิกล่วงหน้าแล้ว เปลี่ยนประเภทระหว่างแก้ไขไม่ได้");
     const { error } = await supabaseAdmin.from("welfare_claim").update(values).eq("id", existing.id);
     if (error) throw error;
     claim = { id: existing.id, claim_no: existing.claimNo, status: existing.status };
@@ -467,9 +497,11 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
       .eq("claim_id", claim.id)
       .is("deleted_at", null);
     if (countError) throw countError;
-    if (!count) throw new ClaimInputError("กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์");
-    if (!input.receiptNo || !input.receiptDate) throw new ClaimInputError("กรุณาระบุเลขที่และวันที่ในใบเสร็จ");
-    if (!input.providerName) throw new ClaimInputError("กรุณาระบุผู้ออกใบเสร็จหรือสถานพยาบาล");
+    if (!advance) {
+      if (!count) throw new ClaimInputError("กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์");
+      if (!input.receiptNo || !input.receiptDate) throw new ClaimInputError("กรุณาระบุเลขที่และวันที่ในใบเสร็จ");
+      if (!input.providerName) throw new ClaimInputError("กรุณาระบุผู้ออกใบเสร็จหรือสถานพยาบาล");
+    }
 
     const { error } = await supabaseAdmin.rpc("welfare_claim_transition", {
       p_claim_id: claim.id,
@@ -480,11 +512,29 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
       p_actor_role: actor.role,
     });
     if (error) throw error;
+    if (advance) {
+      // กำหนดแนบใบเสร็จชั่วคราวนับจากวันที่คาดว่าจะใช้จ่าย ตั้งใหม่ตอนการเงินโอนเงิน (recordAdvancePaid)
+      const days = benefitRow.data.advance_receipt_days ?? DEFAULT_ADVANCE_RECEIPT_DAYS;
+      const { error: advanceError } = await supabaseAdmin
+        .from("welfare_claim_advance")
+        .upsert({ claim_id: claim.id, advance_amount: input.amount, receipt_due_date: addDays(input.expenseDate || bangkokDate(), days) }, { onConflict: "claim_id" });
+      if (advanceError) throw advanceError;
+    }
   } catch (err) {
     const message = err instanceof ClaimInputError ? err.message : (err as { code?: string; message?: string }).code === "P0001" ? (err as Error).message : null;
     if (message) throw new ClaimInputError(`${message} (บันทึกเป็น ${claim.claim_no} แล้ว แก้ไขแล้วกดส่งอีกครั้ง)`, claim.claim_no);
     throw err;
   }
+  const resubmitted = claim.status === "needs_revision";
+  const ownerIsHr = await isHrEmployee(input.employeeCode).catch(() => false);
+  const message = {
+    subject: `${resubmitted ? "คำขอที่แก้ไขแล้วรอตรวจ" : "คำขอใหม่รอตรวจ"} ${claim.claim_no}`,
+    lines: [`${claim.claim_no} · ยอด ${input.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท${advance ? " · เบิกล่วงหน้า" : ""}`, resubmitted ? "ผู้ขอแก้ไขตามที่ส่งกลับแล้ว" : "รอ HR ตรวจสอบ"],
+    path: `/hr/home/requests/${encodeURIComponent(claim.claim_no)}`,
+  };
+  // คำขอของ HR ตรวจได้เฉพาะหัวหน้า HR / HR คนอื่น จึงไม่ส่งถึงเจ้าของและผู้ยื่น
+  emailHr(resubmitted ? "claim_resubmitted" : "claim_new", message, { exclude: [input.employeeCode, actor.sub] });
+  if (ownerIsHr) emailHr("hr_claim_pending", message, { only: "hr_head", exclude: [input.employeeCode, actor.sub] });
   return { claimNo: claim.claim_no, status: "pending_hr" };
 }
 
@@ -620,6 +670,7 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
       p_actor_role: actor.role,
     });
     if (error) throw error;
+    if (claim.advance) await recordAdvancePaid(claim);
     return;
   }
 
@@ -690,4 +741,145 @@ export function claimErrorResponse(err: unknown): { status: number; body: { erro
   if (pg?.code === "P0001" && pg.message) return { status: 400, body: { error: pg.message } };
   console.error("[claims] request failed", err);
   return { status: 500, body: { error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง" } };
+}
+
+// ─── เบิกล่วงหน้า: โอนเงิน แนบใบเสร็จ และยกเลิกเมื่อเกินกำหนด ───────────────────
+
+/** การเงินโอนเงินล่วงหน้าแล้ว: บันทึกวันที่โอนและนับกำหนดแนบใบเสร็จจากวันนี้ */
+async function recordAdvancePaid(claim: ClaimRecord) {
+  const { data: benefit } = await supabaseAdmin.from("welfare_benefit").select("advance_receipt_days").eq("code", claim.benefitCode).maybeSingle();
+  const days = (benefit?.advance_receipt_days as number | null) ?? DEFAULT_ADVANCE_RECEIPT_DAYS;
+  const paidAmount = claim.amountApproved ?? claim.amountRequested;
+  const { error } = await supabaseAdmin
+    .from("welfare_claim_advance")
+    .update({ advance_paid_at: new Date().toISOString(), advance_amount: paidAmount, receipt_due_date: addDays(bangkokDate(), days) })
+    .eq("claim_id", claim.id)
+    .is("advance_paid_at", null);
+  // การโอนบันทึกไปแล้ว ถ้าตั้งกำหนดแนบไม่ได้ให้ตามแก้จาก log กำหนดเดิมยังใช้ได้
+  if (error) console.error("[claims] record advance paid failed", { claimNo: claim.claimNo }, error);
+}
+
+/** ผู้ขอแนบใบเสร็จจริงของคำขอล่วงหน้า (หลังได้รับเงิน ภายในกำหนด) ส่งให้ HR ตรวจที่หน้า H13 */
+export async function submitAdvanceReceipt(
+  claimNo: string,
+  input: { amount: number; receiptNo: string; receiptDate: string; issuerName: string; files: File[] },
+  actor: ClaimActor,
+) {
+  const claim = await getClaim(claimNo);
+  if (!claim || (claim.employeeCode !== actor.sub && claim.submittedByCode !== actor.sub)) throw new ClaimInputError("ไม่พบคำขอนี้");
+  const advance = claim.advance;
+  if (!advance) throw new ClaimInputError("คำขอนี้ไม่ใช่การเบิกล่วงหน้า");
+  if (!advance.advancePaidAt) throw new ClaimInputError("แนบใบเสร็จได้หลังการเงินโอนเงินล่วงหน้าแล้ว");
+  if (advance.status !== "awaiting_receipt" && advance.status !== "receipt_returned") throw new ClaimInputError("คำขอนี้ไม่ได้รอใบเสร็จ กรุณาโหลดหน้าใหม่", claimNo);
+  if (advance.receiptDueDate < bangkokDate()) throw new ClaimInputError("เกินกำหนดแนบใบเสร็จแล้ว กรุณาติดต่อฝ่ายบุคคล");
+  if (!(input.amount > 0)) throw new ClaimInputError("กรุณาระบุยอดตามใบเสร็จ");
+  if (!input.receiptNo.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(input.receiptDate)) throw new ClaimInputError("กรุณาระบุเลขที่และวันที่ในใบเสร็จ");
+  if (input.receiptDate > bangkokDate()) throw new ClaimInputError("วันที่ในใบเสร็จต้องไม่อยู่ในอนาคต");
+  if (!input.issuerName.trim()) throw new ClaimInputError("กรุณาระบุผู้ออกใบเสร็จ");
+  if (input.files.length === 0) throw new ClaimInputError("กรุณาแนบใบเสร็จอย่างน้อย 1 ไฟล์");
+  assertFiles(input.files);
+
+  const uploaderId = await findEmployeeUuidByCode(actor.sub);
+  if (!uploaderId) throw new ClaimInputError("ไม่พบข้อมูลพนักงาน");
+  const ids = await uploadAttachments(claim.id, uploaderId, input.files);
+  await supabaseAdmin.from("welfare_claim_attachment").update({ doc_kind: "receipt" }).in("id", ids);
+
+  const { error: receiptError } = await supabaseAdmin.from("welfare_claim_receipt").insert({
+    claim_id: claim.id,
+    receipt_no: input.receiptNo.trim(),
+    receipt_date: input.receiptDate,
+    issuer_name: input.issuerName.trim(),
+    amount: input.amount,
+    attachment_id: ids[0] ?? null,
+  });
+  if (receiptError) throw receiptError;
+
+  const { data: updated, error } = await supabaseAdmin
+    .from("welfare_claim_advance")
+    .update({ status: "receipt_submitted", receipt_amount: input.amount, receipt_submitted_at: new Date().toISOString() })
+    .eq("claim_id", claim.id)
+    .eq("status", advance.status)
+    .select("id");
+  if (error) throw error;
+  if (!updated || updated.length === 0) throw new ClaimInputError("คำขอนี้ถูกบันทึกไปแล้ว กรุณาโหลดหน้าใหม่", claimNo);
+
+  const { error: eventError } = await supabaseAdmin.from("welfare_claim_event").insert({
+    claim_id: claim.id,
+    kind: "receipt_submitted",
+    from_status: claim.status,
+    to_status: claim.status,
+    actor_employee_id: uploaderId,
+    actor_role: actor.role,
+    note: `ยอดตามใบเสร็จ ${input.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`,
+    amount_before: advance.advanceAmount,
+    amount_after: input.amount,
+  });
+  if (eventError) console.error("[claims] receipt event write failed", { claimNo }, eventError);
+  emailHr(
+    "advance_receipt",
+    { subject: `ใบเสร็จเบิกล่วงหน้ารอตรวจ ${claimNo}`, lines: [`${claimNo} ${claim.benefitName}`, `ยอดล่วงหน้า ${advance.advanceAmount.toLocaleString("th-TH")} บาท · ยอดตามใบเสร็จ ${input.amount.toLocaleString("th-TH")} บาท`], path: `/hr/home/advances/${encodeURIComponent(claimNo)}` },
+    { exclude: [claim.employeeCode, actor.sub] },
+  );
+}
+
+const STATUS_WORD: Partial<Record<ClaimDbStatus, string>> = {
+  needs_revision: "HR ส่งกลับให้แก้ไข",
+  pending_finance: "HR อนุมัติแล้ว ส่งต่อการเงิน",
+  awaiting_payment: "การเงินอนุมัติจ่ายแล้ว รอโอนตามรอบ",
+  paid: "โอนเงินแล้ว",
+  rejected: "ไม่อนุมัติ",
+};
+
+/** HR ที่เปิดอีเมล "สถานะคำขอเบิกของฉัน" ได้อีเมลเมื่อคำขอของตัวเองเปลี่ยนสถานะ */
+export async function emailOwnerStatus(claimNo: string, actorCode: string) {
+  const claim = await getClaim(claimNo).catch(() => null);
+  if (!claim || claim.employeeCode === actorCode) return;
+  const word = STATUS_WORD[claim.status];
+  if (!word) return;
+  emailHr("my_claim_status", { subject: `คำขอ ${claim.claimNo}: ${word}`, lines: [`${claim.claimNo} ${claim.benefitName}`, `สถานะ: ${word}`], path: `/employee/status?id=${encodeURIComponent(claim.claimNo)}` }, { only: [claim.employeeCode] });
+}
+
+let lastOverdueSweep = 0;
+
+/**
+ * ยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จ ผู้ขอต้องคืนยอดล่วงหน้าทั้งหมด (สเปก HR ข้อ 4)
+ * ฐานข้อมูลไม่มีงานตั้งเวลา จึงเรียกจาก layout ของ HR / การเงิน / พนักงาน และเว้นอย่างน้อย 5 นาทีต่อ process
+ */
+export async function cancelOverdueAdvances(force = false): Promise<number> {
+  if (!force && Date.now() - lastOverdueSweep < 5 * 60 * 1000) return 0;
+  lastOverdueSweep = Date.now();
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("welfare_claim_advance")
+      .select("id, claim_id, status, advance_amount, claim:claim_id!inner(status, deleted_at)")
+      .in("status", ["awaiting_receipt", "receipt_returned"])
+      .not("advance_paid_at", "is", null)
+      .lt("receipt_due_date", bangkokDate())
+      .is("claim.deleted_at", null)
+      .returns<{ id: string; claim_id: string; status: string; advance_amount: number | string; claim: { status: ClaimDbStatus } }[]>();
+    if (error) throw error;
+    let cancelled = 0;
+    for (const row of data ?? []) {
+      const now = new Date().toISOString();
+      const note = "เกินกำหนดแนบใบเสร็จ ระบบยกเลิกอัตโนมัติ ผู้ขอต้องคืนยอดล่วงหน้าทั้งหมด";
+      const amount = Number(row.advance_amount);
+      const { data: updated, error: updateError } = await supabaseAdmin
+        .from("welfare_claim_advance")
+        .update({ status: "cancelled_overdue", cancelled_at: now, settlement: "refund", refund_amount: amount, extra_amount_approved: null, review_note: note })
+        .eq("id", row.id)
+        .eq("status", row.status)
+        .select("id");
+      if (updateError) throw updateError;
+      if (!updated?.length) continue;
+      cancelled += 1;
+      const { error: eventError } = await supabaseAdmin
+        .from("welfare_claim_event")
+        .insert({ claim_id: row.claim_id, kind: "advance_cancelled", from_status: row.claim.status, to_status: row.claim.status, actor_employee_id: null, actor_role: "SYSTEM", note, amount_before: amount, amount_after: 0 });
+      if (eventError) console.error("[claims] overdue event write failed", { advanceId: row.id }, eventError);
+    }
+    return cancelled;
+  } catch (err) {
+    console.error("[claims] overdue advance sweep failed", err);
+    return 0;
+  }
 }

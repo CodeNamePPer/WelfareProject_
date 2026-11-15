@@ -153,13 +153,13 @@ const ADMIN_EVENT: Record<ClaimEventKind, ClaimEvent["kind"]> = {
   refund_received: "refund-received",
 };
 
-const ADVANCE_STATUS_LABEL: Record<string, string> = {
-  pending: "รอพิจารณาเบิกล่วงหน้า",
-  disbursed: "โอนเงินล่วงหน้าแล้ว · รอแนบใบเสร็จจริง",
+/** สถานะของ welfare_claim_advance (welfare_advance_status) */
+export const ADVANCE_STATUS_LABEL: Record<string, string> = {
+  awaiting_receipt: "โอนเงินล่วงหน้าแล้ว · รอแนบใบเสร็จจริง",
   receipt_submitted: "แนบใบเสร็จแล้ว · รอ HR ตรวจ",
+  receipt_returned: "HR ส่งกลับ · แนบใบเสร็จใหม่",
   settled: "เคลียร์ยอดใบเสร็จเรียบร้อย",
-  overdue: "เกินกำหนดส่งใบเสร็จ",
-  cancelled: "ยกเลิกเบิกล่วงหน้า",
+  cancelled_overdue: "เกินกำหนดแนบใบเสร็จ · ยกเลิกแล้ว",
 };
 
 const ROLE_SUFFIX: Record<string, string> = { HR: "HR", FINANCE: "การเงิน", SUPER_ADMIN: "Admin" };

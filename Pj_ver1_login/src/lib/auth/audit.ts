@@ -11,6 +11,7 @@ export type AuditAction =
   | "LOGIN_BLOCKED_RECAPTCHA"
   | "LOGIN_BLOCKED_INACTIVE"
   | "LOGOUT"
+  | "LOGOUT_ALL" // ออกจากระบบทุกอุปกรณ์ (ผู้ใช้กดเองจากหน้าโปรไฟล์)
   | "USER_UPDATE"
   | "EMPLOYEE_CREATE" // HR เพิ่มพนักงานใหม่ (targetId = รหัสพนักงาน)
   | "EMPLOYEE_LIMIT_UPDATE" // HR ปรับวงเงินรายคน (targetId = รหัสพนักงาน, changes = { รหัสสวัสดิการ: { old, new } })

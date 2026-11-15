@@ -86,7 +86,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                         const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
                         return (
                             <li key={benefit.code} className="flex flex-col overflow-hidden rounded-lg border border-line bg-white">
-                                <BenefitThumb category={benefit.category} className="h-[140px]" />
+                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="h-[140px]" />
                                 <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}

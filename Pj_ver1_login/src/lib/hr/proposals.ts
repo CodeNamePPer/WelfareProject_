@@ -1,4 +1,5 @@
 import "server-only";
+import { emailHr } from "./emailNotify";
 import { supabaseAdmin } from "@/lib/supabase";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
 
@@ -11,7 +12,8 @@ export type ProposalStatus = "draft" | "pending" | "needs_info" | "approved" | "
 export type ProposalKind = "create" | "update" | "close";
 export type BudgetType = "yearly" | "monthly" | "per_claim";
 
-export const BENEFIT_IMAGE_BUCKET = "welfare-benefit-images";
+export { BENEFIT_IMAGE_BUCKET } from "@/lib/benefitImages";
+import { BENEFIT_IMAGE_BUCKET } from "@/lib/benefitImages";
 export const BUDGET_LABEL: Record<BudgetType, string> = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
 
 export type ProposalInput = {
@@ -170,7 +172,14 @@ export async function createProposal(
     throw error;
   }
   if (kind !== "close") await writeLimits(data.id, input.limits);
-  if (submit) await addEvent(data.id, "submitted", actorId, actor.role, input.reason.trim(), input);
+  if (submit) {
+    await addEvent(data.id, "submitted", actorId, actor.role, input.reason.trim(), input);
+    emailHr(
+      "proposal_pending",
+      { subject: `ข้อเสนอสวัสดิการใหม่รออนุมัติ ${data.proposal_no}`, lines: [`ข้อเสนอ ${data.proposal_no}: ${input.name || options.benefitCode || "สวัสดิการ"}`, "รอหัวหน้า HR พิจารณา"], path: `/hr/proposals/${data.id}` },
+      { only: "hr_head", exclude: [actor.code] },
+    );
+  }
   return { id: data.id as string, proposalNo: data.proposal_no as string };
 }
 
@@ -202,7 +211,14 @@ export async function reviseProposal(id: string, input: ProposalInput, actorCode
     .eq("id", id);
   if (error) throw error;
   if (own.kind !== "close") await writeLimits(id, input.limits);
-  if (submit) await addEvent(id, own.status === "needs_info" ? "revised" : "submitted", own.actorId, own.proposer_role, message.trim() || input.reason.trim(), input);
+  if (submit) {
+    await addEvent(id, own.status === "needs_info" ? "revised" : "submitted", own.actorId, own.proposer_role, message.trim() || input.reason.trim(), input);
+    emailHr(
+      "proposal_pending",
+      { subject: own.status === "needs_info" ? "ข้อเสนอสวัสดิการที่แก้แล้วรออนุมัติ" : "ข้อเสนอสวัสดิการใหม่รออนุมัติ", lines: [`ข้อเสนอ: ${input.name || "สวัสดิการ"}`, "รอหัวหน้า HR พิจารณา"], path: `/hr/proposals/${id}` },
+      { only: "hr_head", exclude: [actorCode] },
+    );
+  }
 }
 
 export async function withdrawProposal(id: string, actorCode: string, note: string) {
@@ -320,6 +336,32 @@ export async function createBenefitDirect(input: ProposalInput) {
   return insertBenefit(input);
 }
 
+async function benefitIdOf(code: string | undefined) {
+  if (!code) throw new ProposalError("ไม่พบรหัสสวัสดิการ", undefined, 400);
+  const { data, error } = await supabaseAdmin
+    .from("welfare_benefit")
+    .select("id")
+    .eq("code", code)
+    .is("deleted_at", null)
+    .maybeSingle<{ id: string }>();
+  if (error) throw error;
+  if (!data) throw new ProposalError("ไม่พบสวัสดิการนี้ในระบบ", undefined, 404);
+  return data.id;
+}
+
+/** หัวหน้า HR แก้ไขสวัสดิการเองโดยไม่ต้องเสนอ */
+export async function updateBenefitDirect(code: string | undefined, input: ProposalInput) {
+  validateProposal(input, "submit", "update");
+  const effective = input.effectiveFrom && input.effectiveFrom >= today() ? input.effectiveFrom : today();
+  return applyBenefitUpdate(await benefitIdOf(code), code as string, { ...input, effectiveFrom: effective });
+}
+
+/** หัวหน้า HR ปิดรับคำขอสวัสดิการเองโดยไม่ต้องเสนอ */
+export async function closeBenefitDirect(code: string | undefined, input: ProposalInput) {
+  validateProposal(input, "submit", "close");
+  return applyBenefitClose(await benefitIdOf(code), code as string);
+}
+
 /** หัวหน้า HR ตัดสินข้อเสนอที่รออนุมัติ */
 export async function decideProposal(id: string, decision: "approve" | "needs_info" | "reject", note: string, actorCode: string) {
   const actorId = await uuidOf(actorCode);
@@ -352,6 +394,14 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
     .eq("id", id);
   if (error) throw error;
   await addEvent(id, decision === "approve" ? "approved" : decision === "needs_info" ? "info_requested" : "rejected", actorId, "HR_HEAD", note.trim() || null);
+  if (detail.proposerCode) {
+    const word = decision === "approve" ? "อนุมัติแล้ว" : decision === "needs_info" ? "ขอข้อมูลเพิ่ม" : "ไม่อนุมัติ";
+    emailHr(
+      "proposal_decided",
+      { subject: `ข้อเสนอสวัสดิการ ${detail.proposalNo}: หัวหน้า HR ${word}`, lines: [`${detail.proposalNo} ${detail.input.name || ""}`.trim(), `ผล: ${word}`, ...(note.trim() ? [`ข้อความ: ${note.trim()}`] : [])], path: `/hr/benefits/proposals/${id}` },
+      { only: [detail.proposerCode] },
+    );
+  }
   return { status, kind: detail.kind, benefitCode: applied?.code ?? null };
 }
 
