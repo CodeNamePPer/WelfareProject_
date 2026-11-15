@@ -71,6 +71,14 @@ export function RequestCard({ request, own }: { request: EditRequestItem; own: b
       <p className="rounded-[8px] bg-[#F8FAFC] px-3 py-2.5 text-13">
         <b className="font-semibold">เหตุผลจากพนักงาน:</b> {request.reason}
       </p>
+      {request.evidenceName ? (
+        <p className="text-13">
+          <span className="text-muted">หลักฐาน: </span>
+          <a href={`/api/hr/employee-requests/${request.id}/evidence`} target="_blank" rel="noopener noreferrer" className="break-all text-[#1D4ED8] hover:underline">
+            {request.evidenceName}
+          </a>
+        </p>
+      ) : null}
       {own ? (
         <p className="text-13 text-muted">คำขอแก้ไขข้อมูลของคุณเอง ต้องให้ HR คนอื่นตรวจ</p>
       ) : (

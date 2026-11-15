@@ -2,8 +2,10 @@
 import { Check, FileText, Lock, Upload } from "lucide-react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { MyProfile } from "@/lib/employee/profile";
+import type { MyPendingEditRequest } from "@/lib/hr/editRequests";
 
 const draftStorageKey = "profile-change-draft";
 
@@ -35,7 +37,10 @@ function formatFileSize(bytes: number) {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ChangeProfileClient({ profile }: { profile: MyProfile }) {
+const thaiDateTime = (iso: string) => new Date(iso).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
+
+export default function ChangeProfileClient({ profile, pending }: { profile: MyProfile; pending: MyPendingEditRequest | null }) {
+  const router = useRouter();
   const currentValues: Record<ChangeField, string> = {
     phone: profile.phone ?? "—",
     email: profile.email,
@@ -49,8 +54,12 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
   const [agreed, setAgreed] = useState(false);
   const [notice, setNotice] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedOption = changeOptions.find((option) => option.value === field)!;
+  // อีเมลเป็นชื่อเข้าระบบ เปลี่ยนผ่านคำขอนี้ไม่ได้ ต้องให้ Admin เปลี่ยนในหน้าตั้งค่าผู้ใช้
+  const emailSelected = field === "email";
 
   useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -109,16 +118,40 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
     }
   }
 
-  function submitRequest(event: React.FormEvent<HTMLFormElement>) {
+  async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    try {
-      window.localStorage.removeItem(draftStorageKey);
-    } catch {
-      setNotice("ส่งคำขอไม่ได้ เนื่องจากไม่สามารถล้างฉบับร่างเดิมได้ กรุณาลองอีกครั้ง");
+    if (sending || emailSelected) return;
+    if (!evidence) {
+      setSubmitError("แนบหลักฐานประกอบคำขอ");
       return;
     }
-    setSubmitted(true);
+    setSending(true);
+    setSubmitError("");
     setNotice("");
+    try {
+      const body = new FormData();
+      body.set("field", field);
+      body.set("value", newValue);
+      body.set("reason", reason);
+      body.set("evidence", evidence);
+      const response = await fetch("/api/employee/edit-request", { method: "POST", body });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setSubmitError(result.error ?? "ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+        return;
+      }
+      try {
+        window.localStorage.removeItem(draftStorageKey);
+      } catch {
+        // ส่งคำขอสำเร็จแล้ว ฉบับร่างที่ค้างไม่กระทบคำขอ
+      }
+      setSubmitted(true);
+      router.refresh();
+    } catch {
+      setSubmitError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ คำขอยังไม่ถูกส่ง กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -181,7 +214,7 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
         </li>
       </ol>
 
-      {submitted ? (
+      {submitted || pending ? (
         <section
           aria-labelledby="submitted-title"
           className="rounded-lg border border-line bg-white p-6 sm:p-8"
@@ -191,22 +224,14 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
               <Check className="size-4 shrink-0 text-18" aria-hidden="true" />
             </span>
             <h2 id="submitted-title" className="mt-4 text-17 font-semibold text-ink">
-              ตรวจสอบข้อมูลเรียบร้อย
+              {submitted ? "ส่งคำขอให้ฝ่ายบุคคลแล้ว" : "มีคำขอที่รอฝ่ายบุคคลตรวจอยู่"}
             </h2>
             <p className="mt-2 text-13 leading-6 text-ink-soft">
-              คำขอเปลี่ยน{selectedOption.label}พร้อมสำหรับส่งให้ฝ่ายบุคคลตรวจสอบ
-            </p>
-            <p className="mt-4 rounded-md bg-surface px-4 py-3 text-12 leading-5 text-ink-soft">
-              หน้าจอตัวอย่างนี้ยังไม่ได้เชื่อมต่อระบบส่งคำขอจริง ข้อมูลจึงยังไม่ถูกส่งไปยังฝ่ายบุคคล
+              {submitted
+                ? `คำขอเปลี่ยน${selectedOption.label}อยู่ระหว่างรอฝ่ายบุคคลตรวจสอบ ข้อมูลในโปรไฟล์จะเปลี่ยนหลังอนุมัติ`
+                : `คำขอเปลี่ยน${pending!.labels.join(", ")} ส่งเมื่อ ${thaiDateTime(pending!.submittedAt)} ส่งคำขอใหม่ได้หลังฝ่ายบุคคลตรวจคำขอนี้แล้ว`}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSubmitted(false)}
-                className="min-h-10 rounded-md border border-line bg-white px-4 text-13 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-              >
-                กลับไปแก้ไข
-              </button>
               <Link
                 href="/employee/profile"
                 className="inline-flex min-h-10 items-center rounded-md bg-primary-600 px-4 text-13 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
@@ -271,6 +296,11 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
                 <p className="mt-1.5 text-10 leading-4 text-muted">
                   เลือกได้หนึ่งรายการต่อคำขอ หากต้องการเปลี่ยนหลายรายการ กรุณาส่งคำขอแยก
                 </p>
+                {emailSelected && (
+                  <p role="note" className="mt-2 rounded-md border border-line bg-surface px-3 py-2 text-12 leading-5 text-ink-soft">
+                    อีเมลใช้เป็นชื่อเข้าระบบ จึงเปลี่ยนผ่านคำขอนี้ไม่ได้ กรุณาติดต่อผู้ดูแลระบบ (Admin) ให้เป็นผู้เปลี่ยน
+                  </p>
+                )}
               </div>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -400,6 +430,11 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
                   ฉันรับรองว่าข้อมูลและหลักฐานเป็นความจริง และยินยอมให้บริษัทตรวจสอบข้อมูลเพื่อดำเนินการตามคำขอ <span aria-hidden="true">*</span>
                 </span>
               </label>
+              {submitError && (
+                <p role="alert" className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-12 leading-5 text-status-rejected">
+                  {submitError}
+                </p>
+              )}
               {notice && (
                 <p role="status" aria-live="polite" className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-12 leading-5 text-ink-soft">
                   {notice}
@@ -422,9 +457,10 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
                   </button>
                   <button
                     type="submit"
-                    className="min-h-10 rounded-md bg-primary-600 px-4 text-12 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                    disabled={sending || emailSelected}
+                    className="min-h-10 rounded-md bg-primary-600 px-4 text-12 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    ส่งคำขอให้บุคคล
+                    {sending ? "กำลังส่ง..." : "ส่งคำขอให้บุคคล"}
                   </button>
                 </div>
               </div>
@@ -435,10 +471,6 @@ export default function ChangeProfileClient({ profile }: { profile: MyProfile })
             <section aria-labelledby="review-title" className="rounded-md border border-line bg-white p-4">
               <h2 id="review-title" className="text-13 font-semibold text-ink">ตรวจสอบก่อนส่ง</h2>
               <dl className="mt-3 space-y-3">
-                <div>
-                  <dt className="text-10 text-muted">เลขที่คำขอ</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">PC-2569-009</dd>
-                </div>
                 <div>
                   <dt className="text-10 text-muted">ข้อมูลที่ขอเปลี่ยน</dt>
                   <dd className="mt-1 text-12 font-medium text-ink">{selectedOption.label}</dd>
