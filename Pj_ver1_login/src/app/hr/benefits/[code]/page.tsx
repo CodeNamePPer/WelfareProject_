@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getHrBenefits } from "@/lib/hr/benefits";
 import { getAllProposals } from "@/lib/hr/proposals";
+import { getSession } from "@/lib/auth/get-session";
+import { isHrHead } from "@/lib/hr/hrHead";
 import { HrPage } from "@/features/hr/ui";
 import { BenefitDetailView } from "@/features/welfare/BenefitDetailView";
 
@@ -15,7 +17,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 export default async function BenefitDetailPage({ params }: { params: Params }) {
-  const [{ code }, benefits, proposals] = await Promise.all([params, getHrBenefits(), getAllProposals()]);
+  const [{ code }, benefits, proposals, session] = await Promise.all([params, getHrBenefits(), getAllProposals(), getSession()]);
+  const isHead = await isHrHead(session);
 
   if (benefits === null) {
     return (
@@ -42,6 +45,8 @@ export default async function BenefitDetailPage({ params }: { params: Params }) 
         backHref="/hr/benefits"
         editHref={`/hr/benefits/propose?edit=${encodeURIComponent(benefit.code)}`}
         openProposalNo={openProposal?.proposalNo ?? null}
+        isHead={isHead}
+        reviewHref={isHead && openProposal?.status === "pending" ? `/hr/proposals/${openProposal.id}` : undefined}
       />
     </HrPage>
   );

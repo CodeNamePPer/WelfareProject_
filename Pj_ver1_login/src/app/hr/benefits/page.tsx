@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "จัดการสวัสดิ
 // ข้อมูลชุดเดียวกับ /admin/benefits และหน้าสิทธิ์ของพนักงาน
 export const dynamic = "force-dynamic";
 
-// H03 จัดการสวัสดิการ: HR แก้ตรงไม่ได้ ต้องเสนอผ่านหัวหน้า HR
+// H03 จัดการสวัสดิการ: HR แก้ตรงไม่ได้ ต้องเสนอผ่านหัวหน้า HR · หัวหน้า HR สร้าง แก้ไข ปิดได้ทันที
 export default async function BenefitsPage() {
   const [benefits, proposals, session] = await Promise.all([getHrBenefits(), getOpenProposals(), getSession()]);
   const isHead = await isHrHead(session);

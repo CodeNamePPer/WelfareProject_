@@ -21,6 +21,8 @@ export function BenefitDetailView({
   onEdit,
   openProposalNo = null,
   onProposedClose,
+  isHead = false,
+  reviewHref,
 }: {
   benefit: WelfareItem;
   backHref: string;
@@ -28,6 +30,10 @@ export function BenefitDetailView({
   onEdit?: () => void;
   openProposalNo?: string | null;
   onProposedClose?: () => void;
+  /** หัวหน้า HR แก้ไข/ปิดได้ทันที ไม่ต้องเสนอ */
+  isHead?: boolean;
+  /** หัวหน้า HR: ลิงก์ไปพิจารณาข้อเสนอที่รออยู่ของสวัสดิการนี้ */
+  reviewHref?: string;
 }) {
   const router = useRouter();
   const { notify } = useToast();
@@ -50,7 +56,7 @@ export function BenefitDetailView({
   const submitCloseProposal = async () => {
     if (closing) return;
     if (!closeReason.trim()) {
-      setCloseError('กรุณาระบุเหตุผลที่เสนอปิดรับคำขอสวัสดิการนี้');
+      setCloseError(isHead ? 'กรุณาระบุเหตุผลที่ปิดรับคำขอสวัสดิการนี้' : 'กรุณาระบุเหตุผลที่เสนอปิดรับคำขอสวัสดิการนี้');
       return;
     }
     setClosing(true);
@@ -83,10 +89,10 @@ export function BenefitDetailView({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setCloseError(data.error ?? 'ส่งข้อเสนอปิดสวัสดิการไม่สำเร็จ');
+        setCloseError(data.error ?? (isHead ? 'ปิดรับคำขอสวัสดิการไม่สำเร็จ' : 'ส่งข้อเสนอปิดสวัสดิการไม่สำเร็จ'));
         return;
       }
-      notify(`ส่งข้อเสนอปิดสวัสดิการ ${data.proposalNo ?? ''} ให้หัวหน้า HR พิจารณาแล้ว`);
+      notify(data.direct ? `ปิดรับคำขอสวัสดิการ ${benefit.code} แล้ว` : `ส่งข้อเสนอปิดสวัสดิการ ${data.proposalNo ?? ''} ให้หัวหน้า HR พิจารณาแล้ว`);
       setClosingOpen(false);
       setCloseReason('');
       if (onProposedClose) {
@@ -128,17 +134,18 @@ export function BenefitDetailView({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {openProposalNo ? <Badge tone="review">รออนุมัติ ({openProposalNo})</Badge> : null}
+            {openProposalNo && reviewHref ? <ButtonLink href={reviewHref}>พิจารณาข้อเสนอ</ButtonLink> : null}
             {benefit.status === 'active' ? <Badge tone="approved">เปิดใช้</Badge> : <Badge tone="neutral">ปิดรับคำขอ</Badge>}
             {editHref && !openProposalNo ? (
-              <ButtonLink href={editHref}>เสนอแก้ไขสวัสดิการ</ButtonLink>
+              <ButtonLink href={editHref}>{isHead ? 'แก้ไขสวัสดิการ' : 'เสนอแก้ไขสวัสดิการ'}</ButtonLink>
             ) : onEdit ? (
               <Button onClick={onEdit} disabled={Boolean(openProposalNo)}>
-                {openProposalNo ? 'มีข้อเสนอรออนุมัติ' : 'เสนอแก้ไขสวัสดิการ'}
+                {openProposalNo ? 'มีข้อเสนอรออนุมัติ' : isHead ? 'แก้ไขสวัสดิการ' : 'เสนอแก้ไขสวัสดิการ'}
               </Button>
             ) : null}
             {benefit.status === 'active' && !openProposalNo ? (
               <Button variant="reject" onClick={() => setClosingOpen((prev) => !prev)}>
-                เสนอปิดรับคำขอ
+                {isHead ? 'ปิดรับคำขอ' : 'เสนอปิดรับคำขอ'}
               </Button>
             ) : null}
           </div>
@@ -147,10 +154,16 @@ export function BenefitDetailView({
 
       {closingOpen ? (
         <Card className="flex flex-col gap-3 border-[#FCA5A5] bg-[#FEF2F2] p-5">
-          <h2 className="text-15 font-semibold text-[#991B1B]">เสนอปิดรับคำขอสวัสดิการ {benefit.name} ({benefit.code})</h2>
-          <p className="text-13 text-ink-soft">การปิดใช้สวัสดิการจะส่งเป็นข้อเสนอให้หัวหน้า HR พิจารณาอนุมัติก่อนมีผล</p>
+          <h2 className="text-15 font-semibold text-[#991B1B]">
+            {isHead ? 'ปิดรับคำขอสวัสดิการ' : 'เสนอปิดรับคำขอสวัสดิการ'} {benefit.name} ({benefit.code})
+          </h2>
+          <p className="text-13 text-ink-soft">
+            {isHead
+              ? 'ปิดแล้วมีผลทันที พนักงานจะยื่นคำขอเบิกสวัสดิการนี้ไม่ได้ คำขอที่ยื่นไว้แล้วยังตรวจต่อได้ตามปกติ'
+              : 'การปิดใช้สวัสดิการจะส่งเป็นข้อเสนอให้หัวหน้า HR พิจารณาอนุมัติก่อนมีผล'}
+          </p>
           <Textarea
-            label={<>เหตุผลที่เสนอปิดใช้ <span className="text-[#B3261E]">*</span></>}
+            label={<>{isHead ? 'เหตุผลที่ปิดรับคำขอ' : 'เหตุผลที่เสนอปิดใช้'} <span className="text-[#B3261E]">*</span></>}
             rows={2}
             value={closeReason}
             onChange={(e) => setCloseReason(e.target.value)}
@@ -159,7 +172,7 @@ export function BenefitDetailView({
           />
           <div className="flex flex-wrap gap-2">
             <Button variant="reject" onClick={() => void submitCloseProposal()} disabled={closing}>
-              {closing ? 'กำลังส่งข้อเสนอ...' : 'ส่งข้อเสนอปิดใช้'}
+              {closing ? (isHead ? 'กำลังปิด...' : 'กำลังส่งข้อเสนอ...') : isHead ? 'ยืนยันปิดรับคำขอ' : 'ส่งข้อเสนอปิดใช้'}
             </Button>
             <Button
               variant="quiet"

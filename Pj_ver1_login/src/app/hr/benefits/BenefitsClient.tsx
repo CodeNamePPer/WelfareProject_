@@ -36,7 +36,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
         title="จัดการสวัสดิการ"
         description={
           isHead
-            ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้างสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
+            ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้าง แก้ไข หรือปิดสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
             : 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง'
         }
         actions={<ButtonLink href="/hr/benefits/propose">{isHead ? 'สร้างสวัสดิการใหม่' : 'เสนอสวัสดิการใหม่'}</ButtonLink>}
@@ -45,14 +45,14 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
       <Card aria-labelledby="my-proposals">
         <div className="flex flex-wrap justify-between gap-2 px-5 pt-3.5 pb-2">
           <h2 id="my-proposals" className="text-16 font-semibold">
-            ข้อเสนอของฉัน (สร้าง / แก้ไข / ปิด)
+            {isHead ? 'ข้อเสนอจาก HR และ Admin (สร้าง / แก้ไข / ปิด)' : 'ข้อเสนอของฉัน (สร้าง / แก้ไข / ปิด)'}
           </h2>
-          <span className="text-12 text-muted">ส่งให้หัวหน้า HR อนุมัติ</span>
+          <span className="text-12 text-muted">{isHead ? 'รอคุณพิจารณา' : 'ส่งให้หัวหน้า HR อนุมัติ'}</span>
         </div>
         {proposals === null ? (
           <EmptyState>โหลดข้อเสนอไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</EmptyState>
         ) : proposals.length === 0 ? (
-          <EmptyState>ยังไม่มีข้อเสนอที่รอหัวหน้า HR</EmptyState>
+          <EmptyState>{isHead ? 'ไม่มีข้อเสนอรอพิจารณา' : 'ยังไม่มีข้อเสนอที่รอหัวหน้า HR'}</EmptyState>
         ) : (
           proposals.map((item) => (
             <Link

@@ -320,6 +320,32 @@ export async function createBenefitDirect(input: ProposalInput) {
   return insertBenefit(input);
 }
 
+async function benefitIdOf(code: string | undefined) {
+  if (!code) throw new ProposalError("ไม่พบรหัสสวัสดิการ", undefined, 400);
+  const { data, error } = await supabaseAdmin
+    .from("welfare_benefit")
+    .select("id")
+    .eq("code", code)
+    .is("deleted_at", null)
+    .maybeSingle<{ id: string }>();
+  if (error) throw error;
+  if (!data) throw new ProposalError("ไม่พบสวัสดิการนี้ในระบบ", undefined, 404);
+  return data.id;
+}
+
+/** หัวหน้า HR แก้ไขสวัสดิการเองโดยไม่ต้องเสนอ */
+export async function updateBenefitDirect(code: string | undefined, input: ProposalInput) {
+  validateProposal(input, "submit", "update");
+  const effective = input.effectiveFrom && input.effectiveFrom >= today() ? input.effectiveFrom : today();
+  return applyBenefitUpdate(await benefitIdOf(code), code as string, { ...input, effectiveFrom: effective });
+}
+
+/** หัวหน้า HR ปิดรับคำขอสวัสดิการเองโดยไม่ต้องเสนอ */
+export async function closeBenefitDirect(code: string | undefined, input: ProposalInput) {
+  validateProposal(input, "submit", "close");
+  return applyBenefitClose(await benefitIdOf(code), code as string);
+}
+
 /** หัวหน้า HR ตัดสินข้อเสนอที่รออนุมัติ */
 export async function decideProposal(id: string, decision: "approve" | "needs_info" | "reject", note: string, actorCode: string) {
   const actorId = await uuidOf(actorCode);

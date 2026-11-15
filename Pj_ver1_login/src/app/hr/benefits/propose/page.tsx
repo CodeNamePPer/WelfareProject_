@@ -9,7 +9,11 @@ import { getProposal, getProposalOptions, signedImageUrl, type BudgetType, type 
 import { HrPage } from "@/features/hr/ui";
 import { ProposalForm } from "./ProposalForm";
 
-export const metadata: Metadata = { title: "เสนอสวัสดิการ" };
+export async function generateMetadata(): Promise<Metadata> {
+  const [session, headCode] = await Promise.all([getSession(), getHrHeadCode()]);
+  const isHead = session?.role === "HR" && headCode !== null && session.sub === headCode;
+  return { title: isHead ? "สวัสดิการ" : "เสนอสวัสดิการ" };
+}
 export const dynamic = "force-dynamic";
 
 const BUDGET_DB: Record<string, BudgetType> = {
@@ -18,7 +22,7 @@ const BUDGET_DB: Record<string, BudgetType> = {
   ต่อครั้ง: "per_claim",
 };
 
-// H04 ฟอร์มเสนอสวัสดิการ 4 ขั้น + พรีวิว · ?draft=<id> แก้ฉบับร่าง · ?edit=<code > เสนอแก้ไขสวัสดิการที่มีอยู่
+// H04 ฟอร์มเสนอสวัสดิการ 4 ขั้น + พรีวิว · ?draft=<id> แก้ฉบับร่าง · ?edit=<code> เสนอแก้ไข (หัวหน้า HR แก้ได้ทันที)
 export default async function ProposePage({ searchParams }: { searchParams: Promise<{ draft?: string; edit?: string }> }) {
   const [session, headCode, options, employees, params] = await Promise.all([
     getSession(),
@@ -75,7 +79,7 @@ export default async function ProposePage({ searchParams }: { searchParams: Prom
   return (
     <HrPage>
       <ProposalForm
-        mode={isHead && kind === "create" ? "direct" : "propose"}
+        mode={isHead ? "direct" : "propose"}
         kind={kind}
         benefitCode={benefitCode}
         levels={options.levels}
