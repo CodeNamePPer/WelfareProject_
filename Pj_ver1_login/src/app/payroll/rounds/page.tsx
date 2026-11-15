@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { getFinanceData } from "@/lib/payroll/finance";
 import { thaiDate, thaiDayMonth } from "@/lib/claims/requester";
-import { DEFAULT_PAY_SETTINGS, monthOffsetLabel } from "@/features/payroll/lib/pay-settings";
+import { DEFAULT_PAY_SETTINGS, resolvePayDate } from "@/features/payroll/lib/pay-settings";
+import { parseRoundKey } from "@/lib/payroll/finance";
 import { HrPage } from "@/features/hr/ui";
 import { RoundsClient, type RoundRow } from "./RoundsClient";
 
@@ -24,8 +25,16 @@ export default async function RoundsPage() {
     .sort((a, b) => b.payDate.localeCompare(a.payDate))
     .slice(0, PAST_ROUNDS);
 
-  const rows: RoundRow[] = [...upcoming, ...past].map((round) => ({
+  const toRow = (round: (typeof all)[number]): RoundRow => {
+    const parsed = parseRoundKey(round.key);
+    const scheduled = parsed ? resolvePayDate(parsed.year, parsed.month, parsed.roundNo, data.settings) : round.payDate;
+    return {
     key: round.key,
+    year: parsed?.year ?? 0,
+    month: parsed?.month ?? 0,
+    roundNo: parsed?.roundNo ?? 1,
+    scheduled: thaiDate(scheduled),
+    moved: scheduled !== round.payDate,
     label: round.label,
     period: round.period,
     payDate: thaiDate(round.payDate),
@@ -36,7 +45,8 @@ export default async function RoundsPage() {
     state: round.state,
     people: new Set(data.claims.filter((item) => item.roundKey === round.key && (item.claim.status === "pending_finance" || item.claim.status === "awaiting_payment")).map((item) => item.person.code)).size,
     canReschedule: round.state !== "paid" && round.payDate >= data.today,
-  }));
+    };
+  };
 
   const settings = data.settings;
   return (
@@ -49,8 +59,8 @@ export default async function RoundsPage() {
           round2MonthOffset: settings.round2MonthOffset,
           cutoffDays: settings.cutoffDays ?? DEFAULT_PAY_SETTINGS.cutoffDays ?? 5,
         }}
-        offsetLabels={{ round1: `ของ${monthOffsetLabel(settings.round1MonthOffset)}`, round2: `ของ${monthOffsetLabel(settings.round2MonthOffset)}` }}
-        rows={rows}
+        upcoming={upcoming.map(toRow)}
+        past={past.map(toRow)}
         today={data.today}
       />
     </HrPage>
