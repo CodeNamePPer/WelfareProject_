@@ -167,7 +167,7 @@ export async function listProposalAuditEntries(limit = 200): Promise<import("../
           target: {
             code: row.proposal.proposal_no,
             name: benefitTitle,
-            href: `/admin/benefits?tab=proposals&proposal=${row.proposal.id}`,
+            href: `/admin/benefits/proposals/${row.proposal.id}`,
           },
           change: row.note ? { fields: [], reason: row.note } : undefined,
         },

@@ -39,6 +39,10 @@ export type ProfileData = {
   childrenCount: number | null;
   pendingEditRequest: boolean;
   notifications: Record<string, { inApp: boolean; email: boolean }>;
+  /** หน้าโปรไฟล์ของ Admin ส่งสิทธิ์ เรื่องที่แจ้ง และหมายเหตุข้อมูลติดต่อของตัวเองมา (ไม่ส่ง = ของ HR / หัวหน้า HR) */
+  rights?: string[];
+  topics?: [string, string, string][];
+  contactNote?: string;
 };
 
 const TABS = ['ข้อมูลส่วนตัว', 'การทำงานและสิทธิ์', 'สวัสดิการของฉัน', 'ความปลอดภัย', 'การแจ้งเตือน'] as const;
@@ -112,8 +116,8 @@ export function ProfileClient({ data }: { data: ProfileData }) {
     refs.current[next]?.focus();
     setTab(next);
   };
-  const rights = data.head ? [...HEAD_RIGHTS, ...(data.directReports > 0 ? [`ยื่นคำขอแทนคนในแผนก (${data.directReports} คน)`] : [])] : HR_RIGHTS;
-  const topics = data.head ? HEAD_TOPICS : HR_TOPICS;
+  const rights = data.rights ?? (data.head ? [...HEAD_RIGHTS, ...(data.directReports > 0 ? [`ยื่นคำขอแทนคนในแผนก (${data.directReports} คน)`] : [])] : HR_RIGHTS);
+  const topics = data.topics ?? (data.head ? HEAD_TOPICS : HR_TOPICS);
   const router = useRouter();
   const { notify } = useToast();
 
@@ -243,7 +247,7 @@ export function ProfileClient({ data }: { data: ProfileData }) {
               </div>
             </Card>
             <Card className="p-5">
-              <SectionTitle title="ข้อมูลติดต่อ" note={`${data.head ? '' : 'HR '}แก้ข้อมูลตัวเองไม่ได้ ส่งคำขอให้ HR คนอื่นตรวจ`} />
+              <SectionTitle title="ข้อมูลติดต่อ" note={data.contactNote ?? `${data.head ? '' : 'HR '}แก้ข้อมูลตัวเองไม่ได้ ส่งคำขอให้ HR คนอื่นตรวจ`} />
               <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                 <Input label="โทรศัพท์" value={contact.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} readOnly={data.pendingEditRequest} />
                 <Input label="ผู้ติดต่อฉุกเฉิน" value={contact.emergency_contact_name} onChange={(event) => setContact({ ...contact, emergency_contact_name: event.target.value })} readOnly={data.pendingEditRequest} />

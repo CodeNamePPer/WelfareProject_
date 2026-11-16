@@ -148,7 +148,7 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
           detail: fields.length > 0 ? fields.map((f) => WELFARE_FIELD_LABELS[f] ?? f).join(', ') : (row.detail ?? ''),
           category: 'settings' as AuditCategory,
           action: 'welfare',
-          target: row.targetId ? { code: row.targetId, name: row.detail, href: `/admin/benefits?item=${row.targetId}` } : undefined,
+          target: row.targetId ? { code: row.targetId, name: row.detail, href: `/admin/benefits/${encodeURIComponent(row.targetId)}` } : undefined,
           change: {
             fields: fields.map((f) => ({
               label: WELFARE_FIELD_LABELS[f] ?? f,

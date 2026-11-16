@@ -20,11 +20,13 @@ export function ReviseClient({
   request,
   levels,
   onSuccess,
+  returnHref = '/hr/benefits',
 }: {
   proposal: { id: string; input: ProposalInput };
   request: { by: string; at: string; note: string } | null;
   levels: Level[];
   onSuccess?: () => void;
+  returnHref?: string;
 }) {
   const router = useRouter();
   const { notify } = useToast();
@@ -63,7 +65,7 @@ export function ReviseClient({
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push('/hr/benefits');
+        router.push(returnHref);
         router.refresh();
       }
     } catch {

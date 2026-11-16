@@ -398,7 +398,7 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
     const word = decision === "approve" ? "อนุมัติแล้ว" : decision === "needs_info" ? "ขอข้อมูลเพิ่ม" : "ไม่อนุมัติ";
     emailHr(
       "proposal_decided",
-      { subject: `ข้อเสนอสวัสดิการ ${detail.proposalNo}: หัวหน้า HR ${word}`, lines: [`${detail.proposalNo} ${detail.input.name || ""}`.trim(), `ผล: ${word}`, ...(note.trim() ? [`ข้อความ: ${note.trim()}`] : [])], path: `/hr/benefits/proposals/${id}` },
+      { subject: `ข้อเสนอสวัสดิการ ${detail.proposalNo}: หัวหน้า HR ${word}`, lines: [`${detail.proposalNo} ${detail.input.name || ""}`.trim(), `ผล: ${word}`, ...(note.trim() ? [`ข้อความ: ${note.trim()}`] : [])], path: `${detail.proposerRole === "SUPER_ADMIN" ? "/admin" : "/hr"}/benefits/proposals/${id}` },
       { only: [detail.proposerCode] },
     );
   }

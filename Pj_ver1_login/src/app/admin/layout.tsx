@@ -7,6 +7,9 @@ import { NavigationProgress } from "@/components/ui/NavigationProgress";
 import { ShortcutFab } from "@/features/shortcuts/ShortcutFab";
 import { countUnread, getAdminAlerts } from "@/lib/admin/alerts";
 import { ROLE_LABELS } from "@/lib/auth/roles";
+import { AdminContent } from "@/features/admin/AdminContent";
+// หน้าที่ Role อื่นมีเหมือนกันใช้ดีไซน์ C แบบ HR (ดู AdminContent)
+import "../hr/hr.css";
 
 // Shared by every Admin page: sidebar (with the signed-in user) + toast + floating shortcut button.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -25,7 +28,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <NavigationProgress />
       <AppShell notificationCount={unread} user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}>
         {/* pb-[72px] เว้นที่ท้ายทุกหน้าไม่ให้ปุ่มทางลัดบังเนื้อหาส่วนล่าง */}
-        <div className="pb-[72px]">{children}</div>
+        <AdminContent>{children}</AdminContent>
       </AppShell>
       <ShortcutFab notificationCount={unread} />
     </ToastProvider>

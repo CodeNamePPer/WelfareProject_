@@ -150,3 +150,15 @@ export function activeNavId(section: NavSection, pathname: string | null): strin
   if (!pathname.startsWith(basePath + '/')) return '';
   return pathname.slice(basePath.length + 1).split('/')[0] ?? '';
 }
+
+// หน้าของ Admin ที่ Role อื่นมีเหมือนกัน (แจ้งเตือน สวัสดิการ ประวัติ โปรไฟล์) ใช้ดีไซน์ C แบบ HR
+// หน้าแรกและตั้งค่าผู้ใช้ของ Admin มีเฉพาะ Admin จึงคงแบบ Figma
+const ADMIN_DESIGN_C = ['/admin/notifications', '/admin/benefits', '/admin/logs', '/admin/profile'];
+
+// คำขอเบิกทั้งหมดมีเฉพาะ Admin (ตาราง Figma เดิม) จึงไม่ใช้ดีไซน์ C
+const ADMIN_FIGMA = ['/admin/benefits/claims'];
+
+export function isAdminDesignC(pathname: string | null): boolean {
+  if (ADMIN_FIGMA.some((path) => pathname === path || Boolean(pathname?.startsWith(`${path}/`)))) return false;
+  return ADMIN_DESIGN_C.some((path) => pathname === path || Boolean(pathname?.startsWith(`${path}/`)));
+}
