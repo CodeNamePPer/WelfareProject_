@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { cx } from '@/lib/cx';
 import { BenefitThumb } from '@/features/requester/ui';
 import type { ProposalStatus, ProposalSummary } from '@/lib/hr/proposals';
@@ -25,7 +25,20 @@ const PROPOSAL_BADGE: Record<ProposalStatus, { label: string; tone: BadgeTone }>
 };
 const ROLE_LABEL = { HR: 'HR', SUPER_ADMIN: 'Admin' } as const;
 
-export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]; proposals: ProposalSummary[] | null; isHead: boolean }) {
+// base: /hr หรือ /admin (Admin ใช้หน้าเดียวกัน เสนอผ่านหัวหน้า HR เหมือน HR) · extraActions: ปุ่มเพิ่มของ Admin
+export function BenefitsClient({
+  rows,
+  proposals,
+  isHead,
+  base = '/hr',
+  extraActions,
+}: {
+  rows: BenefitRow[];
+  proposals: ProposalSummary[] | null;
+  isHead: boolean;
+  base?: '/hr' | '/admin';
+  extraActions?: ReactNode;
+}) {
   const [tab, setTab] = useState<Tab>('active');
   const active = rows.filter((row) => row.active).length;
   const shown = rows.filter((row) => tab === 'all' || (tab === 'active' ? row.active : !row.active));
@@ -39,7 +52,12 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
             ? 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · หัวหน้า HR สร้าง แก้ไข หรือปิดสวัสดิการได้ทันที ข้อเสนอจาก HR อนุมัติที่เมนูอนุมัติสวัสดิการใหม่'
             : 'ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง'
         }
-        actions={<ButtonLink href="/hr/benefits/propose">{isHead ? 'สร้างสวัสดิการใหม่' : 'เสนอสวัสดิการใหม่'}</ButtonLink>}
+        actions={
+          <>
+            {extraActions}
+            <ButtonLink href={`${base}/benefits/propose`}>{isHead ? 'สร้างสวัสดิการใหม่' : 'เสนอสวัสดิการใหม่'}</ButtonLink>
+          </>
+        }
       />
 
       <Card aria-labelledby="my-proposals">
@@ -57,7 +75,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
           proposals.map((item) => (
             <Link
               key={item.id}
-              href={isHead && item.status === 'pending' ? `/hr/proposals/${item.id}` : `/hr/benefits/proposals/${item.id}`}
+              href={isHead && item.status === 'pending' ? `/hr/proposals/${item.id}` : `${base}/benefits/proposals/${item.id}`}
               className="flex items-center justify-between gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline hover:bg-surface"
             >
               <span className="min-w-0">
@@ -102,7 +120,7 @@ export function BenefitsClient({ rows, proposals, isHead }: { rows: BenefitRow[]
               {shown.map((row) => (
                 <Link
                   key={row.code}
-                  href={`/hr/benefits/${encodeURIComponent(row.code)}`}
+                  href={`${base}/benefits/${encodeURIComponent(row.code)}`}
                   className={cx('grid items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline transition-colors hover:bg-surface motion-reduce:transition-none', COLS)}
                 >
                   <BenefitThumb category={row.category} imageUrl={row.imageUrl} className="h-12 w-16 rounded-[6px]" />

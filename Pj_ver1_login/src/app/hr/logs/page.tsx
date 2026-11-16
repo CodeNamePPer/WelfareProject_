@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getHrLog } from "@/lib/hr/logs";
 import { HrPage } from "@/features/hr/ui";
-import { LogClient } from "./LogClient";
+import { LogClient } from "@/features/hr/LogClient";
 
 export const metadata: Metadata = { title: "ประวัติการแก้ไข" };
 export const dynamic = "force-dynamic";

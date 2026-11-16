@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import type { SidebarUser } from './Sidebar';
-import { activeNavId, type NavSection } from './navigation';
+import { activeNavId, isAdminDesignC, type NavSection } from './navigation';
 import { useToast } from '../ui/Toast';
 import { cx } from '../../lib/cx';
 
@@ -36,14 +36,17 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
     if (window.matchMedia('(max-width: 1023px)').matches) setCollapsed(true);
   }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const adminDesignC = section === 'admin' && isAdminDesignC(pathname);
+  const designC = DESIGN_C.includes(section) || adminDesignC;
+  const hrColumn = HR_COLUMN.includes(section) || adminDesignC;
 
   return (
     // ส่วนที่สร้างจากดีไซน์ "แบบ C" (ผู้ส่งคำขอและ HR): ระยะห่างเท่าดีไซน์ (ดู tailwind.config.ts) และพื้นหลัง #F3F4F6
     // data-nav: หน้าย่อยใช้ group-data-[nav=collapsed]/shell:max-w-none เพื่อขยายเต็มเมื่อย่อเมนู
     <div
       data-nav={collapsed ? 'collapsed' : 'expanded'}
-      className={cx('group/shell min-h-screen', DESIGN_C.includes(section) && 'bg-[#F3F4F6]')}
-      style={DESIGN_C.includes(section) ? ({ '--sp': 'calc(1rem * 16 / 14)' } as CSSProperties) : undefined}
+      className={cx('group/shell min-h-screen', designC && 'bg-[#F3F4F6]')}
+      style={designC ? ({ '--sp': 'calc(1rem * 16 / 14)' } as CSSProperties) : undefined}
     >
       <Sidebar
         section={section}
@@ -85,8 +88,8 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
           className={cx(
             'mx-auto w-full px-4 py-6 sm:px-6 lg:px-8',
             // ดีไซน์แบบ C เว้นขอบบน 24px ล่าง 40px ส่วน Admin คง 32px เดิม
-            DESIGN_C.includes(section) ? 'lg:pb-10' : 'lg:py-8',
-            collapsed ? 'max-w-none' : HR_COLUMN.includes(section) ? 'max-w-[1140px]' : 'max-w-[1440px]',
+            designC ? 'lg:pb-10' : 'lg:py-8',
+            collapsed ? 'max-w-none' : hrColumn ? 'max-w-[1140px]' : 'max-w-[1440px]',
           )}
         >
           {children}

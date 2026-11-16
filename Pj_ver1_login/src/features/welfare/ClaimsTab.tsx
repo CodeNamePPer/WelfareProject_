@@ -304,7 +304,7 @@ export function ClaimDetailPage({ claim, claims, employees }: { claim: Claim; cl
 
   return (
     <div className="flex flex-col gap-[12px]">
-      <Breadcrumb items={[{ label: 'คำขอเบิก', href: '/admin/benefits?tab=claims' }, { label: claim.code }]} />
+      <Breadcrumb items={[{ label: 'คำขอเบิก', href: '/admin/benefits/claims' }, { label: claim.code }]} />
       <div className="rounded-[10px] border border-line bg-white">
         <ClaimPanel claim={claim} employeeName={employee?.name ?? claim.employeeId} department={employee?.department ?? null} usedThisYear={usedThisYear} />
       </div>

@@ -18,6 +18,8 @@ export type HrEmailTopic =
   | "hr_claim_pending"
   | "my_claim_status";
 
+const ADMIN_TOPICS: HrEmailTopic[] = ["proposal_decided", "my_claim_status"];
+
 type Message = { subject: string; lines: string[]; path: string };
 
 type Recipient = { code: string; email: string };
@@ -44,7 +46,9 @@ async function recipientsFor(topic: HrEmailTopic): Promise<Recipient[]> {
   return (data ?? []).flatMap(({ employee }) => {
     const email = deliverableEmail(employee.email);
     const isHr = employee.roles.some((row) => !row.revoked_at && row.role?.code === "HR" && row.role.is_active);
-    return email && isHr && !employee.deleted_at && employee.employment_status === "active" ? [{ code: employee.employee_code, email }] : [];
+    // Admin เลือกรับได้เฉพาะเรื่องในโปรไฟล์ของ Admin (ผลข้อเสนอ สถานะคำขอของตัวเอง)
+    const isAdmin = ADMIN_TOPICS.includes(topic) && employee.roles.some((row) => !row.revoked_at && row.role?.code === "SUPER_ADMIN" && row.role.is_active);
+    return email && (isHr || isAdmin) && !employee.deleted_at && employee.employment_status === "active" ? [{ code: employee.employee_code, email }] : [];
   });
 }
 

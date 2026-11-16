@@ -166,7 +166,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         )}
       </SummaryCard>
 
-      <SummaryCard label="คำขอรอ HR ตรวจ" href="/admin/benefits?tab=claims">
+      <SummaryCard label="คำขอรอ HR ตรวจ" href="/admin/benefits/claims">
         <span className="flex items-center justify-between gap-[8px]">
           <Headline
             value={hrQueue?.pending ?? null}
