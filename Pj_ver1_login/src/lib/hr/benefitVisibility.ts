@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
+import { signBenefitImages } from "@/lib/benefitImages";
 
 // การแสดงสวัสดิการที่ใช้ไม่ได้ (ดีไซน์ HH3) คอลัมน์ welfare_benefit.unavailable_display
 //   faded = พนักงานเห็นเป็นการ์ดสีเทา ยื่นคำขอไม่ได้ · hidden = ซ่อนจากพนักงาน
@@ -15,11 +16,12 @@ type BenefitRow = {
   category: string | null;
   is_active: boolean;
   unavailable_display: UnavailableDisplay;
+  image_path: string | null;
 };
 
 async function loadBenefits() {
   const [benefits, limits, restrictions] = await Promise.all([
-    supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, category, is_active, unavailable_display").is("deleted_at", null).order("code").returns<BenefitRow[]>(),
+    supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, category, is_active, unavailable_display, image_path").is("deleted_at", null).order("code").returns<BenefitRow[]>(),
     supabaseAdmin.from("v_welfare_benefit_current").select("id, current_amount").returns<{ id: string; current_amount: number | string | null }[]>(),
     supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department_id, department:department_id(name_th)").returns<{ benefit_id: string; department_id: string; department: { name_th: string } | null }[]>(),
   ]);
@@ -66,7 +68,7 @@ export async function setUnavailableDisplay(code: string, display: UnavailableDi
   if (!data) throw new Error("benefit not found");
 }
 
-export type FadedBenefit = { code: string; name: string; category: string; description: string | null; reason: string };
+export type FadedBenefit = { code: string; name: string; category: string; description: string | null; reason: string; imageUrl: string | null };
 
 /** หน้าสิทธิ์สวัสดิการของพนักงาน: สวัสดิการที่คนนี้ใช้ไม่ได้และตั้งให้แสดงเป็นสีเทา (ไม่รวมที่ใช้ได้อยู่แล้ว) */
 export async function getFadedBenefitsFor(employeeCode: string, usableCodes: string[]): Promise<FadedBenefit[]> {
@@ -80,8 +82,9 @@ export async function getFadedBenefitsFor(employeeCode: string, usableCodes: str
     const { benefits, limitOf, departments } = await loadBenefits();
     const usable = new Set(usableCodes);
     const mine = [employee?.department_id, employee?.department?.parent_department_id].filter(Boolean) as string[];
-    return benefits.flatMap((benefit) => {
-      if (usable.has(benefit.code) || benefit.unavailable_display !== "faded") return [];
+    const shown = benefits.filter((benefit) => !usable.has(benefit.code) && benefit.unavailable_display === "faded");
+    const images = await signBenefitImages(shown.map((benefit) => benefit.image_path));
+    return shown.flatMap((benefit) => {
       const restricted = departments.get(benefit.id);
       const reason = !benefit.is_active
         ? "ปิดรับคำขอปีนี้"
@@ -90,7 +93,7 @@ export async function getFadedBenefitsFor(employeeCode: string, usableCodes: str
           : restricted && !restricted.ids.some((id) => mine.includes(id))
             ? `เฉพาะ ${restricted.names.join(", ") || "แผนกที่กำหนด"}`
             : "คุณไม่มีสิทธิ์ใช้สวัสดิการนี้";
-      return [{ code: benefit.code, name: benefit.name_th, category: benefit.category ?? "อื่น ๆ", description: benefit.description, reason }];
+      return [{ code: benefit.code, name: benefit.name_th, category: benefit.category ?? "อื่น ๆ", description: benefit.description, reason, imageUrl: benefit.image_path ? (images.get(benefit.image_path) ?? null) : null }];
     });
   } catch (err) {
     console.error("[welfare] faded benefits failed", err);

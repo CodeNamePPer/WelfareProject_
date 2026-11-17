@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getHrBenefits } from "@/lib/hr/benefits";
+import { signBenefitImages } from "@/lib/benefitImages";
 import { getAllProposals } from "@/lib/hr/proposals";
 import { getSession } from "@/lib/auth/get-session";
 import { isHrHead } from "@/lib/hr/hrHead";
@@ -25,6 +26,9 @@ export async function BenefitDetailScreen({ code, base }: { code: string; base: 
   const benefit = benefits.find((item) => item.code === decodedCode);
   if (!benefit) notFound();
 
+  const images = await signBenefitImages([benefit.imagePath]);
+  const imageUrl = benefit.imagePath ? (images.get(benefit.imagePath) ?? null) : null;
+
   const openProposal = (proposals ?? []).find(
     (p) => p.benefitCode === benefit.code && (p.status === "draft" || p.status === "pending" || p.status === "needs_info"),
   );
@@ -33,6 +37,7 @@ export async function BenefitDetailScreen({ code, base }: { code: string; base: 
     <HrPage>
       <BenefitDetailView
         benefit={benefit}
+        imageUrl={imageUrl}
         backHref={`${base}/benefits`}
         editHref={`${base}/benefits/propose?edit=${encodeURIComponent(benefit.code)}`}
         openProposalNo={openProposal?.proposalNo ?? null}
