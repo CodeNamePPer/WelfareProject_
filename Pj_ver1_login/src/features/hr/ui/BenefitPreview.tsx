@@ -29,11 +29,11 @@ export function BenefitPreview({
     <article className={cx('overflow-hidden rounded-[8px] border border-line bg-white', className)}>
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- รูปจาก storage ผ่านลิงก์ชั่วคราว
-        <img src={imageUrl} alt={`รูปประกอบ: ${name || 'สวัสดิการ'}`} className="h-[150px] w-full object-cover" />
+        <img src={imageUrl} alt={`รูปประกอบ: ${name || 'สวัสดิการ'}`} className="aspect-[16/9] w-full object-cover" />
       ) : category ? (
-        <BenefitThumb category={category} className="h-[150px] w-full" />
+        <BenefitThumb category={category} className="aspect-[16/9] w-full" />
       ) : (
-        <div role="img" aria-label="ยังไม่มีรูปประกอบ" className="flex h-[150px] flex-col items-center justify-center gap-1.5 bg-mist text-11 text-muted">
+        <div role="img" aria-label="ยังไม่มีรูปประกอบ" className="flex aspect-[16/9] w-full flex-col items-center justify-center gap-1.5 bg-mist text-11 text-muted">
           <ImageIcon className="size-7" strokeWidth={1.5} aria-hidden="true" />
           [รูปประกอบสวัสดิการ]
         </div>
