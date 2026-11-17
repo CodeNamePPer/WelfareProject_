@@ -167,9 +167,14 @@ export function BenefitPicker({
                         : 'border border-line bg-white text-ink hover:border-primary-300',
                   )}
                 >
-                  <span aria-hidden="true" className={cx('flex h-[88px] items-center justify-center rounded-md text-slate-400', reason ? 'bg-[#EEF1F5]' : 'bg-mist')}>
-                    <ImageIcon className="size-6" strokeWidth={1.5} />
-                  </span>
+                  {benefit.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- signed URL จาก Supabase Storage
+                    <img src={benefit.imageUrl} alt="" loading="lazy" className={cx('block h-[88px] w-full rounded-md bg-mist object-cover', reason && 'opacity-50 grayscale')} />
+                  ) : (
+                    <span aria-hidden="true" className={cx('flex h-[88px] items-center justify-center rounded-md text-slate-400', reason ? 'bg-[#EEF1F5]' : 'bg-mist')}>
+                      <ImageIcon className="size-6" strokeWidth={1.5} />
+                    </span>
+                  )}
                   <span className="mt-2 block text-12 text-muted">
                     {benefit.code} · {benefit.category}
                   </span>
