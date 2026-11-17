@@ -58,9 +58,13 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
         <>
             <PageHead crumbs={[{ label: "สิทธิ์สวัสดิการ", href: "/employee/welfare" }, { label: benefit.name }]} title={benefit.name} description={`${benefit.code} · ${benefit.category}`} />
 
-            <Sheet className="flex flex-wrap overflow-hidden">
-                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="min-h-[200px] flex-[1_1_420px] lg:min-h-[320px]" />
-                <div className="flex flex-[1_1_380px] flex-col gap-3 p-6">
+            <Sheet className="flex flex-col overflow-hidden md:flex-row">
+                <BenefitThumb
+                    category={benefit.category}
+                    imageUrl={benefit.imageUrl}
+                    className="h-[180px] w-full md:h-auto md:min-h-[240px] md:w-[340px] lg:w-[380px]"
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-3 p-6">
                     <div>
                         <Pill tone={canClaim ? "green" : "slate"}>{canClaim ? "มีสิทธิ์" : outOfClaims ? "ครบจำนวนครั้งแล้ว" : "ใช้วงเงินครบแล้ว"}</Pill>
                     </div>
