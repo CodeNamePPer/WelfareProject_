@@ -1,8 +1,8 @@
 ﻿'use client';
 
 import { useNavTransition } from '@/lib/useNavTransition';
-import { useRef, useState } from 'react';
-import { Image as ImageIcon, Lock, Upload } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FileText, Image as ImageIcon, Lock, Upload, X } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
@@ -17,7 +17,8 @@ export type WithdrawInitial = {
     note: string;
     receiptNo: string;
     receiptDate: string;
-    attachments: string[];
+    /** ไฟล์ที่แนบไว้แล้ว src เปิดผ่าน API ที่ตรวจสิทธิ์ก่อนออกลิงก์ชั่วคราว */
+    attachments: { name: string; src: string; isImage: boolean }[];
     revisionNote: string | null;
     /** คำขอนี้ยื่นเป็นเบิกล่วงหน้า */
     isAdvance: boolean;
@@ -548,19 +549,12 @@ export default function WithdrawClient({
                             <input id="claim-files" ref={fileInput} type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="sr-only" onChange={(e) => addFiles(e.target.files)} />
                         </label>
                         {(initial?.attachments.length ?? 0) + files.length > 0 ? (
-                            <ul className="flex flex-col gap-1.5 text-13">
-                                {initial?.attachments.map((name) => (
-                                    <li key={name} className="rounded-lg border border-line px-3 py-2 text-ink-soft">
-                                        {name} <span className="text-muted">· แนบไว้แล้ว</span>
-                                    </li>
+                            <ul aria-label="ไฟล์ที่แนบ" className="grid grid-cols-2 gap-3 text-13 sm:grid-cols-3 md:grid-cols-4">
+                                {initial?.attachments.map((file) => (
+                                    <AttachmentTile key={file.src} name={file.name} src={file.src} isImage={file.isImage} meta="แนบไว้แล้ว" />
                                 ))}
                                 {files.map((file, index) => (
-                                    <li key={`${file.name}-${index}`} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
-                                        <span className="min-w-0 truncate">{file.name}</span>
-                                        <button type="button" className="shrink-0 text-primary-600 hover:underline" onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}>
-                                            นำออก
-                                        </button>
-                                    </li>
+                                    <NewAttachmentTile key={`${file.name}-${file.lastModified}-${index}`} file={file} onRemove={() => setFiles((current) => current.filter((_, i) => i !== index))} />
                                 ))}
                             </ul>
                         ) : null}
@@ -568,7 +562,7 @@ export default function WithdrawClient({
                         <ul className="flex flex-col gap-1.5 text-13">
                             {documents.map((name) => (
                                 <li key={name} className="flex items-center gap-2">
-                                    <span aria-hidden="true" className="size-4 shrink-0 rounded border-[1.5px] border-slate-300" />
+                                    <FileText className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
                                     {name}
                                 </li>
                             ))}
@@ -634,4 +628,52 @@ export default function WithdrawClient({
             />
         </>
     );
+}
+
+const fileSize = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`);
+
+/** การ์ดไฟล์แนบ: รูปแสดงตัวอย่าง ไฟล์อื่น (PDF) แสดงไอคอน กดที่ตัวอย่างเพื่อเปิดไฟล์เต็ม */
+function AttachmentTile({ name, src, isImage, meta, onRemove }: { name: string; src: string | null; isImage: boolean; meta: string; onRemove?: () => void }) {
+    return (
+        <li className="relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-line bg-white">
+            <a href={src ?? undefined} target="_blank" rel="noreferrer" aria-label={`เปิดไฟล์ ${name}`} className="block h-[104px] bg-mist">
+                {isImage && src ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- ตัวอย่างไฟล์ในเครื่องหรือลิงก์ชั่วคราวจาก storage
+                    <img src={src} alt="" className="size-full object-cover" />
+                ) : (
+                    <span className="flex size-full flex-col items-center justify-center gap-1 text-muted">
+                        <FileText className="size-7" strokeWidth={1.5} aria-hidden="true" />
+                        <span className="text-11 font-semibold uppercase">{name.split('.').pop()}</span>
+                    </span>
+                )}
+            </a>
+            <span className="flex flex-col px-2.5 py-2">
+                <span className="truncate font-medium text-ink" title={name}>
+                    {name}
+                </span>
+                <span className="text-12 text-muted">{meta}</span>
+            </span>
+            {onRemove ? (
+                <button
+                    type="button"
+                    onClick={onRemove}
+                    aria-label={`นำ ${name} ออก`}
+                    className="absolute top-1.5 right-1.5 flex size-7 items-center justify-center rounded-full bg-white/90 text-ink-soft shadow-[0_1px_2px_rgba(15,23,42,.2)] hover:bg-white hover:text-ink"
+                >
+                    <X className="size-4" aria-hidden="true" />
+                </button>
+            ) : null}
+        </li>
+    );
+}
+
+/** ไฟล์ที่เพิ่งเลือก ยังไม่อัปโหลด ใช้ลิงก์ในเครื่องเพื่อแสดงตัวอย่าง */
+function NewAttachmentTile({ file, onRemove }: { file: File; onRemove: () => void }) {
+    const [src, setSrc] = useState<string | null>(null);
+    useEffect(() => {
+        const url = URL.createObjectURL(file);
+        setSrc(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
+    return <AttachmentTile name={file.name} src={src} isImage={file.type.startsWith('image/')} meta={fileSize(file.size)} onRemove={onRemove} />;
 }

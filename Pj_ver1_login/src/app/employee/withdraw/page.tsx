@@ -41,7 +41,11 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
         note: claim.note ?? "",
         receiptNo: receipt?.receiptNo ?? "",
         receiptDate: receipt?.receiptDate ?? "",
-        attachments: claim.attachments.map((file) => file.fileName),
+        attachments: claim.attachments.map((file) => ({
+          name: file.fileName,
+          src: `/api/claims/attachments/${file.id}`,
+          isImage: Boolean(file.mimeType?.startsWith("image/")),
+        })),
         isAdvance: claim.isAdvance,
         revisionNote: claim.status === "needs_revision" ? ([...claim.events].reverse().find((event) => event.kind === "revision_requested")?.note ?? null) : null,
       };
