@@ -1,5 +1,8 @@
 // ชนิดข้อมูลคำขอเบิกที่ใช้ได้ทั้ง server และ client
 
+/** ค่ากลางของระบบเมื่อสวัสดิการไม่ได้กำหนด advance_receipt_days */
+export const DEFAULT_ADVANCE_RECEIPT_DAYS = 30;
+
 export type ClaimDbStatus =
   | "draft"
   | "pending_hr"

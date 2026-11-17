@@ -1,4 +1,5 @@
 import type { BudgetType, ProposalDetail, ProposalStatus } from "@/lib/hr/proposals";
+import { DEFAULT_ADVANCE_RECEIPT_DAYS } from "@/lib/claims/types";
 import { Card, type BadgeTone } from "@/features/hr/ui";
 
 const BUDGET_LABEL: Record<BudgetType, string> = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
@@ -37,7 +38,7 @@ export function ProposalFacts({ proposal }: { proposal: ProposalDetail }) {
     { label: "มีผล", value: thaiDate(input.effectiveFrom || null) },
     { label: "ครอบครัว", value: input.allowFamily ? "เบิกได้" : "ไม่ได้" },
     { label: "ส่วนเกินประกัน", value: input.allowInsurance ? "เบิกได้" : "ไม่ได้" },
-    { label: "เบิกล่วงหน้า", value: input.allowAdvance ? "เบิกได้" : "ไม่ได้" },
+    { label: "เบิกล่วงหน้า", value: input.allowAdvance ? `เบิกได้ · แนบใบเสร็จใน ${input.advanceReceiptDays ?? DEFAULT_ADVANCE_RECEIPT_DAYS} วัน` : "ไม่ได้" },
   ];
   return (
     <Card className="p-5">

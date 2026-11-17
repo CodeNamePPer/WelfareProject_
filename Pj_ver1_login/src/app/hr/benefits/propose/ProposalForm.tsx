@@ -4,6 +4,7 @@ import { useNavTransition } from '@/lib/useNavTransition';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Check, ImageIcon, Plus, X } from 'lucide-react';
 import { cx } from '@/lib/cx';
+import { DEFAULT_ADVANCE_RECEIPT_DAYS } from '@/lib/claims/types';
 import { useToast } from '@/components/ui/Toast';
 import type { BudgetType, ProposalInput } from '@/lib/hr/proposals';
 import { Avatar, BenefitPreview, Button, Card, Input, PageHeader, Select, Textarea, fieldClass, labelClass } from '@/features/hr/ui';
@@ -122,6 +123,7 @@ export function ProposalForm({
   const [allowFamily, setAllowFamily] = useState(start?.allowFamily ?? false);
   const [allowInsurance, setAllowInsurance] = useState(start?.allowInsurance ?? false);
   const [allowAdvance, setAllowAdvance] = useState(start?.allowAdvance ?? false);
+  const [receiptDays, setReceiptDays] = useState(String(start?.advanceReceiptDays ?? DEFAULT_ADVANCE_RECEIPT_DAYS));
   const [documents, setDocuments] = useState<string[]>(start?.documents.length ? start.documents : DEFAULT_DOCS);
   const [newDoc, setNewDoc] = useState('');
   const [reason, setReason] = useState(start?.reason ?? '');
@@ -158,7 +160,7 @@ export function ProposalForm({
   const chips = [
     allowFamily ? 'เบิกให้ครอบครัวได้' : null,
     allowInsurance ? 'เบิกส่วนเกินประกันได้' : null,
-    allowAdvance ? 'เบิกล่วงหน้าได้' : null,
+    allowAdvance ? `เบิกล่วงหน้าได้ · แนบใบเสร็จใน ${receiptDays.trim() || DEFAULT_ADVANCE_RECEIPT_DAYS} วัน` : null,
   ].filter((chip): chip is string => chip !== null);
 
   const limitText =
@@ -183,6 +185,7 @@ export function ProposalForm({
     allowFamily,
     allowInsurance,
     allowAdvance,
+    advanceReceiptDays: allowAdvance && receiptDays.trim() ? Number(receiptDays) : null,
     documents,
     reason: reason.trim(),
   });
@@ -213,6 +216,10 @@ export function ProposalForm({
         }
       }
       if (!effectiveFrom) found.effectiveFrom = 'กรุณาเลือกวันที่มีผลบังคับใช้';
+      if (allowAdvance) {
+        const days = Number(receiptDays);
+        if (!receiptDays.trim() || !Number.isInteger(days) || days < 1 || days > 365) found.advanceReceiptDays = 'กรุณาระบุจำนวนวันเป็นจำนวนเต็ม 1–365 วัน';
+      }
     }
     if (upTo >= 2 && kind === 'create' && documents.length === 0) {
       found.documents = 'กรุณาเลือกหรือเพิ่มเอกสารที่ต้องแนบอย่างน้อย 1 รายการ';
@@ -226,7 +233,7 @@ export function ProposalForm({
   const firstStepWithError = (found: Errors) =>
     found.name || found.category || found.description || found.image
       ? 0
-      : found.limits || found.maxClaims || found.effectiveFrom
+      : found.limits || found.maxClaims || found.effectiveFrom || found.advanceReceiptDays
         ? 1
         : found.documents
           ? 2
@@ -769,6 +776,34 @@ export function ProposalForm({
                     </label>
                   ))}
                 </div>
+                {allowAdvance ? (
+                  <div className="mt-3 rounded-[10px] border border-line bg-surface p-3">
+                    <label htmlFor="advance-receipt-days" className={labelClass}>
+                      ต้องแนบใบเสร็จจริงภายใน <span className="text-[#B3261E]">*</span>
+                    </label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative w-36">
+                        <input
+                          id="advance-receipt-days"
+                          inputMode="numeric"
+                          value={receiptDays}
+                          onChange={(e) => {
+                            setReceiptDays(e.target.value.replace(/[^\d]/g, ''));
+                            if (errors.advanceReceiptDays) setErrors((c) => ({ ...c, advanceReceiptDays: '' }));
+                          }}
+                          aria-invalid={Boolean(errors.advanceReceiptDays)}
+                          aria-describedby="advance-receipt-days-hint"
+                          className={cx(fieldClass, 'pr-10 text-right tabular-nums')}
+                        />
+                        <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-12 text-muted">วัน</span>
+                      </div>
+                      <p id="advance-receipt-days-hint" className="text-12 text-muted">
+                        นับจากวันที่ผู้ขอได้รับเงิน ไม่แนบภายในกำหนด ระบบยกเลิกรายการและให้คืนเงินล่วงหน้า (ค่ากลาง {DEFAULT_ADVANCE_RECEIPT_DAYS} วัน)
+                      </p>
+                    </div>
+                    {errors.advanceReceiptDays ? <p className="mt-1 text-12 text-[#991B1B]">{errors.advanceReceiptDays}</p> : null}
+                  </div>
+                ) : null}
               </div>
             </>
           ) : null}

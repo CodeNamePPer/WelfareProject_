@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Search, X } from 'lucide-react';
+import { Clock, Image as ImageIcon, Search, X } from 'lucide-react';
 import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -19,14 +19,15 @@ export const countText = (benefit: EmployeeBenefit) =>
   benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : benefit.maxClaimsNote || 'ไม่จำกัดครั้ง';
 
 /**
- * หน้าต่างเลือกสวัสดิการตาม R04: ค้นหา กรองตามหมวด ใช้บ่อย และการ์ดที่เลือกไม่ได้เป็นสีเทาพร้อมเหตุผล
- * ฐานข้อมูลยังไม่มีธงยื่นล่วงหน้าหรือเบิกให้ครอบครัว จึงกรองได้เฉพาะหมวด
+ * หน้าต่างเลือกสวัสดิการตาม R04: ค้นหา กรองตามหมวดหรือ "ยื่นล่วงหน้าได้" ใช้บ่อย และการ์ดที่เลือกไม่ได้เป็นสีเทาพร้อมเหตุผล
+ * advanceOnly = เปิดมาจากตัวเลือก "ยื่นล่วงหน้า" จึงกรองเฉพาะสวัสดิการที่ยื่นล่วงหน้าได้ตั้งแต่แรก
  */
 export function BenefitPicker({
   open,
   benefits,
   selectedCode,
   subtitle,
+  advanceOnly = false,
   onPick,
   onClose,
 }: {
@@ -34,6 +35,7 @@ export function BenefitPicker({
   benefits: EmployeeBenefit[];
   selectedCode: string;
   subtitle: string;
+  advanceOnly?: boolean;
   onPick: (code: string) => void;
   onClose: () => void;
 }) {
@@ -41,6 +43,7 @@ export function BenefitPicker({
   const titleId = useId();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState(ALL);
+  const [advance, setAdvance] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -48,15 +51,17 @@ export function BenefitPicker({
     if (open && !dialog.open) {
       setQuery('');
       setCategory(ALL);
+      setAdvance(advanceOnly);
       dialog.showModal();
     }
     if (!open && dialog.open) dialog.close();
-  }, [open]);
+  }, [open, advanceOnly]);
 
   const categories = useMemo(() => [ALL, ...Array.from(new Set(benefits.map((benefit) => benefit.category).filter(Boolean)))], [benefits]);
   const q = query.trim().toLowerCase();
+  const advanceCount = benefits.filter((benefit) => benefit.allowAdvance).length;
   const shown = benefits.filter(
-    (benefit) => (category === ALL || benefit.category === category) && (!q || benefit.name.toLowerCase().includes(q) || benefit.code.toLowerCase().includes(q)),
+    (benefit) => (category === ALL || benefit.category === category) && (!advance || benefit.allowAdvance) && (!q || benefit.name.toLowerCase().includes(q) || benefit.code.toLowerCase().includes(q)),
   );
   // ใช้บ่อย: สวัสดิการที่เบิกปีนี้มากที่สุด 3 รายการ
   const frequent = [...benefits].filter((benefit) => benefit.claimsThisYear > 0).sort((a, b) => b.claimsThisYear - a.claimsThisYear).slice(0, 3);
@@ -116,9 +121,23 @@ export function BenefitPicker({
               </button>
             );
           })}
+          {advanceCount > 0 ? (
+            <button
+              type="button"
+              aria-pressed={advance}
+              onClick={() => setAdvance((value) => !value)}
+              className={cx(
+                'inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-13',
+                advance ? 'bg-amber-600 text-white' : 'border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100',
+              )}
+            >
+              <Clock className="size-3.5" aria-hidden="true" />
+              ยื่นล่วงหน้าได้ ({advanceCount})
+            </button>
+          ) : null}
         </div>
 
-        {!q && category === ALL && frequent.length > 0 ? (
+        {!q && category === ALL && !advance && frequent.length > 0 ? (
           <div className="flex flex-col gap-2">
             <p className="text-12 font-semibold text-muted">ใช้บ่อย</p>
             <div className="flex flex-wrap gap-2">
@@ -183,7 +202,10 @@ export function BenefitPicker({
                     <span>{countText(benefit)}</span>
                     <span className={cx('font-semibold tabular-nums', reason ? 'text-slate-400' : 'text-ink')}>{baht(benefit.remaining)}</span>
                   </span>
-                  <span className={cx('mt-1 block text-11', reason ? 'text-orange-800' : 'text-status-approved-ink')}>{reason || 'เบิกได้เฉพาะตัวเอง'}</span>
+                  <span className="mt-1 flex flex-wrap items-center justify-between gap-1.5">
+                    <span className={cx('text-11', reason ? 'text-orange-800' : 'text-status-approved-ink')}>{reason || 'เบิกได้เฉพาะตัวเอง'}</span>
+                    {benefit.allowAdvance ? <AdvanceTag muted={Boolean(reason)} /> : null}
+                  </span>
                 </button>
               );
             })}
@@ -191,5 +213,20 @@ export function BenefitPicker({
         )}
       </div>
     </dialog>
+  );
+}
+
+/** ป้าย "ยื่นล่วงหน้าได้" บนการ์ดสวัสดิการ ให้ผู้ขอรู้ก่อนเลือกว่าสวัสดิการไหนรับเงินก่อนได้ */
+export function AdvanceTag({ muted = false }: { muted?: boolean }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex h-5 items-center gap-1 rounded-full px-2 text-11 font-medium',
+        muted ? 'bg-slate-100 text-slate-400' : 'bg-amber-50 text-amber-800 ring-1 ring-amber-200 ring-inset',
+      )}
+    >
+      <Clock className="size-3" aria-hidden="true" />
+      ยื่นล่วงหน้าได้
+    </span>
   );
 }

@@ -27,6 +27,7 @@ export function parseProposalInput(raw: unknown): ProposalInput {
     allowFamily: flag("allowFamily"),
     allowInsurance: flag("allowInsurance"),
     allowAdvance: flag("allowAdvance"),
+    advanceReceiptDays: typeof body.advanceReceiptDays === "number" ? body.advanceReceiptDays : null,
     documents,
     reason: text("reason"),
   };

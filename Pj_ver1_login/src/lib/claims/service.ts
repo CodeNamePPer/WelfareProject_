@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { supabaseAdmin } from "../supabase";
+import { DEFAULT_ADVANCE_RECEIPT_DAYS } from "./types";
 import type { Role } from "../auth/roles";
 import { findEmployeeUuidByCode } from "../auth/users";
 import { getSubordinates } from "../employee/subordinates";
@@ -34,8 +35,7 @@ const COUNTED: ClaimDbStatus[] = ["pending_hr", "needs_revision", "pending_finan
 const APPROVED: ClaimDbStatus[] = ["awaiting_payment", "paid"];
 const FINANCE_VISIBLE: ClaimDbStatus[] = ["pending_finance", "finance_returned", "awaiting_payment", "paid", "rejected"];
 
-/** ค่ากลางของระบบเมื่อสวัสดิการไม่ได้กำหนด advance_receipt_days */
-export const DEFAULT_ADVANCE_RECEIPT_DAYS = 30;
+export { DEFAULT_ADVANCE_RECEIPT_DAYS };
 
 const addDays = (date: string, days: number) => {
   const d = new Date(`${date}T00:00:00Z`);

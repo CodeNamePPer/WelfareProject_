@@ -8,6 +8,7 @@ import { cx } from '@/lib/cx';
 import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
 import { Lock, Search } from 'lucide-react';
 import type { FadedBenefit } from '@/lib/hr/benefitVisibility';
+import { AdvanceTag } from '@/features/requester/BenefitPicker';
 
 const ALL = 'ทั้งหมด';
 
@@ -92,6 +93,11 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                                         {benefit.code} · {benefit.category}
                                     </p>
                                     <h2 className="text-16 font-semibold">{benefit.name}</h2>
+                                    {benefit.allowAdvance ? (
+                                        <p>
+                                            <AdvanceTag />
+                                        </p>
+                                    ) : null}
                                     {benefit.description ? <p className="text-13 text-ink-soft">{benefit.description}</p> : null}
                                     <div className="mt-auto flex justify-between gap-3 pt-1.5 text-12 text-muted">
                                         <span>{benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : benefit.maxClaimsNote || 'ไม่จำกัดครั้ง'}</span>
@@ -118,7 +124,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                 <ul aria-label="สวัสดิการที่ใช้ไม่ได้" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
                     {fadedShown.map((benefit) => (
                             <li key={benefit.code} aria-disabled="true" className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface opacity-60">
-                                <BenefitThumb category={benefit.category} className="h-[140px] grayscale" />
+                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="h-[140px] grayscale" />
                                 <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}

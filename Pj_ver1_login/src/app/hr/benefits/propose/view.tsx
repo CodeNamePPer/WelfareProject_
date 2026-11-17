@@ -50,6 +50,7 @@ export async function ProposeScreen({ params, base }: { params: { draft?: string
         allowFamily: Boolean(target.allowFamily),
         allowInsurance: Boolean(target.allowInsurance),
         allowAdvance: Boolean(target.allowAdvance),
+        advanceReceiptDays: target.advanceReceiptDays ?? null,
         documents: target.documents,
         reason: "",
       },

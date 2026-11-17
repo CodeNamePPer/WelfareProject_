@@ -1,5 +1,6 @@
 'use client';
 
+import { DEFAULT_ADVANCE_RECEIPT_DAYS } from '@/lib/claims/types';
 import { useState } from 'react';
 import { useNavTransition } from '@/lib/useNavTransition';
 import { ROLE_LABELS, type Role } from '@/lib/auth/roles';
@@ -23,8 +24,11 @@ export function BenefitDetailView({
   onProposedClose,
   isHead = false,
   reviewHref,
+  imageUrl = null,
 }: {
   benefit: WelfareItem;
+  /** ลิงก์ชั่วคราวของรูปประกอบ (benefit.imagePath) สำหรับการ์ดพรีวิว */
+  imageUrl?: string | null;
   backHref: string;
   editHref?: string;
   onEdit?: () => void;
@@ -45,7 +49,7 @@ export function BenefitDetailView({
   const chips = [
     benefit.allowFamily ? 'เบิกให้ครอบครัวได้' : null,
     benefit.allowInsurance ? 'เบิกส่วนเกินประกันได้' : null,
-    benefit.allowAdvance ? 'เบิกล่วงหน้าได้' : null,
+    benefit.allowAdvance ? `เบิกล่วงหน้าได้ · แนบใบเสร็จใน ${benefit.advanceReceiptDays ?? DEFAULT_ADVANCE_RECEIPT_DAYS} วัน` : null,
   ].filter((c): c is string => c !== null);
 
   const previewAmount =
@@ -82,6 +86,7 @@ export function BenefitDetailView({
             allowFamily: Boolean(benefit.allowFamily),
             allowInsurance: Boolean(benefit.allowInsurance),
             allowAdvance: Boolean(benefit.allowAdvance),
+            advanceReceiptDays: benefit.advanceReceiptDays ?? null,
             documents: benefit.documents,
             reason: closeReason.trim(),
           },
@@ -258,7 +263,7 @@ export function BenefitDetailView({
         <aside aria-label="พรีวิวการ์ดสวัสดิการ" className="flex min-w-0 flex-[1_1_300px] flex-col gap-2.5">
           <p className="text-12 font-semibold text-muted">พรีวิว: การ์ดที่พนักงานเห็น</p>
           <BenefitPreview
-            imageUrl={null}
+            imageUrl={imageUrl}
             category={benefit.category || 'ทั่วไป'}
             label={`${benefit.code}${benefit.category ? ` · ${benefit.category}` : ''}`}
             name={benefit.name}
