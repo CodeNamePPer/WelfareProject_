@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES } from "@/lib/claims/forms";
@@ -24,7 +24,7 @@ const Required = () => <span className="text-danger"> *</span>;
 
 /** เบิกล่วงหน้า: สถานะเงินล่วงหน้า และฟอร์มแนบใบเสร็จจริงหลังได้รับเงิน */
 export function AdvanceReceiptPanel({ claimNo, advance }: { claimNo: string; advance: AdvanceInfo }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [amount, setAmount] = useState("");
   const [receiptNo, setReceiptNo] = useState("");
   const [receiptDate, setReceiptDate] = useState("");
@@ -59,7 +59,7 @@ export function AdvanceReceiptPanel({ claimNo, advance }: { claimNo: string; adv
       const data = await response.json().catch(() => ({}));
       if (!response.ok) return setError(data.error ?? "ส่งใบเสร็จไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       setFiles([]);
-      router.refresh();
+      nav.refresh();
     } catch {
       setError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
@@ -150,8 +150,8 @@ export function AdvanceReceiptPanel({ claimNo, advance }: { claimNo: string; adv
             </p>
           ) : null}
           <div>
-            <button type="button" disabled={busy} onClick={() => void submit()} className={pill.primary}>
-              {busy ? "กำลังส่ง..." : "ส่งใบเสร็จให้ HR ตรวจ"}
+            <button type="button" disabled={busy || nav.isPending} onClick={() => void submit()} className={pill.primary}>
+              {busy || nav.isPending ? "กำลังส่ง..." : "ส่งใบเสร็จให้ HR ตรวจ"}
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { Bell } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
@@ -32,7 +32,7 @@ function hrefOf(alert: AdminAlert) {
 
 // แจ้งเตือนของ Admin ในโครงเดียวกับหน้าแจ้งเตือนของ HR (H07) · ข้อมูลและสถานะอ่านแล้วยังเป็นของ Admin
 export function AdminNotices({ initialAlerts }: { initialAlerts: AdminAlert[] }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [alerts, setAlerts] = useState(initialAlerts);
   const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ export function AdminNotices({ initialAlerts }: { initialAlerts: AdminAlert[] })
     const before = alerts;
     setAlerts(change);
     return updateAlert(update)
-      .then(() => router.refresh())
+      .then(() => nav.refresh())
       .catch((err: Error) => {
         setAlerts(before);
         notify(err.message);
@@ -53,7 +53,7 @@ export function AdminNotices({ initialAlerts }: { initialAlerts: AdminAlert[] })
   const open = (alert: AdminAlert) => {
     if (alert.unread) void persist({ action: 'read', id: alert.id }, (prev) => prev.map((item) => (item.id === alert.id ? { ...item, unread: false } : item)));
     const href = hrefOf(alert);
-    if (href) router.push(href);
+    if (href) nav.navigate(href);
   };
 
   const resolve = (alert: AdminAlert) =>

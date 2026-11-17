@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { ActivityLogPanel } from './ActivityLogPanel';
 import { EmployeeClaimStats } from './EmployeeClaimStats';
 import { NotificationPanel } from './NotificationPanel';
@@ -40,16 +40,16 @@ export function DashboardPage({
   periods,
   claims,
 }: DashboardPageProps) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
-  const go = (href: string) => () => router.push(href);
+  const go = (href: string) => () => nav.navigate(href);
 
   // กดตรวจสอบ = ปิดงานนั้นในฐานข้อมูล แล้วรีเฟรชตัวเลขแจ้งเตือนใน sidebar
   const review = (alert: AdminAlert) => {
     updateAlert({ action: 'resolve', id: alert.id })
-      .then(() => router.refresh())
+      .then(() => nav.refresh())
       .catch((err: Error) => notify(err.message));
-    router.push(reviewHref[alert.category] ?? '/admin/notifications');
+    nav.navigate(reviewHref[alert.category] ?? '/admin/notifications');
   };
 
   return (
@@ -75,7 +75,7 @@ export function DashboardPage({
           className="xl:col-span-2"
           roles={roleCounts}
           onViewAll={go('/admin/users')}
-          onRetry={() => router.refresh()}
+          onRetry={() => nav.refresh()}
         />
         <ActivityLogPanel className="xl:col-span-4" entries={logEntries} onViewAll={go('/admin/logs')} />
         <div className="min-w-0 bg-white xl:col-span-6">

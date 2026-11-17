@@ -2,7 +2,7 @@
 import { Check, FileText, Lock, Upload } from "lucide-react";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useRef, useState } from "react";
 import type { MyProfile } from "@/lib/employee/profile";
 import type { MyPendingEditRequest } from "@/lib/hr/editRequests";
@@ -40,7 +40,7 @@ function formatFileSize(bytes: number) {
 const thaiDateTime = (iso: string) => new Date(iso).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
 
 export default function ChangeProfileClient({ profile, pending }: { profile: MyProfile; pending: MyPendingEditRequest | null }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const currentValues: Record<ChangeField, string> = {
     phone: profile.phone ?? "—",
     email: profile.email,
@@ -146,7 +146,7 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
         // ส่งคำขอสำเร็จแล้ว ฉบับร่างที่ค้างไม่กระทบคำขอ
       }
       setSubmitted(true);
-      router.refresh();
+      nav.refresh();
     } catch {
       setSubmitError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ คำขอยังไม่ถูกส่ง กรุณาลองใหม่อีกครั้ง");
     } finally {

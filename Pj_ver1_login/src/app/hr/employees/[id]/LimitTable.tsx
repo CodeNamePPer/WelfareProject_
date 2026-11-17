@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useToast } from '@/components/ui/Toast';
@@ -31,7 +31,7 @@ type Errors = Partial<Record<'amount' | 'effectiveFrom' | 'reason' | 'form', str
 
 /** ตารางสิทธิ์และวงเงินรายคน + กล่องปรับวงเงิน (เฉพาะ HR) */
 export function LimitTable({ employeeCode, rows, canAdjust }: { employeeCode: string; rows: LimitRow[]; canAdjust: boolean }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [editing, setEditing] = useState<LimitRow | null>(null);
   const [amount, setAmount] = useState('');
@@ -74,7 +74,7 @@ export function LimitTable({ employeeCode, rows, canAdjust }: { employeeCode: st
       }
       notify(`บันทึกวงเงิน ${editing.name} แล้ว`);
       setEditing(null);
-      router.refresh();
+      nav.refresh();
     } catch {
       setErrors({ form: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
     } finally {
@@ -166,7 +166,7 @@ export function LimitTable({ employeeCode, rows, canAdjust }: { employeeCode: st
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void save()} disabled={busy}>
+            <Button onClick={() => void save()} disabled={busy || nav.isPending}>
               {busy ? 'กำลังบันทึก...' : 'บันทึกวงเงิน'}
             </Button>
             <Button variant="quiet" onClick={() => setEditing(null)} disabled={busy}>

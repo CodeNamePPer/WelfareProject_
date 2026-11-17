@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { UserPanel, type Choice, type User } from "@/app/admin/users/AdminUsersClient";
 import type { OrgOptions } from "@/lib/auth/users";
 
@@ -14,7 +14,7 @@ export function EditEmployeeClient({
   orgOptions: OrgOptions;
   managerChoices: Choice[];
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [user, setUser] = useState<User>(initialUser);
 
   return (
@@ -25,7 +25,7 @@ export function EditEmployeeClient({
       mode="hr"
       onSaved={(updated) => {
         setUser(updated);
-        router.refresh();
+        nav.refresh();
       }}
     />
   );

@@ -1,11 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { FileText, Lock } from 'lucide-react';
 import type { Attachment, ClaimDbStatus } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
+import { useNavTransition } from '@/lib/useNavTransition';
 import type { RowTab } from '@/features/hr/queue';
 import { Button, Card, PageHeader, RequesterFull, StatusBadge, fieldClass, labelClass, type RequesterDetail } from '@/features/hr/ui';
 
@@ -55,7 +55,7 @@ function CheckMark({ ok }: { ok: boolean }) {
 }
 
 export function ReviewClient({ data }: { data: ReviewData }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [doc, setDoc] = useState(0);
   const [amount, setAmount] = useState(data.amountRequested.toFixed(2));
   const [note, setNote] = useState(() => data.blockers.filter((item) => item.action).map((item) => item.reason).join(' และ '));
@@ -86,13 +86,13 @@ export function ReviewClient({ data }: { data: ReviewData }) {
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+        setBusy(null);
         return;
       }
-      router.push(`/hr/home?tab=${DONE[action]}`);
-      router.refresh();
+      // ปุ่มค้างสถานะ "กำลังบันทึก" ไว้จนหน้าคิวแสดงจริง (หน้านี้จะถูกแทนที่ จึงไม่ต้องคืนค่า busy)
+      nav.navigate(`/hr/home?tab=${DONE[action]}`, { refresh: true });
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-    } finally {
       setBusy(null);
     }
   }

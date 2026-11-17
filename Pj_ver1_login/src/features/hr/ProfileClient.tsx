@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useToast } from '@/components/ui/Toast';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
@@ -118,7 +118,7 @@ export function ProfileClient({ data }: { data: ProfileData }) {
   };
   const rights = data.rights ?? (data.head ? [...HEAD_RIGHTS, ...(data.directReports > 0 ? [`ยื่นคำขอแทนคนในแผนก (${data.directReports} คน)`] : [])] : HR_RIGHTS);
   const topics = data.topics ?? (data.head ? HEAD_TOPICS : HR_TOPICS);
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
 
   // ออกจากระบบทุกอุปกรณ์: กดครั้งแรกถามยืนยัน เครื่องนี้ยังใช้งานต่อได้
@@ -158,7 +158,7 @@ export function ProfileClient({ data }: { data: ProfileData }) {
       if (!response.ok) return setEditError(body.error ?? 'ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       notify('ส่งคำขอแก้ไขข้อมูลแล้ว รอ HR คนอื่นตรวจ');
       setEditReason('');
-      router.refresh();
+      nav.refresh();
     } finally {
       setSending(false);
     }

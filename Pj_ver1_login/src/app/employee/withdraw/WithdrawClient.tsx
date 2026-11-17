@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useRef, useState } from 'react';
 import { Image as ImageIcon, Lock, Upload } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
@@ -62,7 +62,7 @@ export default function WithdrawClient({
     /** วันจ่ายของรอบที่คำขอซึ่งยื่นวันนี้ตกอยู่ พร้อมคำอธิบายรอบ */
     expectedPay: { date: string; note: string };
 }) {
-    const router = useRouter();
+    const nav = useNavTransition();
     const canProxy = subordinates.length > 0 && !initial;
     const [proxy, setProxy] = useState(canProxy && initialProxy);
     const [targetCode, setTargetCode] = useState(subordinates[0]?.code ?? '');
@@ -143,6 +143,8 @@ export default function WithdrawClient({
         setBusy(true);
         setError('');
         setNotice('');
+        // ส่งแล้วไปหน้าสถานะ: คงปุ่ม "กำลังส่ง" ไว้จนหน้าใหม่แสดง
+        let leaving = false;
         try {
             const body = new FormData();
             body.append(
@@ -170,8 +172,8 @@ export default function WithdrawClient({
             }
             setFiles([]);
             if (submit && !proxy) {
-                router.push('/employee/status');
-                router.refresh();
+                leaving = true;
+                nav.navigate('/employee/status', { refresh: true });
                 return;
             }
             if (submit) {
@@ -183,14 +185,14 @@ export default function WithdrawClient({
                 setReceiptNo('');
                 setReceiptDate('');
                 setAgreed(false);
-                router.refresh();
+                nav.refresh();
                 return;
             }
             setNotice(`บันทึกฉบับร่าง ${data.claimNo} แล้ว`);
         } catch {
             setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
         } finally {
-            setBusy(false);
+            if (!leaving) setBusy(false);
         }
     }
 

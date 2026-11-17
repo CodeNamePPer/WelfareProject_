@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useToast } from '@/components/ui/Toast';
@@ -28,7 +28,7 @@ export function ReviseClient({
   onSuccess?: () => void;
   returnHref?: string;
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const start = proposal.input;
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
@@ -49,6 +49,7 @@ export function ReviseClient({
     }
     setBusy(action);
     setError('');
+    let leaving = false;
     try {
       const response = await fetch(`/api/hr/proposals/${proposal.id}`, {
         method: 'PATCH',
@@ -65,13 +66,13 @@ export function ReviseClient({
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push(returnHref);
-        router.refresh();
+        leaving = true;
+        nav.navigate(returnHref, { refresh: true });
       }
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
-      setBusy(null);
+      if (!leaving) setBusy(null);
     }
   }
 

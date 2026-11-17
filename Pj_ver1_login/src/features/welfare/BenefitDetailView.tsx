@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { ROLE_LABELS, type Role } from '@/lib/auth/roles';
 import { formatBahtWhole, formatThaiDate } from '@/lib/format';
 import { Badge, BenefitPreview, Button, ButtonLink, Card, PageHeader, Textarea } from '@/features/hr/ui';
@@ -35,7 +35,7 @@ export function BenefitDetailView({
   /** หัวหน้า HR: ลิงก์ไปพิจารณาข้อเสนอที่รออยู่ของสวัสดิการนี้ */
   reviewHref?: string;
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [closingOpen, setClosingOpen] = useState(false);
   const [closeReason, setCloseReason] = useState('');
@@ -98,8 +98,7 @@ export function BenefitDetailView({
       if (onProposedClose) {
         onProposedClose();
       } else {
-        router.push(backHref);
-        router.refresh();
+        nav.navigate(backHref, { refresh: true });
       }
     } catch {
       setCloseError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');

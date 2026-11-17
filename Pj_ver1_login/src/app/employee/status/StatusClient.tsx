@@ -1,7 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Paperclip, Search } from "lucide-react";
 import { useDetailParam } from "@/lib/useDetailParam";
@@ -62,7 +62,7 @@ const LIST_COLS = "grid-cols-[150px_minmax(0,1.6fr)_minmax(0,1.2fr)_110px_130px_
 const inTab = (request: WelfareRequest, tab: StatusFilter) => tab === "all" || TAB_STATUSES[tab].includes(request.status);
 
 export default function StatusClient({ initialRequests }: { initialRequests: WelfareRequest[] }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [requests, setRequests] = useState(initialRequests);
   const [selectedId, setSelectedId] = useState(initialRequests[0]?.id ?? "");
   const [cancelError, setCancelError] = useState("");
@@ -121,7 +121,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
         ),
       );
       setShowCancelConfirmation(false);
-      router.refresh();
+      nav.refresh();
     } catch {
       setCancelError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {

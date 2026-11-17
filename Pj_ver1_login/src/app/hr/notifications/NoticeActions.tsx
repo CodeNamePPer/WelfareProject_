@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState, type ReactNode } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/features/hr/ui';
@@ -27,7 +27,7 @@ export function NoticeLink({ id, href, read, className, children }: { id: string
 
 /** ปุ่ม "อ่านทั้งหมดแล้ว" (ดีไซน์ H07) */
 export function MarkAllRead({ unread }: { unread: number }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -41,15 +41,15 @@ export function MarkAllRead({ unread }: { unread: number }) {
         body: JSON.stringify({ all: true }),
       });
       if (!response.ok) return notify('บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-      router.refresh();
+      nav.refresh();
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Button variant="quiet" className="!px-4" onClick={() => void markAll()} disabled={busy || unread === 0}>
-      {busy ? 'กำลังบันทึก...' : 'อ่านทั้งหมดแล้ว'}
+    <Button variant="quiet" className="!px-4" onClick={() => void markAll()} disabled={busy || nav.isPending || unread === 0}>
+      {busy || nav.isPending ? 'กำลังบันทึก...' : 'อ่านทั้งหมดแล้ว'}
     </Button>
   );
 }
