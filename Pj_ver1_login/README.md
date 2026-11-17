@@ -30,7 +30,7 @@ ROLE: EMPLOYEE, APPROVER, HR, ACCOUNTING, AUDITOR, IT_SUPPORT, SUPER_ADMIN
 
 ## ฟีเจอร์ตาม Requirement
 
-- Google reCAPTCHA v2 ที่หน้า Login (ตรวจฝั่ง server) — ตั้ง `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` และ `RECAPTCHA_SECRET_KEY`
+- Google reCAPTCHA v3 ที่หน้า Login (ตรวจ score + action ฝั่ง server) — ตั้ง `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`, `RECAPTCHA_SECRET_KEY` และ `RECAPTCHA_MIN_SCORE` (ค่าเริ่มต้น 0.5)
 - จำกัดเฉพาะเครือข่ายที่ทำงาน — `ENFORCE_OFFICE_NETWORK=true` และ `OFFICE_ALLOWED_IPS=ip,cidr,...`
   (ต้องอยู่หลัง reverse proxy ที่ตั้ง `x-forwarded-for` เอง)
 - Role-based access: กำหนดเส้นทางที่จำกัดสิทธิ์ใน `src/lib/auth/roles.ts` (`ROUTE_ROLES`)

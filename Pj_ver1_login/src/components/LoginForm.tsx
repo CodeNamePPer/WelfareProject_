@@ -7,19 +7,29 @@ import type { Role } from "@/lib/auth/roles";
 
 const SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? "";
 
-interface GRecaptcha {
-  render: (
-    el: HTMLElement,
-    opts: { sitekey: string; callback: (t: string) => void; "expired-callback": () => void },
-  ) => number;
-  reset: (id?: number) => void;
+// reCAPTCHA v3: ไม่มีกล่องให้ติ๊ก — ขอ token ตอนกดเข้าสู่ระบบ แล้ว server ตรวจคะแนน (score)
+const RECAPTCHA_ACTION = "login";
+
+interface GRecaptchaV3 {
+  ready: (cb: () => void) => void;
+  execute: (siteKey: string, opts: { action: string }) => Promise<string>;
 }
 
 declare global {
   interface Window {
-    grecaptcha?: GRecaptcha;
-    onRecaptchaLoad?: () => void;
+    grecaptcha?: GRecaptchaV3;
   }
+}
+
+/** ขอ token ใหม่ทุกครั้งที่ส่งฟอร์ม (token v3 หมดอายุใน 2 นาทีและใช้ได้ครั้งเดียว) */
+function getRecaptchaToken(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const g = window.grecaptcha;
+    if (!g?.ready) return reject(new Error("recaptcha-not-loaded"));
+    g.ready(() => {
+      g.execute(SITE_KEY, { action: RECAPTCHA_ACTION }).then(resolve, reject);
+    });
+  });
 }
 
 interface LoginResponse {
@@ -42,15 +52,12 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isNavigating, startTransition] = useTransition();
   // router.replace ไม่รอให้หน้าใหม่โหลดเสร็จ จึงต้องนับช่วงเปลี่ยนหน้าเป็นช่วงโหลดด้วย
   const busy = loading || isNavigating;
 
-  const boxRef = useRef<HTMLDivElement>(null);
-  const widgetId = useRef<number | null>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const identifierRef = useRef<HTMLInputElement>(null);
 
@@ -60,48 +67,32 @@ export function LoginForm({
   }, [account]);
 
   useEffect(() => {
-    if (!SITE_KEY) return;
-
-    const mount = () => {
-      if (!window.grecaptcha || !boxRef.current || widgetId.current !== null) return;
-      widgetId.current = window.grecaptcha.render(boxRef.current, {
-        sitekey: SITE_KEY,
-        callback: (t) => setToken(t),
-        "expired-callback": () => setToken(null),
-      });
-    };
-
-    if (window.grecaptcha?.render) {
-      mount();
-      return;
-    }
-
-    window.onRecaptchaLoad = mount;
-    if (!document.getElementById("recaptcha-script")) {
-      const s = document.createElement("script");
-      s.id = "recaptcha-script";
-      s.src = "https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit";
-      s.async = true;
-      s.defer = true;
-      document.head.appendChild(s);
-    }
+    if (!SITE_KEY || document.getElementById("recaptcha-script")) return;
+    const s = document.createElement("script");
+    s.id = "recaptcha-script";
+    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(SITE_KEY)}`;
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
   }, []);
-
-  function resetCaptcha() {
-    setToken(null);
-    if (widgetId.current !== null) window.grecaptcha?.reset(widgetId.current);
-  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (SITE_KEY && !token) {
-      setError("กรุณายืนยันว่าคุณไม่ใช่โปรแกรมอัตโนมัติ");
-      return;
+    setLoading(true);
+
+    let token: string | null = null;
+    if (SITE_KEY) {
+      try {
+        token = await getRecaptchaToken();
+      } catch {
+        setError("โหลดระบบตรวจสอบความปลอดภัย (reCAPTCHA) ไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองใหม่");
+        setLoading(false);
+        return;
+      }
     }
 
-    setLoading(true);
     // แยกสาเหตุ: fetch ล้ม = ติดต่อเซิร์ฟเวอร์ไม่ได้เลย / อ่าน JSON ไม่ได้ = เซิร์ฟเวอร์ตอบมาแต่ผิดพลาด (เน็ตปกติ)
     let reachedServer = false;
     try {
@@ -116,7 +107,6 @@ export function LoginForm({
       if (!res.ok) {
         setError(data.error ?? "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่");
         setPassword("");
-        resetCaptcha();
         setLoading(false);
         passwordRef.current?.focus();
         return;
@@ -137,7 +127,6 @@ export function LoginForm({
           ? "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง หากยังไม่ได้ให้ติดต่อผู้ดูแลระบบ"
           : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบว่าคุณต่ออินเทอร์เน็ตของบริษัทอยู่",
       );
-      resetCaptcha();
       setLoading(false);
     }
   }
@@ -214,9 +203,7 @@ export function LoginForm({
         )}
       </fieldset>
 
-      {SITE_KEY ? (
-        <div ref={boxRef} className="min-h-[78px]" />
-      ) : (
+      {SITE_KEY ? null : (
         <p className="rounded-md bg-stamp/10 px-3 py-2 text-13 text-stamp-dark">
           ยังไม่ได้ตั้งค่า reCAPTCHA (โหมดพัฒนา) — ตั้งค่า NEXT_PUBLIC_RECAPTCHA_SITE_KEY ใน
           .env.local
