@@ -544,7 +544,7 @@ export function ProposalForm({
                     )}
                     <span className="text-13">
                       <b className="font-semibold text-[#1D4ED8]">{uploading ? 'กำลังอัปโหลด...' : imageUrl ? 'เปลี่ยนรูปภาพ' : 'คลิกเพื่ออัปโหลดรูปภาพประกอบ'}</b>
-                      <span className="mt-0.5 block text-12 text-muted">รองรับไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB · แนะนำ 16:9 (1200×675 px ขึ้นไป)</span>
+                      <span className="mt-0.5 block text-12 text-muted">รองรับไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB</span>
                     </span>
                   </label>
                   {imageUrl ? (

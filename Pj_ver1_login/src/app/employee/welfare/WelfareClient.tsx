@@ -87,7 +87,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                         const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
                         return (
                             <li key={benefit.code} className="flex flex-col overflow-hidden rounded-lg border border-line bg-white">
-                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="aspect-[16/9] w-full" />
+                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="h-[140px]" />
                                 <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}
@@ -124,7 +124,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                 <ul aria-label="สวัสดิการที่ใช้ไม่ได้" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
                     {fadedShown.map((benefit) => (
                             <li key={benefit.code} aria-disabled="true" className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface opacity-60">
-                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="aspect-[16/9] w-full grayscale" />
+                                <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="h-[140px] grayscale" />
                                 <div className="flex flex-1 flex-col gap-1.5 px-4 pt-3.5 pb-4">
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}
