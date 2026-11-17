@@ -16,6 +16,7 @@ interface BenefitExtraRow {
   detail: string | null;
   image_path: string | null;
   allow_advance: boolean | null;
+  advance_receipt_days?: number | null;
 }
 
 interface LevelLimitRow {
@@ -39,6 +40,7 @@ interface BenefitRow {
   detail?: string | null;
   image_path?: string | null;
   allow_advance?: boolean | null;
+  advance_receipt_days?: number | null;
   levelLimits?: WelfareItem["levelLimits"];
   eligibility_note: string | null;
   approver_role_id: string | null;
@@ -98,6 +100,7 @@ function toItem(row: BenefitRow, lookup: LookupData): WelfareItem {
     detail: row.detail ?? "",
     imagePath: row.image_path ?? null,
     allowAdvance: Boolean(row.allow_advance),
+    advanceReceiptDays: row.advance_receipt_days ?? null,
     allowFamily: eligible.includes("เบิกให้ครอบครัวได้"),
     allowInsurance: eligible.includes("เบิกส่วนเกินจากประกันได้"),
     levelLimits: row.levelLimits ?? [],
@@ -141,7 +144,7 @@ export async function getWelfareItems(): Promise<WelfareItem[] | null> {
       supabaseAdmin.from("v_welfare_benefit_current").select(COLUMNS).order("code").returns<BenefitRow[]>(),
       supabaseAdmin
         .from("welfare_benefit")
-        .select("id, form_type, category, description, detail, image_path, allow_advance")
+        .select("id, form_type, category, description, detail, image_path, allow_advance, advance_receipt_days")
         .is("deleted_at", null)
         .returns<BenefitExtraRow[]>(),
       supabaseAdmin
@@ -190,6 +193,7 @@ export async function getWelfareItems(): Promise<WelfareItem[] | null> {
           detail: extra?.detail,
           image_path: extra?.image_path,
           allow_advance: extra?.allow_advance,
+          advance_receipt_days: extra?.advance_receipt_days,
           levelLimits,
         },
         lookup,

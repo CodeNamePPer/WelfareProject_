@@ -217,6 +217,8 @@ export interface WelfareItem {
   allowFamily?: boolean;
   allowInsurance?: boolean;
   allowAdvance?: boolean;
+  /** แนบใบเสร็จภายในกี่วันหลังได้รับเงินล่วงหน้า (null = ค่ากลางของระบบ) */
+  advanceReceiptDays?: number | null;
   levelLimits?: WelfareLevelLimit[];
   /** ISO date, YYYY-MM-DD */
   updatedAt: string;

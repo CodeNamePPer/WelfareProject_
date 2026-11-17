@@ -31,6 +31,8 @@ export type ProposalInput = {
   allowFamily: boolean;
   allowInsurance: boolean;
   allowAdvance: boolean;
+  /** แนบใบเสร็จภายในกี่วันหลังได้รับเงินล่วงหน้า (null = ค่ากลางของระบบ) */
+  advanceReceiptDays: number | null;
   documents: string[];
   reason: string;
 };
@@ -59,6 +61,9 @@ export function validateProposal(input: ProposalInput, mode: "draft" | "submit",
     if (!Number.isFinite(limit.amount) || limit.amount < 0) throw new ProposalError("วงเงินต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป", "limits");
   }
   if (input.maxClaims !== null && (!Number.isInteger(input.maxClaims) || input.maxClaims < 1)) throw new ProposalError("จำนวนครั้งต้องเป็นจำนวนเต็มตั้งแต่ 1", "maxClaims");
+  if (input.allowAdvance && input.advanceReceiptDays !== null && (!Number.isInteger(input.advanceReceiptDays) || input.advanceReceiptDays < 1 || input.advanceReceiptDays > 365)) {
+    throw new ProposalError("กำหนดแนบใบเสร็จต้องเป็นจำนวนวัน 1–365", "advanceReceiptDays");
+  }
   if (mode === "draft") return;
   if (!input.category.trim()) throw new ProposalError("เลือกหมวด", "category");
   if (kind === "create" && !input.description.trim()) {
@@ -87,6 +92,7 @@ function proposalRow(input: ProposalInput) {
     allow_family: input.allowFamily,
     allow_insurance_excess: input.allowInsurance,
     allow_advance: input.allowAdvance,
+    advance_receipt_days: input.allowAdvance ? input.advanceReceiptDays : null,
     eligibility: { all_departments: true },
     required_documents: input.documents.map((doc) => doc.trim()).filter(Boolean),
     reason: input.reason.trim() || null,
@@ -256,6 +262,7 @@ async function insertBenefit(input: ProposalInput) {
       eligibility_note: notes || null,
       required_documents: input.documents,
       allow_advance: input.allowAdvance,
+      advance_receipt_days: input.allowAdvance ? input.advanceReceiptDays : null,
       is_active: true,
     })
     .select("id")
@@ -289,6 +296,7 @@ async function applyBenefitUpdate(benefitId: string, benefitCode: string, input:
       eligibility_note: notes || null,
       required_documents: input.documents,
       allow_advance: input.allowAdvance,
+      advance_receipt_days: input.allowAdvance ? input.advanceReceiptDays : null,
       is_active: true,
     })
     .eq("id", benefitId);
@@ -536,6 +544,7 @@ type DetailRow = SummaryRow & {
   allow_family: boolean;
   allow_insurance_excess: boolean;
   allow_advance: boolean;
+  advance_receipt_days: number | null;
   required_documents: string[];
   reason: string | null;
   decision_note: string | null;
@@ -550,7 +559,7 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
   const { data, error } = await supabaseAdmin
     .from("welfare_benefit_proposal")
     .select(
-      `${SUMMARY_SELECT}, proposed_by, description, detail, max_claims, effective_from, allow_family, allow_insurance_excess, allow_advance, required_documents, reason, decision_note, decided_at,
+      `${SUMMARY_SELECT}, proposed_by, description, detail, max_claims, effective_from, allow_family, allow_insurance_excess, allow_advance, advance_receipt_days, required_documents, reason, decision_note, decided_at,
        decider:decided_by(employee_code, first_name_th, last_name_th, position:position_id(name_th)), applied:applied_benefit_id(code),
        level_limits:welfare_benefit_proposal_limit(amount, job_level_id, level:job_level_id(code, name_th, rank_order)),
        events:welfare_benefit_proposal_event(kind, note, created_at, actor:actor_employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th)))`,
@@ -586,6 +595,7 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
       allowFamily: data.allow_family,
       allowInsurance: data.allow_insurance_excess,
       allowAdvance: data.allow_advance,
+      advanceReceiptDays: data.advance_receipt_days,
       documents: data.required_documents,
       reason: data.reason ?? "",
     },

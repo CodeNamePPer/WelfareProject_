@@ -7,7 +7,7 @@ import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPaylo
 import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
-import { BenefitPicker, blockedReason, countText } from '@/features/requester/BenefitPicker';
+import { AdvanceTag, BenefitPicker, blockedReason, countText } from '@/features/requester/BenefitPicker';
 import { PageHead, Sheet, inputClass, labelClass, pill } from '@/features/requester/ui';
 
 export type WithdrawInitial = {
@@ -86,6 +86,8 @@ export default function WithdrawClient({
     const [dragging, setDragging] = useState(false);
     const [agreed, setAgreed] = useState(false);
     const [pickerOpen, setPickerOpen] = useState(false);
+    // เปิดหน้าต่างเลือกจากตัวเลือก "ยื่นล่วงหน้า" = กรองเฉพาะสวัสดิการที่ยื่นล่วงหน้าได้
+    const [pickerAdvance, setPickerAdvance] = useState(false);
     const [error, setError] = useState('');
     const [notice, setNotice] = useState('');
     const [busy, setBusy] = useState(false);
@@ -103,6 +105,11 @@ export default function WithdrawClient({
     // ยื่นล่วงหน้าได้เฉพาะสวัสดิการที่เปิดไว้ ระหว่างแก้ไขเปลี่ยนประเภทไม่ได้
     const advance = advanceChoice && Boolean(benefit?.allowAdvance);
     const typeLocked = revising;
+    const advanceCount = list.filter((item) => item.allowAdvance && !blockedReason(item)).length;
+    const openPicker = (advanceOnly: boolean) => {
+        setPickerAdvance(advanceOnly);
+        setPickerOpen(true);
+    };
     const firstName = person.fullName.replace(/^(นาย|นางสาว|นาง|น\.ส\.)/, '').split(' ')[0];
 
     const setValue = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
@@ -367,10 +374,19 @@ export default function WithdrawClient({
                                     <span className="block font-semibold">ยื่นล่วงหน้า</span>
                                     <span className="block text-12 text-muted">รับเงินก่อน แนบใบเสร็จภายใน {benefit.advanceReceiptDays} วันหลังได้รับเงิน</span>
                                 </button>
+                            ) : advanceCount > 0 && !typeLocked ? (
+                                // สวัสดิการที่เลือกอยู่ยื่นล่วงหน้าไม่ได้ กดเพื่อเลือกจากสวัสดิการที่ยื่นล่วงหน้าได้
+                                <button type="button" role="radio" aria-checked="false" aria-haspopup="dialog" onClick={() => openPicker(true)} className={choice(false)}>
+                                    <span className="block font-semibold">ยื่นล่วงหน้า</span>
+                                    <span className="block text-12 text-muted">
+                                        {benefit ? 'สวัสดิการนี้ยื่นล่วงหน้าไม่ได้ · ' : ''}
+                                        <span className="font-medium text-primary-700 underline underline-offset-2">เลือกจาก {advanceCount} สวัสดิการที่ยื่นล่วงหน้าได้</span>
+                                    </span>
+                                </button>
                             ) : (
                                 <button type="button" role="radio" aria-checked="false" aria-disabled="true" className={cx(choice(false), 'cursor-not-allowed border-dashed bg-surface text-slate-400')}>
                                     <span className="block font-semibold">ยื่นล่วงหน้า</span>
-                                    <span className="block text-12">สวัสดิการนี้ยื่นล่วงหน้าไม่ได้</span>
+                                    <span className="block text-12">{advanceCount > 0 ? 'สวัสดิการนี้ยื่นล่วงหน้าไม่ได้' : 'ยังไม่มีสวัสดิการที่ยื่นล่วงหน้าได้'}</span>
                                 </button>
                             )}
                         </div>
@@ -405,12 +421,15 @@ export default function WithdrawClient({
                                         คงเหลือ <b className="font-semibold tabular-nums">{baht(benefit.remaining)}</b>
                                         {proxy ? ` (ของ${firstName})` : ''} · {countText(benefit)}
                                     </p>
-                                    <p className="text-12 text-status-approved-ink">เบิกได้เฉพาะตัวเอง</p>
+                                    <p className="flex flex-wrap items-center gap-2 text-12 text-status-approved-ink">
+                                        เบิกได้เฉพาะตัวเอง
+                                        {benefit.allowAdvance ? <AdvanceTag /> : null}
+                                    </p>
                                 </div>
                                 {revising ? (
                                     <span className="text-12 text-muted">เปลี่ยนไม่ได้ระหว่างแก้ไข</span>
                                 ) : (
-                                    <button type="button" aria-haspopup="dialog" onClick={() => setPickerOpen(true)} className={pill.outline}>
+                                    <button type="button" aria-haspopup="dialog" onClick={() => openPicker(advance)} className={pill.outline}>
                                         เปลี่ยนสวัสดิการ
                                     </button>
                                 )}
@@ -614,14 +633,23 @@ export default function WithdrawClient({
                 open={pickerOpen}
                 benefits={list}
                 selectedCode={benefitCode}
-                subtitle={proxy ? `แสดงสิทธิ์และวงเงินของ ${person.fullName}` : 'ค้นหาหรือกรองตามหมวด สวัสดิการที่ใช้ไม่ได้แสดงเป็นสีเทาพร้อมเหตุผล'}
+                advanceOnly={pickerAdvance}
+                subtitle={
+                    pickerAdvance
+                        ? 'แสดงเฉพาะสวัสดิการที่ยื่นล่วงหน้าได้ กดตัวกรอง "ยื่นล่วงหน้าได้" อีกครั้งเพื่อดูทั้งหมด'
+                        : proxy
+                          ? `แสดงสิทธิ์และวงเงินของ ${person.fullName}`
+                          : 'ค้นหาหรือกรองตามหมวด สวัสดิการที่ใช้ไม่ได้แสดงเป็นสีเทาพร้อมเหตุผล'
+                }
                 onPick={(code) => {
+                    const picked = list.find((item) => item.code === code);
                     if (code !== benefitCode) {
                         setBenefitCode(code);
-                        setAdvanceChoice(false);
                         setValues({});
                         setError('');
                     }
+                    // เลือกมาจากตัวเลือกยื่นล่วงหน้า และสวัสดิการนั้นยื่นได้ -> ตั้งเป็นยื่นล่วงหน้าให้เลย
+                    setAdvanceChoice(Boolean(pickerAdvance && picked?.allowAdvance) || (code === benefitCode && advanceChoice));
                     setPickerOpen(false);
                 }}
                 onClose={() => setPickerOpen(false)}

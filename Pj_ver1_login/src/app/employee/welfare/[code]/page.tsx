@@ -39,6 +39,12 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
         { label: "วงเงิน", value: `${baht(benefit.limit)} ${BUDGET_TYPE[benefit.budgetType]}` },
         { label: "จำนวนครั้ง", value: benefit.maxClaimsNote || "ไม่จำกัดจำนวนครั้ง" },
         { label: "ผู้มีสิทธิ์", value: benefit.eligibilityNote || "พนักงานทุกคน" },
+        {
+            label: "ยื่นล่วงหน้า",
+            value: benefit.allowAdvance
+                ? `ได้ · รับเงินก่อน แล้วแนบใบเสร็จจริงภายใน ${benefit.advanceReceiptDays} วันหลังได้รับเงิน`
+                : "ไม่ได้ · ต้องจ่ายเองก่อนแล้วยื่นเบิกพร้อมใบเสร็จ",
+        },
         { label: "เอกสารที่ต้องแนบ", value: ["ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน", ...benefit.documents].join(", ") },
         { label: "ข้อมูลที่ต้องกรอก", value: formFields.map((field) => field.label).join(", ") },
         { label: "ผู้อนุมัติ", value: APPROVAL_FLOW },

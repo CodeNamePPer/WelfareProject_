@@ -28,7 +28,7 @@ export default async function ProposalReviewPage({ params }: { params: Params })
   const [imageUrl, budget] = await Promise.all([signedImageUrl(proposal.imagePath), estimateBudget(proposal.levelLimits)]);
   const status = PROPOSAL_STATUS[proposal.status];
   const input = proposal.input;
-  const chips = [input.allowFamily ? "เบิกให้ครอบครัวได้" : null, input.allowInsurance ? "เบิกส่วนเกินประกันได้" : null, input.allowAdvance ? "เบิกล่วงหน้าได้" : null].filter((chip): chip is string => chip !== null);
+  const chips = [input.allowFamily ? "เบิกให้ครอบครัวได้" : null, input.allowInsurance ? "เบิกส่วนเกินประกันได้" : null, input.allowAdvance ? `เบิกล่วงหน้าได้ · แนบใบเสร็จใน ${input.advanceReceiptDays ?? 30} วัน` : null].filter((chip): chip is string => chip !== null);
   // พรีวิวใช้วงเงินระดับที่ 3 ตามดีไซน์ (ถ้ามี)
   const previewAmount = proposal.levelLimits[2]?.amount ?? proposal.levelLimits.at(-1)?.amount ?? null;
   const perYear = input.budgetType === "monthly" ? 12 : 1;

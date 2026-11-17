@@ -1,5 +1,6 @@
 'use client';
 
+import { DEFAULT_ADVANCE_RECEIPT_DAYS } from '@/lib/claims/types';
 import { useState } from 'react';
 import { useNavTransition } from '@/lib/useNavTransition';
 import { ROLE_LABELS, type Role } from '@/lib/auth/roles';
@@ -45,7 +46,7 @@ export function BenefitDetailView({
   const chips = [
     benefit.allowFamily ? 'เบิกให้ครอบครัวได้' : null,
     benefit.allowInsurance ? 'เบิกส่วนเกินประกันได้' : null,
-    benefit.allowAdvance ? 'เบิกล่วงหน้าได้' : null,
+    benefit.allowAdvance ? `เบิกล่วงหน้าได้ · แนบใบเสร็จใน ${benefit.advanceReceiptDays ?? DEFAULT_ADVANCE_RECEIPT_DAYS} วัน` : null,
   ].filter((c): c is string => c !== null);
 
   const previewAmount =
@@ -82,6 +83,7 @@ export function BenefitDetailView({
             allowFamily: Boolean(benefit.allowFamily),
             allowInsurance: Boolean(benefit.allowInsurance),
             allowAdvance: Boolean(benefit.allowAdvance),
+            advanceReceiptDays: benefit.advanceReceiptDays ?? null,
             documents: benefit.documents,
             reason: closeReason.trim(),
           },
