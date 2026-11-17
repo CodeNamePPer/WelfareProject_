@@ -8,7 +8,7 @@ import type { UnavailableBenefit, UnavailableDisplay } from '@/lib/hr/benefitVis
 import { Card, EmptyState } from '@/features/hr/ui';
 
 // คอลัมน์ตามดีไซน์ HH3
-const COLS = 'grid-cols-[minmax(0,1.6fr)_minmax(0,1.4fr)_240px]';
+const COLS = 'grid-cols-[minmax(0,2fr)_minmax(0,1.6fr)_280px]';
 const OPTIONS: { id: UnavailableDisplay; label: string }[] = [
   { id: 'faded', label: 'แสดงเป็นสีเทา' },
   { id: 'hidden', label: 'ซ่อน' },
@@ -44,20 +44,20 @@ export function VisibilityClient({ rows }: { rows: UnavailableBenefit[] }) {
           <EmptyState>ทุกสวัสดิการเปิดใช้และมีวงเงิน ไม่มีรายการที่ต้องตั้งค่า</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[720px]">
+            <div className="min-w-[780px]">
               <div className={cx('grid gap-3.5 bg-[#F8FAFC] px-5 py-2 text-12 font-medium text-muted', COLS)}>
                 <span>สวัสดิการ</span>
                 <span>เหตุที่ใช้ไม่ได้</span>
-                <span>พนักงานเห็นเป็น</span>
+                <span className="text-right">พนักงานเห็นเป็น</span>
               </div>
               {rows.map((row) => (
-                <div key={row.code} className={cx('grid items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3', COLS)}>
+                <div key={row.code} className={cx('grid items-center gap-3.5 border-t border-[#F1F5F9] px-5 py-3.5', COLS)}>
                   <span className="min-w-0">
                     <span className="block font-medium">{row.name}</span>
                     <span className="block text-12 text-muted">{row.code}</span>
                   </span>
                   <span className="text-13 text-ink-soft">{row.reason}</span>
-                  <div role="radiogroup" aria-label={`การแสดง ${row.name}`} className="inline-flex w-fit rounded-[999px] border border-[#CBD5E1] p-0.5">
+                  <div role="radiogroup" aria-label={`การแสดง ${row.name}`} className="flex w-fit justify-self-end rounded-[999px] bg-[#F1F5F9] p-[3px]">
                     {OPTIONS.map((option) => {
                       const checked = values[row.code] === option.id;
                       return (
@@ -68,7 +68,7 @@ export function VisibilityClient({ rows }: { rows: UnavailableBenefit[] }) {
                           aria-checked={checked}
                           disabled={saving === row.code}
                           onClick={() => void change(row, option.id)}
-                          className={cx('h-8 rounded-[999px] px-3.5 text-13', checked ? 'bg-[#1D4ED8] font-medium text-white' : 'text-ink-soft hover:bg-surface')}
+                          className={cx('h-[30px] rounded-[999px] px-3.5 text-13 disabled:cursor-wait', checked ? 'bg-white font-semibold text-ink shadow-[0_1px_2px_rgba(15,23,42,.12)]' : 'text-muted hover:text-ink')}
                         >
                           {option.label}
                         </button>
@@ -82,15 +82,15 @@ export function VisibilityClient({ rows }: { rows: UnavailableBenefit[] }) {
         )}
       </Card>
       {sample ? (
-        <Card className="flex flex-col gap-2.5 p-5">
-          <div className="max-w-[320px] rounded-[8px] border border-line bg-[#F8FAFC] p-4 opacity-60">
-            <div className="flex items-center gap-2 text-[#5B6B82]">
-              <Lock className="size-4" aria-hidden="true" />
+        <Card className="flex flex-wrap items-center gap-4 px-5 py-4">
+          <div className="w-[220px] rounded-[8px] border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-3 text-13 text-[#6B778C]">
+            <div className="flex items-center gap-1.5">
+              <Lock className="size-3.5 text-[#94A3B8]" aria-hidden="true" />
               <b className="font-semibold">{sample.name}</b>
             </div>
-            <div className="mt-1 text-13 text-muted">{sample.reason}</div>
+            <div>{sample.reason}</div>
           </div>
-          <p className="text-12 text-muted">ตัวอย่างการ์ดสีเทาที่พนักงานเห็นในหน้าสิทธิ์สวัสดิการ ยื่นคำขอไม่ได้ · การเปลี่ยนแปลงบันทึกใน Log และมีผลทันที</p>
+          <p className="m-0 flex-[1_1_300px] text-13 text-ink-soft">ตัวอย่างการ์ดสีเทาที่พนักงานเห็นในหน้าสิทธิ์สวัสดิการ ยื่นคำขอไม่ได้ · การเปลี่ยนแปลงบันทึกใน Log และมีผลทันที</p>
         </Card>
       ) : null}
     </>
