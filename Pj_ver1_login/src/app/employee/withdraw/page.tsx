@@ -15,12 +15,14 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
     redirect("/login");
   }
 
-  const [profile, benefits, params, paySettings, subordinates] = await Promise.all([
+  const params = await searchParams;
+  // คำขอที่จะแก้ (ถ้ามี) โหลดพร้อมกับข้อมูลอื่น ไม่ต้องรอทีละอย่าง
+  const [profile, benefits, paySettings, subordinates, editing] = await Promise.all([
     getMyProfile(session.sub),
     getEmployeeBenefits(session.sub),
-    searchParams,
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
     getSubordinates(session.sub),
+    params.claim ? getClaim(params.claim) : Promise.resolve(null),
   ]);
   const round = currentRound(paySettings);
   if (!profile || !benefits) {
@@ -28,9 +30,9 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
   }
 
   let initial: WithdrawInitial | null = null;
-  if (params.claim) {
-    const claim = await getClaim(params.claim);
-    if (claim && claim.employeeCode === session.sub && (claim.status === "draft" || claim.status === "needs_revision")) {
+  if (editing) {
+    const claim = editing;
+    if ( claim.employeeCode === session.sub && (claim.status === "draft" || claim.status === "needs_revision")) {
       const receipt = claim.receipts[0];
       initial = {
         claimNo: claim.claimNo,

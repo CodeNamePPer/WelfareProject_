@@ -97,8 +97,10 @@ const config: Config = {
         // ข้อความในแถบเมนูตอนขยาย: รอให้แถบกว้างขึ้นก่อนแล้วค่อยแสดง
         "label-in": "fade-in var(--dur-base) ease-out 90ms both",
         "toast-in": "toast-in var(--dur-slow) var(--ease-out) backwards",
-        // หน่วง 200ms ก่อนค่อยๆ แสดง skeleton
-        "skeleton-in": "skeleton-in 200ms ease-out 200ms both",
+        // หน่วงสั้นๆ 80ms กันโครงหน้ากระพริบตอนหน้ามาเร็ว (เดิม 200ms ทำให้จอดูค้าง) แล้วค่อยๆ แสดง
+        "skeleton-in": "skeleton-in 150ms ease-out 80ms both",
+        // เนื้อหาหน้าใหม่ (template.tsx ของแต่ละ role) – backwards: เล่นจบแล้วไม่ค้าง stacking context ทับ z-index ของ overlay ในหน้า
+        "page-in": "fade-in 160ms ease-out backwards",
         "step-in": "step-in 450ms cubic-bezier(.16,1,.3,1) both",
       },
     },

@@ -113,6 +113,18 @@ export async function createHrEmployee(employee: NewEmployee): Promise<string> {
   return (data as { employee_code: string }).employee_code;
 }
 
+/** พนักงานคนเดียวตามรหัส – undefined = ไม่พบ, null = โหลดไม่สำเร็จ (เหมือน getHrEmployees) */
+export async function getHrEmployee(code: string): Promise<HrEmployee | undefined | null> {
+  try {
+    const { data, error } = await supabaseAdmin.from("employee").select(COLUMNS).eq("employee_code", code).is("deleted_at", null).maybeSingle();
+    if (error) throw error;
+    return data ? toHrEmployee(data as unknown as EmployeeRow) : undefined;
+  } catch (err) {
+    console.error("[hr] getHrEmployee failed", err);
+    return null;
+  }
+}
+
 /** คืน null เมื่อโหลดไม่สำเร็จ เพื่อให้หน้าจอแจ้ง "โหลดไม่สำเร็จ" แทนการแสดงรายชื่อว่างหรือข้อมูลปลอม */
 export async function getHrEmployees(): Promise<HrEmployee[] | null> {
   try {

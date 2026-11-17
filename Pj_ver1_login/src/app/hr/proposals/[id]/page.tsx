@@ -19,10 +19,10 @@ const ROLE = { HR: "HR", SUPER_ADMIN: "Admin" } as const;
 
 // HH2 ตรวจข้อเสนอ + พรีวิว เฉพาะหัวหน้า HR
 export default async function ProposalReviewPage({ params }: { params: Params }) {
-  const session = await getSession();
-  if (!(await isHrHead(session))) redirect("/hr/home");
   const { id } = await params;
-  const proposal = await getProposal(id);
+  // ตรวจสิทธิ์และโหลดข้อเสนอพร้อมกัน (ไม่แสดงข้อมูลจนกว่าจะยืนยันว่าเป็นหัวหน้า HR)
+  const [head, proposal] = await Promise.all([getSession().then(isHrHead), getProposal(id)]);
+  if (!head) redirect("/hr/home");
   if (!proposal || proposal.status === "draft" || proposal.status === "withdrawn") notFound();
 
   const [imageUrl, budget] = await Promise.all([signedImageUrl(proposal.imagePath), estimateBudget(proposal.levelLimits)]);
