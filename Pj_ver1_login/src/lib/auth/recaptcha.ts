@@ -1,6 +1,27 @@
 const VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify";
 
-export async function verifyRecaptcha(token: string | undefined, ip: string | null): Promise<boolean> {
+/** action ที่หน้า Login ส่งมากับ grecaptcha.execute — ต้องตรงกันทั้งสองฝั่ง */
+export const RECAPTCHA_LOGIN_ACTION = "login";
+
+/** reCAPTCHA v3 ให้คะแนน 0.0 (บอท) – 1.0 (คน) ต่ำกว่าเกณฑ์นี้ถือว่าไม่ผ่าน */
+function minScore(): number {
+  const n = Number(process.env.RECAPTCHA_MIN_SCORE);
+  return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.5;
+}
+
+interface SiteVerifyV3 {
+  success?: boolean;
+  score?: number;
+  action?: string;
+  hostname?: string;
+  "error-codes"?: string[];
+}
+
+export async function verifyRecaptcha(
+  token: string | undefined,
+  ip: string | null,
+  expectedAction: string = RECAPTCHA_LOGIN_ACTION,
+): Promise<boolean> {
   const secret = process.env.RECAPTCHA_SECRET_KEY;
 
   if (!secret) {
@@ -14,8 +35,12 @@ export async function verifyRecaptcha(token: string | undefined, ip: string | nu
     if (ip) body.set("remoteip", ip);
 
     const res = await fetch(VERIFY_URL, { method: "POST", body, cache: "no-store" });
-    const data = (await res.json()) as { success?: boolean };
-    return data.success === true;
+    const data = (await res.json()) as SiteVerifyV3;
+
+    if (data.success !== true) return false;
+    if (data.action !== expectedAction) return false;
+    if (typeof data.score !== "number" || data.score < minScore()) return false;
+    return true;
   } catch {
     return false;
   }
