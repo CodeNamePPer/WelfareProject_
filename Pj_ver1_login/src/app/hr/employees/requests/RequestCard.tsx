@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import type { EditRequestItem } from '@/lib/hr/editRequests';
@@ -10,7 +10,7 @@ const thaiDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { da
 
 /** การ์ดคำขอแก้ไขข้อมูล 1 รายการ (ดีไซน์ H12) */
 export function RequestCard({ request, own }: { request: EditRequestItem; own: boolean }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -21,6 +21,8 @@ export function RequestCard({ request, own }: { request: EditRequestItem; own: b
     if (decision === 'reject' && !note.trim()) return setError('ระบุข้อความถึงพนักงานเมื่อไม่อนุมัติ');
     setBusy(decision);
     setError('');
+    // สำเร็จแล้วการ์ดนี้จะหายไปจากรายการหลังโหลดใหม่: คงปุ่ม "กำลังบันทึก" ไว้จนถึงตอนนั้น
+    let done = false;
     try {
       const response = await fetch(`/api/hr/employee-requests/${request.id}`, {
         method: 'POST',
@@ -30,11 +32,12 @@ export function RequestCard({ request, own }: { request: EditRequestItem; own: b
       const body = await response.json().catch(() => ({}));
       if (!response.ok) return setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       notify(decision === 'approve' ? `บันทึกข้อมูลของ ${request.employeeName} แล้ว` : 'ไม่อนุมัติคำขอแล้ว');
-      router.refresh();
+      done = true;
+      nav.refresh();
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
-      setBusy(null);
+      if (!done) setBusy(null);
     }
   }
 

@@ -31,9 +31,13 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
     redirect("/access-denied?reason=role");
   }
 
-  const [waiting, head, notifications] = await Promise.all([countClaimsForHr(), isHrHead(session), countHrNotifications(session.sub, session.role)]);
-  // หัวหน้า HR เห็นเมนูของหัวหน้า HR พร้อมจำนวนข้อเสนอที่รออนุมัติ
-  const [proposals, hrClaims] = head ? await Promise.all([countPendingProposals(), countHrClaimsForHead(session.sub)]) : [0, 0];
+  // หัวหน้า HR เห็นเมนูของหัวหน้า HR พร้อมจำนวนข้อเสนอที่รออนุมัติ – นับต่อทันทีที่รู้ว่าเป็นหัวหน้า ไม่ต้องรอตัวนับอื่น
+  const headCounts = isHrHead(session).then(async (isHead) => ({
+    head: isHead,
+    counts: isHead ? await Promise.all([countPendingProposals(), countHrClaimsForHead(session.sub)]) : ([0, 0] as const),
+  }));
+  const [waiting, notifications, { head, counts }] = await Promise.all([countClaimsForHr(), countHrNotifications(session.sub, session.role), headCounts]);
+  const [proposals, hrClaims] = counts;
 
   return (
     <ToastProvider>

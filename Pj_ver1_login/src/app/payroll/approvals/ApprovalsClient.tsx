@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -55,7 +55,7 @@ export function ApprovalsClient({
   rounds: { key: string; label: string }[];
   initialTab?: string;
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : 'pending');
   const [query, setQuery] = useState('');
@@ -88,20 +88,21 @@ export function ApprovalsClient({
   const approve = async (claimNos: string[]) => {
     if (claimNos.length === 0) return;
     setBusy(claimNos.length === 1 ? claimNos[0] : 'bulk');
-    let done = 0;
-    let failure: string | null = null;
-    for (const claimNo of claimNos) {
-      const { error } = await claimAction(claimNo, { action: 'finance_approve' });
-      if (error) {
-        failure = `${claimNo}: ${error}`;
-        break;
-      }
-      done += 1;
+    // ส่งพร้อมกันทีละ 4 รายการ แทนการรอทีละรายการ
+    const results: { claimNo: string; error: string | null }[] = [];
+    for (let start = 0; start < claimNos.length; start += 4) {
+      const batch = claimNos.slice(start, start + 4);
+      results.push(
+        ...(await Promise.all(batch.map(async (claimNo) => ({ claimNo, error: (await claimAction(claimNo, { action: 'finance_approve' })).error ?? null })))),
+      );
     }
+    const done = results.filter((result) => !result.error).length;
+    const failed = results.filter((result) => result.error);
+    const failure = failed.length > 0 ? failed.map((result) => `${result.claimNo}: ${result.error}`).join(' · ') : null;
     setBusy(null);
     setSelected(new Set());
     notify(failure ? (done > 0 ? `อนุมัติจ่ายแล้ว ${done} รายการ · ${failure}` : failure) : `อนุมัติจ่ายแล้ว ${done} รายการ`);
-    router.refresh();
+    nav.refresh();
   };
 
   const count = (t: Tab) => rows.filter((row) => tabOfStatus(row.status) === t).length;
@@ -167,7 +168,8 @@ export function ApprovalsClient({
                   return (
                     <div
                       key={row.claimNo}
-                      onClick={() => router.push(href)}
+                      onClick={() => nav.navigate(href)}
+                      onMouseEnter={() => nav.prefetch(href)}
                       className={cx('grid cursor-pointer items-center gap-3 border-t border-[#F1F5F9] px-5 py-3.5 transition-colors hover:bg-surface motion-reduce:transition-none', COLS)}
                     >
                       <span onClick={(event) => event.stopPropagation()}>

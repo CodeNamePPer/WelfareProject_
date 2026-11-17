@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { ClaimDbStatus } from '@/lib/claims/types';
 import { useToast } from '@/components/ui/Toast';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { Badge, Button, Card, Input, PageHeader, ReadOnlyInput, RequesterFull, type BadgeTone, type RequesterDetail } from '@/features/hr/ui';
 import { FormError, claimAction } from '@/features/finance/ui';
 
@@ -28,7 +28,7 @@ export type ClaimDetailData = {
 const TONE: Partial<Record<ClaimDbStatus, BadgeTone>> = { pending_finance: 'finance', awaiting_payment: 'approved', finance_returned: 'revise', paid: 'paid' };
 
 export function ClaimDetailClient({ data }: { data: ClaimDetailData }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +46,14 @@ export function ClaimDetailClient({ data }: { data: ClaimDetailData }) {
     setError(null);
     setBusy(action);
     const { error: failure } = await claimAction(data.claimNo, action === 'approve' ? { action: 'finance_approve' } : { action: 'finance_return', note: reason.trim() });
-    setBusy(null);
     if (failure) {
+      setBusy(null);
       setError(failure);
       return;
     }
     notify(action === 'approve' ? `อนุมัติจ่าย ${data.claimNo} แล้ว` : `ส่ง ${data.claimNo} กลับ HR แล้ว`);
-    router.push(`/payroll/approvals?tab=${action === 'approve' ? 'awaiting' : 'returned'}`);
-    router.refresh();
+    // คง busy ไว้จนหน้ารายการแสดงจริง
+    nav.navigate(`/payroll/approvals?tab=${action === 'approve' ? 'awaiting' : 'returned'}`, { refresh: true });
   };
 
   const receipt = data.receipts[shown] ?? null;

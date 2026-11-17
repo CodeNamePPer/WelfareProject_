@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
-import { getHrEmployees } from "@/lib/hr/employees";
+import { getHrEmployee } from "@/lib/hr/employees";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
@@ -30,14 +30,14 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
   const claim = await getClaim(decodeURIComponent(claimNo));
   if (!claim || !FIN_STATUSES.includes(claim.status)) notFound();
 
-  const [employees, benefits, account, settings, session] = await Promise.all([
-    getHrEmployees(),
+  const [owner, benefits, account, settings, session] = await Promise.all([
+    getHrEmployee(claim.employeeCode),
     getEmployeeBenefits(claim.employeeCode).catch(() => null),
     getPrimaryBankAccount(claim.employeeCode).catch(() => null),
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
     getSession(),
   ]);
-  const employee = employees?.find((item) => item.code === claim.employeeCode) ?? null;
+  const employee = owner ?? null;
   const hr = [...claim.events].reverse().find((event) => event.kind === "hr_approved") ?? null;
   const returned = [...claim.events].reverse().find((event) => event.kind === "returned") ?? null;
   const paid = [...claim.events].reverse().find((event) => event.kind === "paid") ?? null;

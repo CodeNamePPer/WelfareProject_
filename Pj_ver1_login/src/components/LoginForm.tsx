@@ -21,15 +21,57 @@ declare global {
   }
 }
 
-/** ขอ token ใหม่ทุกครั้งที่ส่งฟอร์ม (token v3 หมดอายุใน 2 นาทีและใช้ได้ครั้งเดียว) */
-function getRecaptchaToken(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const g = window.grecaptcha;
-    if (!g?.ready) return reject(new Error("recaptcha-not-loaded"));
-    g.ready(() => {
-      g.execute(SITE_KEY, { action: RECAPTCHA_ACTION }).then(resolve, reject);
-    });
+const SCRIPT_ID = "recaptcha-script";
+const LOAD_TIMEOUT_MS = 10_000;
+let loading: Promise<GRecaptchaV3> | null = null;
+
+/** โหลด api.js ครั้งเดียวแล้วรอจน grecaptcha.ready — ถ้ากดเข้าสู่ระบบก่อนสคริปต์โหลดเสร็จจะรอแทนที่จะล้มทันที */
+function loadRecaptcha(): Promise<GRecaptchaV3> {
+  if (loading) return loading;
+  loading = new Promise<GRecaptchaV3>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("recaptcha-load-timeout")), LOAD_TIMEOUT_MS);
+    const whenReady = () => {
+      const g = window.grecaptcha;
+      if (!g?.ready) return;
+      g.ready(() => {
+        clearTimeout(timer);
+        resolve(g);
+      });
+    };
+
+    if (window.grecaptcha?.ready) return whenReady();
+
+    let s = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null;
+    if (!s) {
+      s = document.createElement("script");
+      s.id = SCRIPT_ID;
+      s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(SITE_KEY)}`;
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+    s.addEventListener("load", whenReady, { once: true });
+    s.addEventListener(
+      "error",
+      () => {
+        clearTimeout(timer);
+        reject(new Error("recaptcha-script-blocked"));
+      },
+      { once: true },
+    );
+  }).catch((err) => {
+    loading = null; // ให้ลองโหลดใหม่ได้ในการกดครั้งถัดไป
+    throw err;
   });
+  return loading;
+}
+
+/** ขอ token ใหม่ทุกครั้งที่ส่งฟอร์ม (token v3 หมดอายุใน 2 นาทีและใช้ได้ครั้งเดียว) */
+async function getRecaptchaToken(): Promise<string> {
+  const g = await loadRecaptcha();
+  const token = await g.execute(SITE_KEY, { action: RECAPTCHA_ACTION });
+  if (!token) throw new Error("recaptcha-empty-token");
+  return token;
 }
 
 interface LoginResponse {
@@ -66,14 +108,9 @@ export function LoginForm({
     (account ? passwordRef : identifierRef).current?.focus();
   }, [account]);
 
+  // เริ่มโหลดสคริปต์ตั้งแต่เปิดหน้า เพื่อให้พร้อมก่อนผู้ใช้กดเข้าสู่ระบบ
   useEffect(() => {
-    if (!SITE_KEY || document.getElementById("recaptcha-script")) return;
-    const s = document.createElement("script");
-    s.id = "recaptcha-script";
-    s.src = `https://www.google.com/recaptcha/api.js?render=${encodeURIComponent(SITE_KEY)}`;
-    s.async = true;
-    s.defer = true;
-    document.head.appendChild(s);
+    if (SITE_KEY) loadRecaptcha().catch(() => {});
   }, []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -86,7 +123,9 @@ export function LoginForm({
     if (SITE_KEY) {
       try {
         token = await getRecaptchaToken();
-      } catch {
+      } catch (err) {
+        // ดูสาเหตุจริงได้ใน DevTools Console (เช่น คีย์ผิดประเภท โดเมนไม่ได้เพิ่ม หรือถูก ad blocker บล็อก)
+        console.error("[reCAPTCHA]", err);
         setError("โหลดระบบตรวจสอบความปลอดภัย (reCAPTCHA) ไม่สำเร็จ กรุณารีเฟรชหน้าแล้วลองใหม่");
         setLoading(false);
         return;

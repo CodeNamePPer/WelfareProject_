@@ -1,12 +1,12 @@
 'use client';
 
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { useState } from "react";
 import { pill } from "@/features/requester/ui";
 
 /** ปุ่ม "อ่านทั้งหมดแล้ว" */
 export function MarkAllSeen({ unread }: { unread: number }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,7 +17,7 @@ export function MarkAllSeen({ unread }: { unread: number }) {
     try {
       const response = await fetch("/api/employee/notifications/read", { method: "POST" });
       if (!response.ok) return setError("บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-      router.refresh();
+      nav.refresh();
     } catch {
       setError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
     } finally {
@@ -32,8 +32,8 @@ export function MarkAllSeen({ unread }: { unread: number }) {
           {error}
         </span>
       ) : null}
-      <button type="button" onClick={() => void markAll()} disabled={busy || unread === 0} className={pill.quiet}>
-        {busy ? "กำลังบันทึก..." : "อ่านทั้งหมดแล้ว"}
+      <button type="button" onClick={() => void markAll()} disabled={busy || nav.isPending || unread === 0} className={pill.quiet}>
+        {busy || nav.isPending ? "กำลังบันทึก..." : "อ่านทั้งหมดแล้ว"}
       </button>
     </div>
   );

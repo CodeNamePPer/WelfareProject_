@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Check, ImageIcon, Plus, X } from 'lucide-react';
 import { cx } from '@/lib/cx';
@@ -77,7 +77,7 @@ export function ProposalForm({
   onCancel?: () => void;
   onSuccess?: () => void;
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const start = initial?.input;
 
@@ -288,6 +288,8 @@ export function ProposalForm({
       return setStep(0);
     }
     setBusy(kindType);
+    // ออกจากหน้านี้แล้ว: คงปุ่ม "กำลังบันทึก" ไว้จนหน้าปลายทางแสดง
+    let leaving = false;
     try {
       const response = initial?.id
         ? await fetch(`/api/hr/proposals/${initial.id}`, {
@@ -311,13 +313,13 @@ export function ProposalForm({
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push(returnHref);
-        router.refresh();
+        leaving = true;
+        nav.navigate(returnHref, { refresh: true });
       }
     } catch {
       setErrors({ form: 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
     } finally {
-      setBusy(null);
+      if (!leaving) setBusy(null);
     }
   }
 

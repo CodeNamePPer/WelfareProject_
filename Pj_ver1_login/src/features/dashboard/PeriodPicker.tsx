@@ -103,7 +103,7 @@ export function PeriodPicker({ periods, value, onChange, countFor, className }: 
           ref={panelRef}
           role="dialog"
           aria-label="เลือกช่วงเวลา"
-          className="absolute top-[calc(100%+6px)] right-0 z-30 w-[272px] rounded-[8px] border border-line bg-white p-[12px] shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)]"
+          className="origin-top-right animate-pop-in absolute top-[calc(100%+6px)] right-0 z-30 w-[272px] rounded-[8px] border border-line bg-white p-[12px] shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)]"
         >
           <div role="tablist" aria-label="ดูยอดแบบ" className="grid grid-cols-2 gap-[2px] rounded-[6px] bg-surface p-[2px]">
             {(['month', 'year'] as const).map((tab) => (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
-import { getHrEmployees } from "@/lib/hr/employees";
+import { getHrEmployee } from "@/lib/hr/employees";
 import { isHrHead } from "@/lib/hr/hrHead";
 import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
@@ -68,8 +68,8 @@ export default async function ReviewPage({ params }: { params: Params }) {
   if (!claim || !tab) notFound();
 
   // ยื่นแทน: วงเงิน จำนวนครั้ง และบัญชี ใช้ของพนักงานเจ้าของสิทธิ์ (employeeCode) ไม่ใช่คนกรอก
-  const [employees, session, benefits, settings, account, fields, maxClaims] = await Promise.all([
-    getHrEmployees(),
+  const [owner, session, benefits, settings, account, fields, maxClaims] = await Promise.all([
+    getHrEmployee(claim.employeeCode),
     getSession(),
     getEmployeeBenefits(claim.employeeCode),
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
@@ -77,7 +77,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
     getClaimReviewFields(claim.id).catch(() => null),
     getBenefitMaxClaims().catch(() => null),
   ]);
-  const employee = employees?.find((item) => item.code === claim.employeeCode) ?? null;
+  const employee = owner ?? null;
   const request = toPendingRequest(claim);
   const blockers = findBlockers(request, employee, session?.sub ?? null);
   const benefit = benefits?.find((item) => item.code === claim.benefitCode) ?? null;
@@ -98,8 +98,9 @@ export default async function ReviewPage({ params }: { params: Params }) {
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
 
   // HH4: หัวหน้า HR ตรวจคำขอของ HR คนอื่น (ไม่ใช่ของตัวเอง) ที่ยังรอตรวจ
-  const hrClaim =
-    tab === "pending" && session !== null && claim.employeeCode !== session.sub && (await isHrHead(session)) && ((await getHrStaffCodes())?.has(claim.employeeCode) ?? false);
+  const checkHrClaim = tab === "pending" && session !== null && claim.employeeCode !== session.sub;
+  const [head, hrStaff] = checkHrClaim ? await Promise.all([isHrHead(session), getHrStaffCodes()]) : [false, null];
+  const hrClaim = head && (hrStaff?.has(claim.employeeCode) ?? false);
 
   const insurancePaid = fields?.insurancePaid ?? null;
   const insured = insurancePaid !== null && insurancePaid > 0;

@@ -11,9 +11,8 @@ export const dynamic = "force-dynamic";
 
 // HH3 การแสดงสวัสดิการที่ใช้ไม่ได้ เฉพาะหัวหน้า HR
 export default async function VisibilityPage() {
-  const session = await getSession();
-  if (!(await isHrHead(session))) redirect("/hr/home");
-  const rows = await listUnavailableBenefits();
+  const [head, rows] = await Promise.all([getSession().then(isHrHead), listUnavailableBenefits()]);
+  if (!head) redirect("/hr/home");
 
   return (
     <HrPage>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { PageHeader, ReadOnlyInput } from "@/features/hr/ui";
-import { useRouter } from "next/navigation";
+import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
 type MaritalStatus = "โสด" | "สมรส" | "หย่าร้าง / หม้าย";
@@ -203,7 +203,7 @@ function getSummary(form: EmployeeForm, org: OrgChoices): [string, string][][] {
 }
 
 export default function AddEmployeePage() {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [form, setForm] = useState(initialForm);
   const [step, setStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
@@ -347,7 +347,7 @@ export default function AddEmployeePage() {
 
       sessionStorage.removeItem(draftKey);
       sessionStorage.setItem("employee-notice", `เพิ่มพนักงาน ${result.name} (${result.code}) ลงระบบแล้ว`);
-      router.push("/hr/employees");
+      nav.navigate("/hr/employees", { refresh: true });
     } catch {
       setIsSaving(false);
       setSaveError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ข้อมูลยังไม่เข้าระบบ กรุณาลองอีกครั้ง");

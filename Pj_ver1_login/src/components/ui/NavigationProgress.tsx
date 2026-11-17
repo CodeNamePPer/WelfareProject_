@@ -15,6 +15,20 @@ const GIVE_UP_MS = 10_000;
 // handoff: โครงหน้าขึ้นแล้ว ให้แถบจางหายไปเฉยๆ (ยังไม่เสร็จ จึงไม่วิ่งไปสุด) เหลือตัวบอกสถานะแค่อันเดียว
 type Phase = 'idle' | 'loading' | 'done' | 'handoff';
 
+// เปลี่ยนหน้าด้วยโค้ด (router.push / router.refresh) ไม่มีการคลิกลิงก์ให้ดัก จึงสั่งผ่าน event นี้แทน
+const START_EVENT = 'nav-progress:start';
+const FINISH_EVENT = 'nav-progress:finish';
+
+/** เริ่มแถบโหลดเอง – ใช้คู่กับ router.push / router.refresh (ดู useNavTransition) */
+export function startNavigationProgress() {
+  window.dispatchEvent(new Event(START_EVENT));
+}
+
+/** จบแถบโหลด – เรียกเมื่อ transition ของ router จบแล้ว (เช่น refresh ที่ URL ไม่เปลี่ยน) */
+export function finishNavigationProgress() {
+  window.dispatchEvent(new Event(FINISH_EVENT));
+}
+
 function locationKey() {
   return window.location.pathname + window.location.search;
 }
@@ -43,13 +57,27 @@ export function NavigationProgress() {
       if (url.origin !== window.location.origin) return;
       if (url.pathname + url.search === locationKey()) return;
 
+      begin();
+    }
+
+    function begin() {
       startKey.current = locationKey();
       setProgress(0.15);
       setPhase('loading');
     }
 
+    function finish() {
+      setPhase((current) => (current === 'loading' ? 'done' : current));
+    }
+
     document.addEventListener('click', onClick, true);
-    return () => document.removeEventListener('click', onClick, true);
+    window.addEventListener(START_EVENT, begin);
+    window.addEventListener(FINISH_EVENT, finish);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener(START_EVENT, begin);
+      window.removeEventListener(FINISH_EVENT, finish);
+    };
   }, []);
 
   // ระหว่างโหลด: ค่อยๆ ขยับเข้าใกล้ 90% และคอยดูว่าหน้าใหม่พร้อมหรือยัง

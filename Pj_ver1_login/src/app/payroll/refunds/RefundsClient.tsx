@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -23,7 +23,7 @@ export type RefundRow = {
 const COLS = 'grid-cols-[minmax(0,2fr)_minmax(0,2fr)_100px_130px_120px]';
 
 export function RefundsClient({ rows }: { rows: RefundRow[] }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [confirming, setConfirming] = useState<RefundRow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function RefundsClient({ rows }: { rows: RefundRow[] }) {
     if (failure) return setError(failure);
     notify(`บันทึกรับคืน ${confirming.claimNo} แล้ว`);
     setConfirming(null);
-    router.refresh();
+    nav.refresh();
   };
 
   return (

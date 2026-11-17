@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getHrEmployees } from "@/lib/hr/employees";
+import { getHrEmployee } from "@/lib/hr/employees";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { getEmployeeLimits } from "@/lib/hr/employeeLimits";
 import { getHrHeadCode } from "@/lib/hr/hrHead";
@@ -42,20 +42,19 @@ function tenureOf(hireIso: string, endIso: string | null) {
 export default async function EmployeeProfilePage({ params }: { params: Params }) {
   const { id } = await params;
   const code = decodeURIComponent(id);
-  const employees = await getHrEmployees();
-  if (employees === null) return <p className="text-13 text-status-rejected-ink">โหลดข้อมูลพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
-  const employee = employees.find((item) => item.code === code);
-  if (!employee) notFound();
-
-  const [benefits, claims, maxClaims, limits, session] = await Promise.all([
+  // ดึงทุกอย่างพร้อมกัน (เดิมโหลดพนักงานทั้งบริษัทก่อนเพื่อหาคนเดียว แล้วค่อยโหลดส่วนที่เหลือ)
+  const [employee, benefits, claims, maxClaims, limits, session, hrHead] = await Promise.all([
+    getHrEmployee(code),
     getEmployeeBenefits(code),
     listClaims({ employeeCode: code }),
     getBenefitMaxClaims().catch(() => null),
     getEmployeeLimits(code).catch(() => null),
     getSession(),
+    getHrHeadCode(),
   ]);
+  if (employee === null) return <p className="text-13 text-status-rejected-ink">โหลดข้อมูลพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
+  if (!employee) notFound();
   // ปรับวงเงินรายคนได้เฉพาะหัวหน้า HR คนอื่นเห็นตารางอย่างเดียว
-  const hrHead = await getHrHeadCode();
   const canAdjust = session?.role === "HR" && hrHead !== null && session.sub === hrHead;
   const today = bangkokToday();
   const year = today.slice(0, 4);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useRef, useState } from 'react';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -28,7 +28,7 @@ function ResultPill({ result }: { result: PayoutRow['result'] }) {
 }
 
 function RecordForm({ row, onClose }: { row: PayoutRow; onClose: () => void }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [result, setResult] = useState<'success' | 'failed'>('success');
   const [text, setText] = useState('');
@@ -43,7 +43,7 @@ function RecordForm({ row, onClose }: { row: PayoutRow; onClose: () => void }) {
     if (failure) return setError(failure);
     notify(`บันทึกผลการโอน ${row.claimNo} แล้ว`);
     onClose();
-    router.refresh();
+    nav.refresh();
   };
 
   return (
@@ -96,7 +96,7 @@ export function PayoutTable({
   nextPayDate: string | null;
   readOnly?: boolean;
 }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const upload = useRef<HTMLInputElement>(null);
   const [recording, setRecording] = useState<PayoutRow | null>(null);
@@ -156,7 +156,7 @@ export function PayoutTable({
     }
     setBusy(null);
     notify(failure ? `บันทึกแล้ว ${done} รายการ · ${failure}` : `บันทึกผลการโอนแล้ว ${done} รายการ`);
-    router.refresh();
+    nav.refresh();
   };
 
   const carry = async (row: PayoutRow) => {
@@ -164,7 +164,7 @@ export function PayoutTable({
     const { error } = await financeAction({ type: 'carry_over', claimNo: row.claimNo });
     setBusy(null);
     notify(error ?? `ยก ${row.claimNo} ไปโอนรอบถัดไปแล้ว`);
-    router.refresh();
+    nav.refresh();
   };
 
   return (

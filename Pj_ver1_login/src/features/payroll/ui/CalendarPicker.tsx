@@ -91,7 +91,7 @@ export function CalendarPicker({ label, baseYear, baseMonth, minOffset, maxOffse
       </button>
 
       {open ? (
-        <div role="dialog" aria-label={`ปฏิทิน ${label}`} className="absolute left-0 top-full z-30 mt-2 w-[296px] rounded-[12px] border border-line bg-white p-3 shadow-lg">
+        <div role="dialog" aria-label={`ปฏิทิน ${label}`} className="origin-top-left animate-pop-in absolute left-0 top-full z-30 mt-2 w-[296px] rounded-[12px] border border-line bg-white p-3 shadow-lg">
           <div className="mb-2 flex items-center justify-between">
             <button
               type="button"

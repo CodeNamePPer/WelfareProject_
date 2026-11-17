@@ -1,15 +1,15 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/Toast';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { Button, Card, Textarea } from '@/features/hr/ui';
 
 type Decision = 'approve' | 'needs_info' | 'reject';
 
 /** HH2 การตัดสินใจของหัวหน้า HR: อนุมัติและเปิดใช้ / ขอข้อมูลเพิ่ม / ไม่อนุมัติ */
 export function DecisionClient({ proposalId }: { proposalId: string }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
@@ -27,13 +27,14 @@ export function DecisionClient({ proposalId }: { proposalId: string }) {
         body: JSON.stringify({ decision, note: note.trim() }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) return setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      if (!response.ok) {
+        setBusy(null);
+        return setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      }
       notify(decision === 'approve' ? `อนุมัติแล้ว สร้างสวัสดิการ ${body.benefitCode ?? ''}` : decision === 'needs_info' ? 'ส่งกลับให้ผู้เสนอแก้แล้ว' : 'ไม่อนุมัติข้อเสนอแล้ว');
-      router.push('/hr/proposals');
-      router.refresh();
+      nav.navigate('/hr/proposals', { refresh: true });
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-    } finally {
       setBusy(null);
     }
   }

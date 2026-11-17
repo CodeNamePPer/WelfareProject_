@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState, type ReactNode } from 'react';
 import { baht, thaiDate } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -58,7 +58,7 @@ const COLS = 'lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.3fr)_110px_minmax(0,1fr)_
 
 function Reschedule({ row, today, settings, onClose }: { row: RoundRow; today: string; settings: Settings; onClose: () => void }) {
   const cutoffDays = settings.cutoffDays;
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [date, setDate] = useState('');
   const [reason, setReason] = useState('');
@@ -78,7 +78,7 @@ function Reschedule({ row, today, settings, onClose }: { row: RoundRow; today: s
     if (failure) return setError(failure);
     notify(`เลื่อนวันจ่าย${row.label}เป็น ${thaiDate(date)} แล้ว · แจ้งผู้ขอ ${Number(data.notified ?? 0)} คน`);
     onClose();
-    router.refresh();
+    nav.refresh();
   };
 
   return (
@@ -222,7 +222,7 @@ const linkClass = 'text-primary-600 underline-offset-2 hover:underline';
 
 // การ์ด "ตั้งค่าการจ่ายเงิน": เลือกวันจ่ายของรอบที่ 1 / 2 จากปฏิทิน (ตัวอย่าง = คำขอที่ยื่นเดือนนี้)
 function ScheduleSettings({ settings, upcoming, today }: { settings: Settings; upcoming: RoundRow[]; today: string }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const { notify } = useToast();
   const [draft, setDraft] = useState<Settings>(settings);
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +255,7 @@ function ScheduleSettings({ settings, upcoming, today }: { settings: Settings; u
       if (!response.ok) setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       else {
         notify('บันทึกการตั้งค่าการจ่ายเงินแล้ว');
-        router.refresh();
+        nav.refresh();
       }
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');

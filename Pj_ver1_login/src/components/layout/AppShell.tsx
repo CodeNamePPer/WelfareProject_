@@ -64,7 +64,7 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
 
       <div
         className={cx(
-          'transition-[padding] duration-200 motion-reduce:transition-none',
+          'transition-[padding] duration-slow ease-out motion-reduce:transition-none',
           collapsed ? 'md:pl-[72px]' : 'md:pl-[260px]',
         )}
       >

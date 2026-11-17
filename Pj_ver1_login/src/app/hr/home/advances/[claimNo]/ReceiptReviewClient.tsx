@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { Badge, Button, Card, PageHeader, RequesterFull, fieldClass, labelClass, type BadgeTone, type RequesterDetail } from '@/features/hr/ui';
@@ -27,7 +27,7 @@ export type ReceiptReviewData = {
 type Action = 'approve' | 'return' | 'cancel_overdue';
 
 export function ReceiptReviewClient({ data }: { data: ReceiptReviewData }) {
-  const router = useRouter();
+  const nav = useNavTransition();
   const [doc, setDoc] = useState(0);
   const [extra, setExtra] = useState(data.maxExtra !== null ? data.maxExtra.toFixed(2) : '');
   const [note, setNote] = useState('');
@@ -57,7 +57,7 @@ export function ReceiptReviewClient({ data }: { data: ReceiptReviewData }) {
         setError(body.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
         return;
       }
-      router.refresh();
+      nav.refresh();
     } catch {
       setError('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
     } finally {
