@@ -57,7 +57,29 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-plex-thai)", "system-ui", "sans-serif"],
       },
+      // จังหวะ motion กลาง (ตัวแปรอยู่ใน globals.css) – ease-out ของ Tailwind เปลี่ยนเป็นเส้นโค้งเดียวกันทั้งระบบ
+      transitionTimingFunction: {
+        out: "var(--ease-out)",
+      },
+      transitionDuration: {
+        fast: "var(--dur-fast)",
+        base: "var(--dur-base)",
+        slow: "var(--dur-slow)",
+      },
       keyframes: {
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        // dropdown / ปฏิทิน: ขยายจากมุมของปุ่มที่เปิด
+        "pop-in": {
+          from: { opacity: "0", transform: "translateY(-4px) scale(0.97)" },
+          to: { opacity: "1", transform: "none" },
+        },
+        "toast-in": {
+          from: { opacity: "0", transform: "translateY(12px) scale(0.98)" },
+          to: { opacity: "1", transform: "none" },
+        },
         "skeleton-in": {
           from: { opacity: "0" },
           to: { opacity: "1" },
@@ -69,6 +91,12 @@ const config: Config = {
         },
       },
       animation: {
+        "fade-in": "fade-in var(--dur-base) ease-out both",
+        "pop-in": "pop-in var(--dur-base) var(--ease-out) both",
+        // backwards: หลังเล่นจบให้คลาส transition คุมต่อ (ตอนจางหาย)
+        // ข้อความในแถบเมนูตอนขยาย: รอให้แถบกว้างขึ้นก่อนแล้วค่อยแสดง
+        "label-in": "fade-in var(--dur-base) ease-out 90ms both",
+        "toast-in": "toast-in var(--dur-slow) var(--ease-out) backwards",
         // หน่วง 200ms ก่อนค่อยๆ แสดง skeleton
         "skeleton-in": "skeleton-in 200ms ease-out 200ms both",
         "step-in": "step-in 450ms cubic-bezier(.16,1,.3,1) both",

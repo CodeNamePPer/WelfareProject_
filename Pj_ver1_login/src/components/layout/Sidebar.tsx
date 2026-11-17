@@ -46,7 +46,7 @@ export function Sidebar({
     .filter((item) => !hiddenNavIds?.includes(item.id))
     .map((item) => (badges?.[item.id] !== undefined ? { ...item, badge: badges[item.id] } : item));
 
-  const hideWhenCollapsed = collapsed ? 'md:hidden' : '';
+  const hideWhenCollapsed = collapsed ? 'md:hidden' : 'md:animate-label-in';
   const profileActive = activeId === 'profile';
   const userInitial = Array.from(user.name.trim())[0] ?? '?';
 
@@ -66,14 +66,14 @@ export function Sidebar({
   return (
     <>
       {mobileOpen ? (
-        <div className="fixed inset-0 z-30 bg-ink/40 md:hidden" onClick={onCloseMobile} aria-hidden="true" />
+        <div className="fixed inset-0 z-30 animate-fade-in bg-ink/40 md:hidden" onClick={onCloseMobile} aria-hidden="true" />
       ) : null}
 
       <aside
         id="app-sidebar"
         className={cx(
           'fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col gap-1 border-r border-line bg-white px-4 py-6',
-          'transition-[width,transform] duration-200 motion-reduce:transition-none',
+          'transition-[width,transform] duration-slow ease-out motion-reduce:transition-none',
           collapsed ? 'md:w-[72px] md:px-3' : 'md:w-[260px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}

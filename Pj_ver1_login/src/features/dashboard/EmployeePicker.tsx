@@ -149,7 +149,7 @@ export function EmployeePicker({ employees, value, onChange, claimCounts, classN
       </button>
 
       {open ? (
-        <div className="absolute top-[calc(100%+6px)] right-0 z-30 flex w-full flex-col overflow-hidden rounded-[8px] border border-line bg-white shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] sm:w-[340px]">
+        <div className="origin-top-right animate-pop-in absolute top-[calc(100%+6px)] right-0 z-30 flex w-full flex-col overflow-hidden rounded-[8px] border border-line bg-white shadow-[0_8px_24px_-8px_rgb(15_23_42/0.18)] sm:w-[340px]">
           <div className="relative border-b border-line">
             <Search className="pointer-events-none absolute top-1/2 left-[12px] size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
             <input

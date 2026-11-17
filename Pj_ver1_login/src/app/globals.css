@@ -5,6 +5,11 @@
 :root {
   color-scheme: light;
   font-family: 'IBM Plex Sans Thai', sans-serif;
+  /* จังหวะ motion กลางของทั้งระบบ (tailwind: ease-out, duration-fast/base/slow, hr.css ใช้ตัวแปรเดียวกัน) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
 }
 
 body {
@@ -26,6 +31,59 @@ body {
 @layer base {
   html {
     font-size: 0.875rem;
+  }
+
+  /* ค่าเริ่มต้นให้ทุกตัวควบคุม: สี ขอบ และ focus ring ค่อยๆ เปลี่ยน ไม่กระพริบ
+     (คลาส transition-* ของ Tailwind ยังชนะ เพราะอยู่ใน layer utilities) */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [role='tab'] {
+    transition-property: color, background-color, border-color, box-shadow, text-decoration-color, fill, stroke;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: ease-out;
+  }
+
+  /* dialog ทุกตัว (showModal) ค่อยๆ ลอยขึ้นตอนเปิด และจางหายตอนปิด
+     – เบราว์เซอร์ที่ยังไม่รองรับ allow-discrete จะปิดทันทีเหมือนเดิม */
+  dialog {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+    transition:
+      opacity var(--dur-fast) ease-out,
+      transform var(--dur-fast) ease-out,
+      overlay var(--dur-fast) allow-discrete,
+      display var(--dur-fast) allow-discrete;
+  }
+  dialog[open] {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-out);
+  }
+  @starting-style {
+    dialog[open] {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+  }
+  dialog::backdrop {
+    opacity: 0;
+    transition:
+      opacity var(--dur-base) ease-out,
+      overlay var(--dur-base) allow-discrete,
+      display var(--dur-base) allow-discrete;
+  }
+  dialog[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    dialog[open]::backdrop {
+      opacity: 0;
+    }
   }
 }
 
