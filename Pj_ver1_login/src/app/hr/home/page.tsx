@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployees } from "@/lib/hr/employees";
+import { isHrHead } from "@/lib/hr/hrHead";
+import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getBenefitMaxClaims, getQueueFields } from "@/lib/hr/claimReview";
 import { getPaySettings, listClaims } from "@/lib/claims/service";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
@@ -30,6 +32,9 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
 
   const extra = await getQueueFields(claims.map((claim) => claim.id)).catch(() => new Map<string, { proxyReason: string | null; insurancePaid: number | null }>());
   const viewer = session?.sub ?? null;
+  // หัวหน้า HR: คำขอของ HR คนอื่นรวมอยู่ในคิวนี้ (เดิมอยู่เมนู "คำขอเบิกของ HR") ติดป้ายให้เห็นว่าต้องให้หัวหน้า HR ตรวจ
+  const head = session ? await isHrHead(session) : false;
+  const hrStaff = head ? await getHrStaffCodes() : null;
   const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
 
   /** ครั้งที่ใช้ไปของสวัสดิการเดียวกันในปีงบเดียวกัน (รวมคำขอนี้) */
@@ -44,6 +49,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const proxy = claim.submittedByCode !== claim.employeeCode;
     const reason = proxy ? (fields?.proxyReason ?? proxyReasonOf(claim.note)) : null;
     const own = claim.employeeCode === viewer;
+    const hrClaim = !own && tab === "pending" && (hrStaff?.has(claim.employeeCode) ?? false);
     const revision = [...claim.events].reverse().find((event) => event.kind === "revision_requested" || event.kind === "returned");
     const max = maxClaims.get(claim.benefitCode) ?? null;
     const times = usedTimes(claim.employeeCode, claim.benefitCode, claim.expenseDate?.slice(0, 4));
@@ -51,6 +57,8 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const usage = [max !== null ? `ใช้ ${times}/${max} ครั้ง` : `ใช้ ${times} ครั้ง`, left !== null ? `เหลือ ${baht(left)} หลังเบิก` : null].filter(Boolean).join(" · ");
     const hint: QueueRow["hint"] = own
       ? { text: "คำขอของ HR ตรวจโดยหัวหน้า HR", tone: "muted" }
+      : hrClaim
+        ? { text: claim.status === "finance_returned" ? `คำขอของ HR · การเงินส่งกลับ${revision?.note ? `: ${revision.note}` : ""}` : "คำขอของ HR ต้องให้หัวหน้า HR ตรวจ", tone: "amber" }
       : claim.status === "needs_revision"
         ? { text: revision?.note ? `รอผู้ขอแก้: ${revision.note}` : "รอผู้ขอแก้ไข", tone: "muted" }
         : claim.status === "finance_returned"
@@ -62,7 +70,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
       {
         claimNo: claim.claimNo,
         status: claim.status,
-        statusLabel: own && tab === "pending" ? "ส่งหัวหน้า HR ตรวจ" : claim.status === "needs_revision" ? "ส่งกลับให้แก้ไข" : CLAIM_STATUS_LABEL[claim.status],
+        statusLabel: own && tab === "pending" ? "ส่งหัวหน้า HR ตรวจ" : hrClaim ? "รอหัวหน้า HR ตรวจ" : claim.status === "needs_revision" ? "ส่งกลับให้แก้ไข" : CLAIM_STATUS_LABEL[claim.status],
         tab,
         employeeCode: claim.employeeCode,
         employeeName: person?.name ?? claim.employeeName,

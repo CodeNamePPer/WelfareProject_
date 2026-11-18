@@ -100,7 +100,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   return (
     <>
       <PageHeader
-        crumbs={[data.hrClaim ? { label: 'คำขอเบิกของ HR', href: '/hr/hr-claims' } : { label: 'คิวคำขอ', href: '/hr/home' }, { label: data.claimNo }]}
+        crumbs={[{ label: 'คิวคำขอ', href: '/hr/home' }, { label: data.claimNo }]}
         title={data.tab === 'pending' ? `ตรวจคำขอ ${data.claimNo}` : `คำขอ ${data.claimNo}`}
         description={data.subtitle}
         actions={<StatusBadge status={data.status} label={data.hrClaim ? 'รอหัวหน้า HR ตรวจ' : undefined} />}
