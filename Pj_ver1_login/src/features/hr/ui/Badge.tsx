@@ -37,7 +37,7 @@ export function StatusBadge({ status, label }: { status: ClaimDbStatus; label?: 
 }
 
 /** ป้าย "ยื่นแทนโดย…" (สเปก: พื้น #FFFBEB ตัว #92400E ขอบ #FCD34D) */
-export function ProxyBadge({ name, role = 'หัวหน้าแผนก', className }: { name: string; role?: string; className?: string }) {
+export function ProxyBadge({ name, role = 'หัวหน้า', className }: { name: string; role?: string; className?: string }) {
   return (
     <span className={cx('inline-flex items-center rounded-[999px] border border-[#FCD34D] bg-[#FFFBEB] px-2 text-11 text-[#92400E]', className)}>
       ยื่นแทนโดย {name}

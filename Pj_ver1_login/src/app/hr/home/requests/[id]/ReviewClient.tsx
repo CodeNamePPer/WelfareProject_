@@ -20,7 +20,7 @@ export type ReviewData = {
   /** คำขอของ HR ที่หัวหน้า HR กำลังตรวจ (ดีไซน์ HH4) */
   hrClaim?: boolean;
   person: RequesterDetail;
-  /** คำขอที่หัวหน้าแผนกยื่นแทน: ใช้วงเงิน จำนวนครั้ง และบัญชีของเจ้าของสิทธิ์ */
+  /** คำขอที่หัวหน้ายื่นแทน: ใช้วงเงิน จำนวนครั้ง และบัญชีของเจ้าของสิทธิ์ */
   proxy: { by: string; reason: string | null; owner: string; account: string | null } | null;
   entitlement: { title: string; rows: Row[] };
   facts: Row[];
@@ -144,7 +144,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             {/* ยื่นแทน: สเปกต้องแสดงเหตุผลและใช้วงเงิน/บัญชีของเจ้าของสิทธิ์ (artboard H02 ไม่ได้วาดกรณีนี้) */}
             {data.proxy ? (
               <div className="mt-3.5 rounded-[8px] border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-13 text-[#92400E]">
-                <p className="font-medium">ยื่นแทนโดย {data.proxy.by} (หัวหน้าแผนก) · เหตุผล: {data.proxy.reason ?? 'ไม่ได้ระบุ'}</p>
+                <p className="font-medium">ยื่นแทนโดย {data.proxy.by} (หัวหน้า) · เหตุผล: {data.proxy.reason ?? 'ไม่ได้ระบุ'}</p>
                 <p>
                   ใช้วงเงิน จำนวนครั้ง และบัญชีของ {data.proxy.owner}
                   {data.proxy.account ? ` · ${data.proxy.account}` : ' · ยังไม่มีบัญชีหลักในระบบ'}

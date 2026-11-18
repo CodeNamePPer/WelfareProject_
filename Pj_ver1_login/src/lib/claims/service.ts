@@ -5,6 +5,7 @@ import { DEFAULT_ADVANCE_RECEIPT_DAYS } from "./types";
 import type { Role } from "../auth/roles";
 import { findEmployeeUuidByCode } from "../auth/users";
 import { getSubordinates } from "../employee/subordinates";
+import { proxyReasonOf } from "../../features/hr/queue";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, maxClaimsLabel } from "./forms";
 import { emailHr, isHrEmployee } from "../hr/emailNotify";
@@ -420,7 +421,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   if (input.employeeCode !== actor.sub) {
     const reports = await getSubordinates(actor.sub);
     if (!reports?.some((report) => report.id === input.employeeCode)) {
-      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้าแผนก และเฉพาะพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
+      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้า และเฉพาะลูกน้องหรือพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
     }
   }
 
@@ -450,6 +451,8 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     expense_date: input.expenseDate || null,
     provider_name: input.providerName || null,
     note: input.note || null,
+    // ฐานข้อมูลบังคับให้คำขอที่ยื่นแทนมีเหตุผลก่อนส่ง (welfare_claim_proxy_reason_check) ฟอร์มส่งมาไว้ต้นหมายเหตุ
+    proxy_reason: input.employeeCode !== actor.sub ? proxyReasonOf(input.note || null) : null,
     details: input.details,
   };
 
