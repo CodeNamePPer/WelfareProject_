@@ -19,7 +19,8 @@ const BUDGET_DB: Record<string, BudgetType> = {
 export async function ProposeScreen({ params, base }: { params: { draft?: string; edit?: string }; base: "/hr" | "/admin" }) {
   const [session, headCode, options, employees] = await Promise.all([getSession(), getHrHeadCode(), getProposalOptions(), getHrEmployees()]);
   const isHead = session?.role === "HR" && headCode !== null && session.sub === headCode;
-  const headName = headCode ? (employees?.find((employee) => employee.code === headCode)?.name ?? null) : null;
+  const head = headCode ? employees?.find((employee) => employee.code === headCode) : undefined;
+  const headName = head?.name ?? null;
 
   let initial: { id?: string; input: ProposalInput; imageUrl: string | null } | undefined;
   let kind: "create" | "update" = "create";
@@ -73,6 +74,7 @@ export async function ProposeScreen({ params, base }: { params: { draft?: string
         levels={options.levels}
         categories={options.categories}
         headName={headName}
+        headPhotoUrl={head?.photoUrl ?? null}
         initial={initial}
         returnHref={`${base}/benefits`}
       />

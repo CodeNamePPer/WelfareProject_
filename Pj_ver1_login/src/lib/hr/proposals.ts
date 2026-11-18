@@ -233,6 +233,14 @@ export async function withdrawProposal(id: string, actorCode: string, note: stri
   const { error } = await supabaseAdmin.from("welfare_benefit_proposal").update({ status: "withdrawn" }).eq("id", id);
   if (error) throw error;
   await addEvent(id, "withdrawn", own.actorId, own.proposer_role, note.trim() || null);
+  // ฉบับร่างยังไม่เคยส่งถึงหัวหน้า HR จึงไม่ต้องแจ้ง
+  if (own.status !== "draft") {
+    emailHr(
+      "proposal_pending",
+      { subject: "ผู้เสนอถอนข้อเสนอสวัสดิการแล้ว", lines: ["ข้อเสนอนี้ไม่ต้องพิจารณาแล้ว", ...(note.trim() ? [`เหตุผล: ${note.trim()}`] : [])], path: `/hr/proposals/${id}` },
+      { only: "hr_head", exclude: [actorCode] },
+    );
+  }
 }
 
 /** รหัสสวัสดิการถัดไป WEL-014, WEL-015, ... */
@@ -553,7 +561,7 @@ export type ProposalDetail = ProposalSummary & {
   decidedAt: string | null;
   appliedBenefitCode: string | null;
   /** ข้อความล่าสุดที่หัวหน้า HR ขอข้อมูลเพิ่ม */
-  infoRequest: { by: string; at: string; note: string } | null;
+  infoRequest: { by: string; photoUrl: string | null; at: string; note: string } | null;
 };
 
 type DetailRow = SummaryRow & {
@@ -581,9 +589,9 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
     .from("welfare_benefit_proposal")
     .select(
       `${SUMMARY_SELECT}, proposed_by, description, detail, max_claims, effective_from, allow_family, allow_insurance_excess, allow_advance, advance_receipt_days, required_documents, reason, decision_note, decided_at,
-       decider:decided_by(employee_code, first_name_th, last_name_th, position:position_id(name_th)), applied:applied_benefit_id(code),
+       decider:decided_by(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th)), applied:applied_benefit_id(code),
        level_limits:welfare_benefit_proposal_limit(amount, job_level_id, level:job_level_id(code, name_th, rank_order)),
-       events:welfare_benefit_proposal_event(kind, note, created_at, actor:actor_employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th)))`,
+       events:welfare_benefit_proposal_event(kind, note, created_at, actor:actor_employee_id(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th)))`,
     )
     .eq("id", id)
     .is("deleted_at", null)
@@ -625,7 +633,7 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
     decidedByName: data.decider ? nameOf(data.decider) : null,
     decidedAt: data.decided_at,
     appliedBenefitCode: data.applied?.code ?? null,
-    infoRequest: ask ? { by: nameOf(ask.actor), at: ask.created_at, note: ask.note ?? "" } : null,
+    infoRequest: ask ? { by: nameOf(ask.actor), photoUrl: ask.actor?.photo_url ?? null, at: ask.created_at, note: ask.note ?? "" } : null,
   };
 }
 

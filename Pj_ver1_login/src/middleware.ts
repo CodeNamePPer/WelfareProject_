@@ -4,7 +4,8 @@ import { canAccess } from "@/lib/auth/roles";
 import { getClientIp, isOfficeNetwork } from "@/lib/auth/network";
 import { getPasswordState } from "@/lib/auth/credential";
 
-const PUBLIC_PATHS = ["/login", "/access-denied", "/api/auth/login"];
+// /api/auth/account-photo: รูปบนตัวเลือกบัญชีหน้า login – ตรวจกุญแจรูปเองใน route
+const PUBLIC_PATHS = ["/login", "/access-denied", "/api/auth/login", "/api/auth/account-photo"];
 
 /** เส้นทางที่ใช้ได้ระหว่างถูกบังคับตั้งรหัสผ่านใหม่ */
 const CHANGE_PASSWORD_PATH = "/change-password";

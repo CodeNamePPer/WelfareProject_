@@ -13,7 +13,12 @@ export interface KnownAccount {
   name: string;
   role: Role;
   lastUsedAt: number;
+  /** กุญแจเปิดรูปโปรไฟล์ของบัญชีนี้บนหน้า login (/api/auth/account-photo/{photoToken}) */
+  photoToken?: string;
 }
+
+const PHOTO_TOKEN = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+const isPhotoToken = (v: unknown) => v === undefined || (typeof v === "string" && v.length <= 1000 && PHOTO_TOKEN.test(v));
 
 const STORAGE_KEY = "welfare.knownAccounts.v1";
 const MAX_ACCOUNTS = 5;
@@ -28,6 +33,7 @@ function isKnownAccount(v: unknown): v is KnownAccount {
     a.login.length <= 200 &&
     typeof a.name === "string" &&
     typeof a.lastUsedAt === "number" &&
+    isPhotoToken(a.photoToken) &&
     (ROLES as readonly string[]).includes(a.role as string)
   );
 }
@@ -60,6 +66,17 @@ export function rememberAccount(account: Omit<KnownAccount, "lastUsedAt">): void
   if (!isKnownAccount({ ...account, lastUsedAt: 0 })) return;
   const rest = readKnownAccounts().filter((a) => a.code !== account.code);
   write([{ ...account, lastUsedAt: Date.now() }, ...rest].slice(0, MAX_ACCOUNTS));
+}
+
+/**
+ * ต่ออายุกุญแจรูปของบัญชีที่จำไว้ในเครื่องแล้ว (เรียกจากทุกหน้าหลังล็อกอิน)
+ * ไม่เพิ่มบัญชีใหม่ ผู้ที่ไม่ติ๊ก "จดจำบัญชี" จึงไม่ถูกเก็บ
+ */
+export function rememberPhotoToken(code: string, photoToken: string): void {
+  if (!isPhotoToken(photoToken)) return;
+  const list = readKnownAccounts();
+  if (!list.some((a) => a.code === code && a.photoToken !== photoToken)) return;
+  write(list.map((a) => (a.code === code ? { ...a, photoToken } : a)));
 }
 
 export function forgetAccount(code: string): KnownAccount[] {

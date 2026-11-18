@@ -9,6 +9,10 @@ import { Spinner } from '../ui/Spinner';
 import { NAV, type NavSection } from './navigation';
 
 export interface SidebarUser {
+  /** employee_code – ใช้อัปเดตรูปในตัวเลือกบัญชีบนหน้า login */
+  code: string;
+  /** กุญแจรูปโปรไฟล์สำหรับหน้า login (ดู lib/auth/accountPhoto.ts) */
+  photoToken: string;
   name: string;
   roleLabel: string;
   photoUrl?: string | null;

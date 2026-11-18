@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
+import { createAccountPhotoToken } from "@/lib/auth/accountPhoto";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -28,7 +29,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <ToastProvider>
       <NavigationProgress />
-      <AppShell notificationCount={unread} user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role, photoUrl: profile?.photoUrl ?? null }}>
+      <AppShell notificationCount={unread} user={{ code: session.sub, photoToken: await createAccountPhotoToken(session.sub), name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role, photoUrl: profile?.photoUrl ?? null }}>
         {/* pb-[72px] เว้นที่ท้ายทุกหน้าไม่ให้ปุ่มทางลัดบังเนื้อหาส่วนล่าง */}
         <AdminContent>{children}</AdminContent>
       </AppShell>

@@ -1,7 +1,8 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
-import { emailHr } from "./emailNotify";
+import { emailHr, isHrEmployee } from "./emailNotify";
+import { emailEmployees } from "@/lib/email/notify";
 
 // คำขอแก้ไขข้อมูลพนักงาน (ดีไซน์ H12) ตาราง employee_edit_request
 //   พนักงานขอแก้ข้อมูลส่วนตัว -> HR คนอื่นตรวจ -> อนุมัติ = บันทึกค่าใหม่ลง employee จริง / ไม่อนุมัติ = ต้องมีข้อความถึงพนักงาน
@@ -177,6 +178,16 @@ export async function submitEmployeeEditRequest(code: string, topic: EmployeeCha
     { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอเปลี่ยน ${Object.keys(changes).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`], path: "/hr/employees?tab=edits" },
     { exclude: [code] },
   );
+  emailEditRequestReceived(code, Object.keys(changes), "/employee/profile");
+}
+
+/** อีเมลยืนยันถึงผู้ขอว่าคำขอแก้ไขข้อมูลส่งถึง HR แล้ว */
+export function emailEditRequestReceived(code: string, fields: string[], path: string) {
+  emailEmployees("edit_request:submitted", [code], {
+    subject: "ได้รับคำขอแก้ไขข้อมูลของคุณแล้ว",
+    lines: [`ข้อมูลที่ขอแก้: ${fields.map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`, "ขั้นต่อไป: HR ตรวจสอบหลักฐาน ผลจะแจ้งทางอีเมลและในระบบ"],
+    path,
+  });
 }
 
 /** ลิงก์ชั่วคราว (60 วินาที) ให้ HR เปิดดูหลักฐานของคำขอ */
@@ -330,5 +341,22 @@ export async function decideEditRequest(id: string, decision: "approve" | "rejec
     .eq("id", id)
     .eq("status", "pending");
   if (decideError) throw decideError;
-  return { employeeCode: request.employee?.employee_code ?? "", changes };
+  const employeeCode = request.employee?.employee_code ?? "";
+  if (employeeCode) {
+    const labels = Object.keys(request.requested_fields ?? {}).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ");
+    const approved = decision === "approve";
+    // HR แก้ข้อมูลตัวเองที่โปรไฟล์ /hr/profile พนักงานคนอื่นที่ /employee/profile
+    const path = (await isHrEmployee(employeeCode).catch(() => false)) ? "/hr/profile" : "/employee/profile";
+    emailEmployees(
+      "edit_request:decided",
+      [employeeCode],
+      {
+        subject: approved ? "HR อนุมัติคำขอแก้ไขข้อมูลของคุณแล้ว" : "คำขอแก้ไขข้อมูลของคุณไม่ได้รับอนุมัติ",
+        lines: [`ข้อมูลที่ขอแก้: ${labels || "-"}`, approved ? "บันทึกข้อมูลใหม่ในโปรไฟล์แล้ว" : "ข้อมูลในโปรไฟล์ยังเป็นค่าเดิม", ...(note.trim() ? [`ข้อความจาก HR: ${note.trim()}`] : [])],
+        path,
+      },
+      { exclude: [actorCode] },
+    );
+  }
+  return { employeeCode, changes };
 }

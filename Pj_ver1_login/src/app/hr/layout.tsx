@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
+import { createAccountPhotoToken } from "@/lib/auth/accountPhoto";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { cancelOverdueAdvances, countClaimsForHr } from "@/lib/claims/service";
 import { isHrHead } from "@/lib/hr/hrHead";
@@ -48,7 +49,7 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
         section={head ? "hr_head" : "hr"}
         notificationCount={waiting}
         badges={head ? { proposals } : { notifications }}
-        user={{ name: session.name, roleLabel: head ? "หัวหน้าฝ่ายบุคคล" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
+        user={{ code: session.sub, photoToken: await createAccountPhotoToken(session.sub), name: session.name, roleLabel: head ? "หัวหน้าฝ่ายบุคคล" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
       >
         <div className="hr-app">{children}</div>
       </AppShell>

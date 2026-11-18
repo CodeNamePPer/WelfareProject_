@@ -1,5 +1,6 @@
 import "server-only";
 import { emailHr } from "./emailNotify";
+import { emailEditRequestReceived } from "./editRequests";
 import { supabaseAdmin } from "@/lib/supabase";
 
 // ข้อมูลเพิ่มของหน้าโปรไฟล์ HR / หัวหน้า HR (ดีไซน์ P01, P02) อ่านอย่างเดียว
@@ -167,6 +168,7 @@ export async function submitOwnEditRequest(code: string, wanted: Partial<Record<
     throw insertError;
   }
   emailHr("employee_edit_request", { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอแก้ไขข้อมูลติดต่อ`], path: "/hr/employees?tab=edits" }, { exclude: [code] });
+  emailEditRequestReceived(code, Object.keys(changes), "/hr/profile");
 }
 
 /** บันทึกการตั้งค่าแจ้งเตือนรายเรื่อง */

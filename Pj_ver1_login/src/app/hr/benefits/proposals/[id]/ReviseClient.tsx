@@ -23,7 +23,7 @@ export function ReviseClient({
   returnHref = '/hr/benefits',
 }: {
   proposal: { id: string; input: ProposalInput };
-  request: { by: string; at: string; note: string } | null;
+  request: { by: string; photoUrl: string | null; at: string; note: string } | null;
   levels: Level[];
   onSuccess?: () => void;
   returnHref?: string;
@@ -81,7 +81,7 @@ export function ReviseClient({
       {request ? (
         <section aria-label="ความเห็นของหัวหน้า HR" className="flex flex-col gap-2 rounded-[8px] border border-[#FDBA74] bg-[#FFF7ED] px-[18px] py-4">
           <div className="flex items-center gap-2.5">
-            <Avatar name={request.by} size="sm" tone="orange" />
+            <Avatar name={request.by} src={request.photoUrl} size="sm" tone="orange" />
             <span className="text-13">
               <b className="font-semibold">{request.by}</b> · หัวหน้า HR · {thaiDate(request.at)}
             </span>

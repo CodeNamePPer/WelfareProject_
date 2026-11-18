@@ -1,12 +1,11 @@
 import "server-only";
-import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { deliverableEmail } from "@/lib/email/address";
-import { escapeHtml, isEmailConfigured, sendEmail } from "@/lib/email/resend";
+import { PREFERENCE_FOOTER, afterResponse, deliver, type NoticeMessage } from "@/lib/email/notify";
 import { getHrHeadCode } from "./hrHead";
 
 // อีเมลแจ้งเตือนฝั่ง HR ตามที่แต่ละคนเลือกไว้ในแท็บ "การแจ้งเตือน" ของโปรไฟล์ (hr_notification_preference.email)
-// ส่งหลังตอบ request แล้ว (after) อีเมลส่งไม่ได้ไม่กระทบงานหลัก · ไม่ตั้ง RESEND_API_KEY = ไม่ส่ง
+// ส่งผ่าน lib/email/notify (หลังตอบ request) · อีเมลถึงผู้ขอและการเงินอยู่ใน lib/claims/notify
 
 export type HrEmailTopic =
   | "claim_new"
@@ -20,7 +19,7 @@ export type HrEmailTopic =
 
 const ADMIN_TOPICS: HrEmailTopic[] = ["proposal_decided", "my_claim_status"];
 
-type Message = { subject: string; lines: string[]; path: string };
+type Message = NoticeMessage;
 
 type Recipient = { code: string; email: string };
 
@@ -52,45 +51,18 @@ async function recipientsFor(topic: HrEmailTopic): Promise<Recipient[]> {
   });
 }
 
-function render(message: Message) {
-  const base = process.env.APP_URL?.trim().replace(/\/$/, "");
-  const link = base ? `${base}${message.path}` : null;
-  const text = [...message.lines, ...(link ? ["", `เปิดดู: ${link}`] : [])].join("\n");
-  const html = [
-    ...message.lines.map((line) => `<p style="margin:0 0 8px">${escapeHtml(line)}</p>`),
-    link ? `<p style="margin:16px 0 0"><a href="${escapeHtml(link)}">เปิดดูในระบบ</a></p>` : "",
-    `<p style="margin:16px 0 0;color:#64748B;font-size:12px">ปิดอีเมลเรื่องนี้ได้ที่ โปรไฟล์ → การแจ้งเตือน</p>`,
-  ].join("");
-  return { text, html };
-}
-
 /**
  * ส่งอีเมลเรื่อง topic ถึง HR ที่เลือกรับไว้
  *   exclude   รหัสพนักงานที่ไม่ต้องได้ (ผู้ทำรายการเอง เจ้าของคำขอ)
  *   only      ส่งเฉพาะรหัสนี้ (เช่น หัวหน้า HR หรือเจ้าของคำขอ)
  */
 export function emailHr(topic: HrEmailTopic, message: Message, options: { exclude?: string[]; only?: string[] | "hr_head" } = {}) {
-  if (!isEmailConfigured()) return;
-  const run = async () => {
-    try {
-      const only = options.only === "hr_head" ? [await getHrHeadCode()].filter((code): code is string => Boolean(code)) : options.only;
-      if (only && only.length === 0) return;
-      const recipients = (await recipientsFor(topic)).filter((r) => !options.exclude?.includes(r.code) && (!only || only.includes(r.code)));
-      const { text, html } = render(message);
-      for (const recipient of recipients) {
-        const result = await sendEmail({ to: recipient.email, subject: message.subject, text, html });
-        if (!result.ok) console.error("[hr email] send failed", { topic, to: recipient.code, error: result.error });
-      }
-    } catch (err) {
-      console.error("[hr email] notify failed", { topic }, err);
-    }
-  };
-  try {
-    after(run);
-  } catch {
-    // เรียกนอก request (เช่น สคริปต์) ส่งทันทีแบบไม่รอ
-    void run();
-  }
+  afterResponse(`hr:${topic}`, async () => {
+    const only = options.only === "hr_head" ? [await getHrHeadCode()].filter((code): code is string => Boolean(code)) : options.only;
+    if (only && only.length === 0) return;
+    const recipients = (await recipientsFor(topic)).filter((r) => !options.exclude?.includes(r.code) && (!only || only.includes(r.code)));
+    await deliver(`hr:${topic}`, recipients, message, PREFERENCE_FOOTER);
+  });
 }
 
 /** เจ้าของคำขอมีบทบาท HR หรือไม่ (คำขอของ HR ไปที่หัวหน้า HR) */

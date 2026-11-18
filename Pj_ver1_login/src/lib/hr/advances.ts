@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getClaim } from "@/lib/claims/service";
-import type { ClaimRecord } from "@/lib/claims/types";
+import { getClaim, notifyClaim } from "@/lib/claims/service";
+import type { ClaimEventKind, ClaimRecord } from "@/lib/claims/types";
 
 // ตรวจใบเสร็จเบิกล่วงหน้า (ดีไซน์ H13) อ่านและบันทึกตาราง welfare_claim_advance (migration 20261114100000)
 // กติกา: ใบเสร็จมากกว่ายอดล่วงหน้า = จ่ายเพิ่มไม่เกินวงเงินคงเหลือ · น้อยกว่า = ผู้ขอคืนส่วนต่าง · เกินกำหนดแนบ = ยกเลิก
@@ -180,5 +180,7 @@ export async function settleAdvance(claimNo: string, input: { action: AdvanceAct
     // ประวัติเขียนไม่ได้: บันทึกไว้ให้ตามแก้ ผลการตรวจยังอยู่ใน welfare_claim_advance (reviewed_by / reviewed_at / review_note)
     console.error("[hr advances] event write failed", { claimNo, action: input.action }, eventError);
   }
+  // ข้อความที่ระบบเติมเอง (ยอดคืนส่วนต่าง) อยู่ในอีเมลแล้ว ส่งเฉพาะข้อความที่ HR พิมพ์ และเหตุผลที่ยกเลิก
+  notifyClaim(claimNo, event.kind as ClaimEventKind, actor.sub, event.kind === "advance_cancelled" ? event.note : note || null);
   return { status: patch.status as AdvanceStatus };
 }

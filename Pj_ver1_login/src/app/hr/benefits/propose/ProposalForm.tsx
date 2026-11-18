@@ -62,6 +62,7 @@ export function ProposalForm({
   levels,
   categories,
   headName,
+  headPhotoUrl,
   initial,
   returnHref = '/hr/benefits',
   onCancel,
@@ -73,6 +74,7 @@ export function ProposalForm({
   levels: Level[];
   categories: string[];
   headName: string | null;
+  headPhotoUrl: string | null;
   initial?: { id?: string; input: ProposalInput; imageUrl: string | null };
   returnHref?: string;
   onCancel?: () => void;
@@ -961,7 +963,7 @@ export function ProposalForm({
 
               {mode === 'propose' ? (
                 <div className="flex items-center gap-2.5 rounded-[8px] bg-surface px-3.5 py-2.5 text-13">
-                  {headName ? <Avatar name={headName} size="sm" /> : null}
+                  {headName ? <Avatar name={headName} src={headPhotoUrl} size="sm" /> : null}
                   <span>
                     ส่งข้อเสนอถึง <b className="font-semibold">{headName ? `${headName} · หัวหน้า HR` : 'หัวหน้า HR'}</b> เพื่อพิจารณาอนุมัติ
                   </span>

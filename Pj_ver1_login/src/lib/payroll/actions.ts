@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase";
-import { ClaimInputError, applyClaimAction, getClaim, getPaySettings, type ClaimActor } from "@/lib/claims/service";
+import { ClaimInputError, applyClaimAction, getClaim, getPaySettings, notifyClaim, type ClaimActor } from "@/lib/claims/service";
 import { bangkokToday, thaiDate } from "@/lib/claims/requester";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate } from "@/features/payroll/lib/pay-settings";
 import { keyOf, nextRoundOf, parseRoundKey } from "./finance";
@@ -86,6 +86,7 @@ export async function recordPaymentResult(claimNo: string, input: { result: "suc
   });
   if (error) throw error;
   await addEvent(claim.id, "payment_failed", by, `โอนไม่สำเร็จ: ${reason}`, claim.status);
+  notifyClaim(claimNo, "payment_failed", actor.sub, reason);
 }
 
 /** โอนไม่สำเร็จ: ยกคำขอไปรอบจ่ายถัดไป (F06 "โอนใหม่รอบถัดไป") */
@@ -116,6 +117,7 @@ export async function carryToNextRound(claimNo: string, actor: Actor) {
   const { error } = await supabaseAdmin.from("welfare_claim").update({ pay_round_id: target.id, pay_date_override: null }).eq("id", claim.id);
   if (error) throw error;
   await addEvent(claim.id, "pay_date_changed", by, `โอนไม่สำเร็จ ยกไปรอบจ่าย ${thaiDate(target.pay_date)}`, claim.status);
+  notifyClaim(claimNo, "pay_date_changed", actor.sub, "โอนไม่สำเร็จ ยกไปรอบจ่ายถัดไป");
 }
 
 /**
@@ -142,10 +144,10 @@ export async function rescheduleRound(key: string, date: string, reason: string,
   const next = nextRoundOf(parsed.year, parsed.month, parsed.roundNo);
   const end = `${next.year}-${pad(next.month)}-${next.roundNo === 1 ? "01" : "16"}T00:00:00+07:00`;
   const [bound, unbound] = await Promise.all([
-    supabaseAdmin.from("welfare_claim").select("id, employee_id").eq("pay_round_id", round.id).in("status", ["pending_finance", "awaiting_payment"]).is("deleted_at", null),
+    supabaseAdmin.from("welfare_claim").select("id, claim_no, employee_id").eq("pay_round_id", round.id).in("status", ["pending_finance", "awaiting_payment"]).is("deleted_at", null),
     supabaseAdmin
       .from("welfare_claim")
-      .select("id, employee_id")
+      .select("id, claim_no, employee_id")
       .is("pay_round_id", null)
       .eq("status", "pending_finance")
       .gte("submitted_at", start)
@@ -164,6 +166,7 @@ export async function rescheduleRound(key: string, date: string, reason: string,
       p_note: `เลื่อนวันจ่ายรอบ ${keyOf(parsed.year, parsed.month, parsed.roundNo)} จาก ${thaiDate(round.pay_date)} เป็น ${thaiDate(date)}: ${note}`,
     });
     if (rpcError) throw rpcError;
+    notifyClaim(claim.claim_no as string, "pay_date_changed", actor.sub, note);
   }
   return { notified: new Set(claims.map((claim) => claim.employee_id)).size };
 }
@@ -184,5 +187,7 @@ export async function recordRefund(claimNo: string, actor: Actor) {
   if (data.refund_received_at) throw new ClaimInputError("บันทึกรับคืนไปแล้ว กรุณาโหลดหน้าใหม่");
   const { error: updateError } = await supabaseAdmin.from("welfare_claim_advance").update({ refund_received_at: new Date().toISOString() }).eq("id", data.id).is("refund_received_at", null);
   if (updateError) throw updateError;
-  await addEvent(claim.id, "refund_received", by, `รับเงินคืน ${amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`, claim.status);
+  const received = `รับเงินคืน ${amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท`;
+  await addEvent(claim.id, "refund_received", by, received, claim.status);
+  notifyClaim(claimNo, "refund_received", actor.sub, received);
 }

@@ -11,7 +11,7 @@ import { Button, ButtonLink, Card, Input, ReadOnlyInput } from '@/features/hr/ui
 
 export type ProfileData = {
   head: boolean;
-  /** ระบบตั้งค่าการส่งอีเมล (Resend) แล้ว */
+  /** ระบบตั้งค่าการส่งอีเมล (Gmail หรือ Resend) แล้ว */
   emailEnabled: boolean;
   name: string;
   initials: string;

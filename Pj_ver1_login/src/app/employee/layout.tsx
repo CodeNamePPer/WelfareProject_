@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
+import { createAccountPhotoToken } from "@/lib/auth/accountPhoto";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { cancelOverdueAdvances, countClaimsToRevise } from "@/lib/claims/service";
 import { countUnreadNotifications } from "@/lib/employee/notifications";
@@ -45,7 +46,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
         notificationCount={todoCount}
         badges={{ notifications: unreadCount }}
         hiddenNavIds={hiddenNavIds}
-        user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role, photoUrl: profile?.photoUrl ?? null }}
+        user={{ code: session.sub, photoToken: await createAccountPhotoToken(session.sub), name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role, photoUrl: profile?.photoUrl ?? null }}
       >
         {/* ความกว้างเนื้อหาและระยะห่างระหว่างส่วนตามดีไซน์ฝั่งผู้ส่งคำขอ */}
         <div className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">{children}</div>
