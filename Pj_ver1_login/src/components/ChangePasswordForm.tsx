@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Check, Circle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { checkNewPassword, PASSWORD_MAX, PASSWORD_RULES } from "@/lib/auth/password-policy";
+import { checkNewPassword, PASSWORD_MAX, PASSWORD_RULES, passwordRuleStatus } from "@/lib/auth/password-policy";
 
 type Props = {
   employeeId: string;
@@ -62,6 +63,8 @@ export function ChangePasswordForm({ employeeId, loginName, redirectTo, submitLa
   const inputClass =
     "h-10 w-full rounded-lg border border-line bg-white px-3 text-13 text-ink focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500";
   const type = show ? "text" : "password";
+  const ruleStatus = passwordRuleStatus(next, { employeeId, loginName });
+  const confirmMatches = confirm === next;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-[14px]" noValidate>
@@ -92,10 +95,21 @@ export function ChangePasswordForm({ employeeId, loginName, redirectTo, submitLa
           required
         />
       </label>
-      <ul id="password-rules" className="-mt-[6px] list-disc space-y-[2px] pl-[18px] text-12 text-muted">
-        {PASSWORD_RULES.map((rule) => (
-          <li key={rule}>{rule}</li>
-        ))}
+      <ul id="password-rules" className="-mt-[6px] space-y-[4px] text-12" aria-live="polite">
+        {PASSWORD_RULES.map((rule, i) => {
+          const ok = ruleStatus[i];
+          return (
+            <li key={rule} className={`flex items-center gap-[6px] ${ok ? "text-ok" : "text-muted"}`}>
+              {ok ? (
+                <Check aria-hidden className="size-[14px] shrink-0" strokeWidth={2.5} />
+              ) : (
+                <Circle aria-hidden className="size-[14px] shrink-0" strokeWidth={1.75} />
+              )}
+              <span>{rule}</span>
+              <span className="sr-only">{ok ? "(ผ่านแล้ว)" : "(ยังไม่ผ่าน)"}</span>
+            </li>
+          );
+        })}
       </ul>
       <label className="flex flex-col gap-[6px] text-13 font-medium text-ink">
         ยืนยันรหัสผ่านใหม่
@@ -109,6 +123,19 @@ export function ChangePasswordForm({ employeeId, loginName, redirectTo, submitLa
           required
         />
       </label>
+      {confirm ? (
+        <p
+          aria-live="polite"
+          className={`-mt-[6px] flex items-center gap-[6px] text-12 ${confirmMatches ? "text-ok" : "text-danger"}`}
+        >
+          {confirmMatches ? (
+            <Check aria-hidden className="size-[14px] shrink-0" strokeWidth={2.5} />
+          ) : (
+            <X aria-hidden className="size-[14px] shrink-0" strokeWidth={2.5} />
+          )}
+          {confirmMatches ? "รหัสผ่านตรงกัน" : "รหัสผ่านยังไม่ตรงกัน"}
+        </p>
+      ) : null}
       <label className="flex items-center gap-[8px] text-13 text-muted">
         <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="size-4" />
         แสดงรหัสผ่าน
