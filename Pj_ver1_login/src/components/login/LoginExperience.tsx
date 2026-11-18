@@ -31,15 +31,23 @@ const ROLE_SHORT: Record<Role, string> = {
 };
 
 function Avatar({ account, size }: { account: KnownAccount; size: "md" | "lg" }) {
+  // รูปโหลดไม่ได้ (ไม่มีรูป / กุญแจหมดอายุ) → กลับไปใช้ตัวย่อ
+  const [failed, setFailed] = useState(false);
+  const box = size === "md" ? "h-[calc(44rem/14)] w-[calc(44rem/14)] text-15" : "h-[calc(52rem/14)] w-[calc(52rem/14)] text-18";
+  if (account.photoToken && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์จาก route ของระบบ
+      <img
+        src={`/api/auth/account-photo/${account.photoToken}`}
+        alt=""
+        aria-hidden="true"
+        onError={() => setFailed(true)}
+        className={cn("shrink-0 rounded-full bg-mist object-cover", box)}
+      />
+    );
+  }
   return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "grid shrink-0 place-items-center rounded-full font-semibold text-white",
-        avatarTone(account.code),
-        size === "md" ? "h-[calc(44rem/14)] w-[calc(44rem/14)] text-15" : "h-[calc(52rem/14)] w-[calc(52rem/14)] text-18",
-      )}
-    >
+    <span aria-hidden="true" className={cn("grid shrink-0 place-items-center rounded-full font-semibold text-white", avatarTone(account.code), box)}>
       {initialsOf(account.name)}
     </span>
   );

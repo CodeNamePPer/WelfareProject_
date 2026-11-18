@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
+import { createAccountPhotoToken } from "@/lib/auth/accountPhoto";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { supabaseAdmin } from "@/lib/supabase";
 import { cancelOverdueAdvances } from "@/lib/claims/service";
@@ -50,7 +51,7 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
         notificationCount={0}
         badges={badges}
         hiddenNavIds={admin ? ADMIN_HIDDEN_NAV : undefined}
-        user={{ name: session.name, roleLabel: session.role === "FINANCE" ? "ฝ่ายการเงิน (Finance)" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
+        user={{ code: session.sub, photoToken: await createAccountPhotoToken(session.sub), name: session.name, roleLabel: session.role === "FINANCE" ? "ฝ่ายการเงิน (Finance)" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
       >
         <div className="payroll-app">{children}</div>
       </AppShell>

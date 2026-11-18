@@ -1,3 +1,4 @@
+import { createAccountPhotoToken } from "@/lib/auth/accountPhoto";
 import { NextResponse, type NextRequest } from "next/server";
 import { findUserByIdentifier, markLogin, verifyPassword } from "@/lib/auth/users";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
     mustChangePassword: mustChange,
     home,
     // ให้หน้า login จำบัญชีนี้ไว้ในเครื่อง (ตัวเลือกบัญชี) – ข้อมูลที่ผู้ใช้เห็นอยู่แล้วหลังเข้าระบบ ไม่มีรหัสผ่าน/token
-    account: { code: user.employeeId, login: user.email, name: user.name, role: user.role },
+    account: { code: user.employeeId, login: user.email, name: user.name, role: user.role, photoToken: await createAccountPhotoToken(user.employeeId) },
   });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return res;

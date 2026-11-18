@@ -66,10 +66,6 @@ export default async function LoginPage({
         <p className="relative mt-5 hidden max-w-[40ch] text-17 leading-[1.7] text-[#b9c3d6] lg:block">
           ยื่นคำขอเบิก แนบใบเสร็จ และดูสถานะการอนุมัติจากฝ่ายบุคคลได้ทันที
         </p>
-        <div className="relative mt-14 hidden gap-7 text-13 text-[#a3aec2] lg:flex">
-          <span>ระบบภายในบริษัท</span>
-          <span>ลืมรหัสผ่าน? ติดต่อผู้ดูแลระบบ</span>
-        </div>
       </aside>
 
       <div className="grid place-items-start justify-items-center px-5 py-9 lg:place-items-center lg:px-9 lg:py-12">

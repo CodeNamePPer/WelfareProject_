@@ -8,6 +8,7 @@ import { Sidebar } from './Sidebar';
 import type { SidebarUser } from './Sidebar';
 import { activeNavId, isAdminDesignC, type NavSection } from './navigation';
 import { useToast } from '../ui/Toast';
+import { rememberPhotoToken } from '../../lib/auth/knownAccounts';
 import { cx } from '../../lib/cx';
 
 interface AppShellProps {
@@ -35,6 +36,10 @@ export function AppShell({ section = 'admin', hiddenNavIds, notificationCount, b
   useEffect(() => {
     if (window.matchMedia('(max-width: 1023px)').matches) setCollapsed(true);
   }, []);
+  // ให้ตัวเลือกบัญชีบนหน้า login เปิดรูปโปรไฟล์ของบัญชีนี้ได้ (หน้านั้นยังไม่ล็อกอิน)
+  useEffect(() => {
+    rememberPhotoToken(user.code, user.photoToken);
+  }, [user.code, user.photoToken]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const adminDesignC = section === 'admin' && isAdminDesignC(pathname);
   const designC = DESIGN_C.includes(section) || adminDesignC;

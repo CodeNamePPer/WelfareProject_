@@ -78,7 +78,7 @@ interface LoginResponse {
   error?: string;
   home?: string;
   mustChangePassword?: boolean;
-  account?: { code: string; login: string; name: string; role: Role };
+  account?: { code: string; login: string; name: string; role: Role; photoToken?: string };
 }
 
 export function LoginForm({
