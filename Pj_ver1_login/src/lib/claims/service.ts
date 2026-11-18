@@ -712,7 +712,8 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
   if (input.action === "finance_approve") {
     const hrAmount = claim.amountApproved ?? claim.amountRequested;
     if (input.amountApproved !== undefined && input.amountApproved !== hrAmount) throw new ClaimInputError("การเงินปรับยอดไม่ได้ ถ้ายอดไม่ถูกต้องให้ส่งกลับ HR");
-    amountApproved = hrAmount;
+    // ยอดที่ HR อนุมัติบันทึกไว้แล้ว ส่งซ้ำจะทำให้ welfare_claim_transition บันทึก amount_adjusted ที่ไม่มีเหตุผล (ผิด welfare_claim_event_check)
+    amountApproved = claim.amountApproved === null ? hrAmount : null;
     payRoundId = await ensurePayRound(claim.submittedAt ?? new Date().toISOString());
   }
 
