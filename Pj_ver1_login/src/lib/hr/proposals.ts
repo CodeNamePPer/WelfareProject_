@@ -319,12 +319,31 @@ async function applyBenefitUpdate(benefitId: string, benefitCode: string, input:
         })),
     ];
     for (const row of rows) {
-      let query = supabaseAdmin.from("welfare_benefit_limit").select("id").eq("benefit_id", benefitId).is("employee_id", null).eq("effective_from", row.effective_from);
+      let query = supabaseAdmin.from("welfare_benefit_limit").select("id, amount, effective_from").eq("benefit_id", benefitId).is("employee_id", null).eq("effective_from", row.effective_from);
       query = row.job_level_id === null ? query.is("job_level_id", null) : query.eq("job_level_id", row.job_level_id);
-      const { data: existing } = await query.maybeSingle<{ id: string }>();
-      const write = existing
-        ? await supabaseAdmin.from("welfare_benefit_limit").update({ amount: row.amount, reason: row.reason }).eq("id", existing.id)
-        : await supabaseAdmin.from("welfare_benefit_limit").insert(row);
+      const { data: existing, error: findError } = await query.maybeSingle<{ id: string; amount: number | string; effective_from: string }>();
+      if (findError) throw findError;
+      if (!existing) {
+        const write = await supabaseAdmin.from("welfare_benefit_limit").insert(row);
+        if (write.error) throw write.error;
+        continue;
+      }
+      // ยอดเท่าเดิม: ไม่ต้องแตะแถว (แถวที่มีผลแล้วแก้ไม่ได้ เช่น สวัสดิการที่เพิ่งสร้างวันนี้)
+      if (Number(existing.amount) === row.amount) continue;
+      if (existing.effective_from > today()) {
+        const write = await supabaseAdmin.from("welfare_benefit_limit").update({ amount: row.amount, reason: row.reason }).eq("id", existing.id);
+        if (write.error) throw write.error;
+        continue;
+      }
+      // วงเงินที่มีผลแล้วแก้ไม่ได้ (trigger) · ถ้ายังไม่มีคำขอใดอ้างอิง ให้แทนที่แถวเดิมได้
+      const { count, error: usedError } = await supabaseAdmin.from("welfare_claim").select("id", { count: "exact", head: true }).eq("benefit_limit_id", existing.id);
+      if (usedError) throw usedError;
+      if ((count ?? 0) > 0) {
+        throw new ProposalError("วงเงินที่มีผลวันนี้มีคำขอเบิกใช้อยู่แล้ว เลือกวันที่มีผลเป็นวันพรุ่งนี้หรือหลังจากนั้นเพื่อปรับวงเงิน", "effectiveFrom");
+      }
+      const removed = await supabaseAdmin.from("welfare_benefit_limit").delete().eq("id", existing.id);
+      if (removed.error) throw removed.error;
+      const write = await supabaseAdmin.from("welfare_benefit_limit").insert(row);
       if (write.error) throw write.error;
     }
   }
