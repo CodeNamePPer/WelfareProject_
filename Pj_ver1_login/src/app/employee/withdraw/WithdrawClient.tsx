@@ -38,7 +38,11 @@ const segment = (active: boolean) =>
     cx('h-8 rounded-full px-3.5 text-13', active ? 'bg-white font-semibold text-ink shadow-[0_1px_2px_rgba(15,23,42,.12)]' : 'text-muted hover:text-ink');
 /** การ์ดตัวเลือก (ประเภทการยื่น) */
 const choice = (active: boolean) =>
-    cx('rounded-lg px-3.5 py-3 text-left text-14', active ? 'border-[1.5px] border-primary-600 bg-primary-50' : 'border border-slate-300 bg-white');
+    // ขอบหนาเท่ากันทั้งสองสถานะ สลับแล้วกล่องไม่ขยับ
+    cx(
+        'flex flex-col justify-center rounded-lg border-[1.5px] px-3.5 py-3 text-left text-14 transition-colors',
+        active ? 'border-primary-600 bg-primary-50' : 'border-slate-300 bg-white hover:border-slate-400',
+    );
 
 const firstSelectable = (list: EmployeeBenefit[]) => (list.find((benefit) => !blockedReason(benefit)) ?? list[0])?.code ?? '';
 
@@ -374,17 +378,8 @@ export default function WithdrawClient({
                                     <span className="block font-semibold">ยื่นล่วงหน้า</span>
                                     <span className="block text-12 text-muted">รับเงินก่อน แนบใบเสร็จภายใน {benefit.advanceReceiptDays} วันหลังได้รับเงิน</span>
                                 </button>
-                            ) : advanceCount > 0 && !typeLocked ? (
-                                // สวัสดิการที่เลือกอยู่ยื่นล่วงหน้าไม่ได้ กดเพื่อเลือกจากสวัสดิการที่ยื่นล่วงหน้าได้
-                                <button type="button" role="radio" aria-checked="false" aria-haspopup="dialog" onClick={() => openPicker(true)} className={choice(false)}>
-                                    <span className="block font-semibold">ยื่นล่วงหน้า</span>
-                                    <span className="block text-12 text-muted">
-                                        {benefit ? 'สวัสดิการนี้ยื่นล่วงหน้าไม่ได้ · ' : ''}
-                                        <span className="font-medium text-primary-700 underline underline-offset-2">เลือกจาก {advanceCount} สวัสดิการที่ยื่นล่วงหน้าได้</span>
-                                    </span>
-                                </button>
                             ) : (
-                                <button type="button" role="radio" aria-checked="false" aria-disabled="true" className={cx(choice(false), 'cursor-not-allowed border-dashed bg-surface text-slate-400')}>
+                                <button type="button" role="radio" aria-checked="false" aria-disabled="true" className={cx(choice(false), 'cursor-not-allowed border-dashed bg-surface text-slate-400 hover:border-slate-300')}>
                                     <span className="block font-semibold">ยื่นล่วงหน้า</span>
                                     <span className="block text-12">{advanceCount > 0 ? 'สวัสดิการนี้ยื่นล่วงหน้าไม่ได้' : 'ยังไม่มีสวัสดิการที่ยื่นล่วงหน้าได้'}</span>
                                 </button>
