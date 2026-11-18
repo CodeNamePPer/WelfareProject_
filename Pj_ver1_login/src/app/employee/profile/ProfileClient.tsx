@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { ProfilePhotoEditor } from "@/components/ProfilePhotoEditor";
 import type { MyProfile } from "@/lib/employee/profile";
 import type { MyEditRequest } from "@/lib/hr/editRequests";
 import { cx } from "@/lib/cx";
@@ -83,14 +84,12 @@ export default function ProfileClient({ profile, roleLabel, editRequest = null }
         <div className="h-24 bg-blue-900" />
         <div className="flex flex-wrap items-end justify-between gap-4 px-6">
           <div className="flex flex-wrap items-end gap-4">
-            <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
-              {profile.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
-                <img src={profile.photoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                profile.initials
-              )}
-            </div>
+            <ProfilePhotoEditor
+              photoUrl={profile.photoUrl}
+              initials={profile.initials}
+              className="-mt-[52px]"
+              circleClassName="size-[104px] border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700"
+            />
             <div className="min-w-0 pb-1">
               <h1 className="text-22 font-semibold">{profile.name}</h1>
               <p className="text-14 text-ink-soft">{[profile.position, profile.department].filter(Boolean).join(" · ") || "ยังไม่ระบุตำแหน่ง"}</p>
