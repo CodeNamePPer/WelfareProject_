@@ -133,11 +133,7 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
     <>
       {!detailRequest && (
         <>
-          <PageHead title="ติดตามสถานะ" description={`ปี ${selectedYear} · คำขอทั้งหมด ${requestsForYear.length} รายการ`}>
-            <Link href="/employee/withdraw" className={pill.primary}>
-              ยื่นคำขอใหม่
-            </Link>
-          </PageHead>
+          <PageHead title="ติดตามสถานะ" description={`ปี ${selectedYear} · คำขอทั้งหมด ${requestsForYear.length} รายการ`} />
 
           <Sheet>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5">
