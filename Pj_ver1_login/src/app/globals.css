@@ -96,3 +96,9 @@ body {
     display: none;
   }
 }
+
+/* reCAPTCHA v3 badge: สคริปต์ยังค้างหลังล็อกอิน (เปลี่ยนหน้าแบบ client) ทำให้ badge บังปุ่มลอยมุมขวาล่าง
+   ซ่อนไว้ได้ตามเงื่อนไขของ Google เพราะหน้า Login แสดงข้อความแจ้งการใช้ reCAPTCHA แทนแล้ว (LoginForm) */
+.grecaptcha-badge {
+  visibility: hidden !important;
+}
