@@ -269,6 +269,21 @@ export function LoginForm({
       </button>
 
       <p className="text-13 text-ink-mute">ลืมรหัสผ่าน? ติดต่อผู้ดูแลระบบ</p>
+
+      {/* ซ่อน badge ลอยของ reCAPTCHA ไว้ใน globals.css (มันบังปุ่มลอยมุมขวาล่าง) Google อนุญาตให้ซ่อนได้ถ้าแสดงข้อความนี้ในฟอร์มแทน */}
+      {SITE_KEY ? (
+        <p className="text-12 leading-relaxed text-ink-mute">
+          เว็บไซต์นี้ใช้ reCAPTCHA ของ Google ตาม{" "}
+          <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-ink-soft">
+            นโยบายความเป็นส่วนตัว
+          </a>{" "}
+          และ{" "}
+          <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-ink-soft">
+            ข้อกำหนดในการให้บริการ
+          </a>{" "}
+          ของ Google
+        </p>
+      ) : null}
     </form>
   );
 }
