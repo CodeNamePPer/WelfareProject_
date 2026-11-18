@@ -23,6 +23,7 @@ interface LevelLimitRow {
   benefit_id: string;
   job_level_id: string;
   amount: number | string;
+  effective_from: string;
   level: { code: string; name_th: string; rank_order: number } | null;
 }
 
@@ -149,11 +150,12 @@ export async function getWelfareItems(): Promise<WelfareItem[] | null> {
         .returns<BenefitExtraRow[]>(),
       supabaseAdmin
         .from("welfare_benefit_limit")
-        .select("benefit_id, job_level_id, amount, level:job_level_id(code, name_th, rank_order)")
+        .select("benefit_id, job_level_id, amount, effective_from, level:job_level_id(code, name_th, rank_order)")
         .is("employee_id", null)
         .not("job_level_id", "is", null)
-        .is("effective_to", null)
-        .is("deleted_at", null)
+        // ตารางนี้ไม่มี effective_to / deleted_at: วงเงินที่ใช้วันนี้ = แถวล่าสุดที่ effective_from <= วันนี้
+        .lte("effective_from", bangkokDate())
+        .order("effective_from", { ascending: false })
         .returns<LevelLimitRow[]>(),
       fetchLookup(),
     ]);
@@ -169,9 +171,12 @@ export async function getWelfareItems(): Promise<WelfareItem[] | null> {
     }
     const extraOf = new Map(extraRows.map((row) => [row.id, row]));
     const limitsByBenefit = new Map<string, { levelId: string; code: string; name: string; amount: number; rank: number }[]>();
+    if (levelRows.error) console.error("[admin welfare] level limits load failed", levelRows.error);
     for (const row of levelRows.data ?? []) {
       if (!row.job_level_id || !row.level) continue;
       const list = limitsByBenefit.get(row.benefit_id) ?? [];
+      // เรียงใหม่ไปเก่า แถวแรกของแต่ละระดับคือวงเงินที่มีผลวันนี้
+      if (list.some((limit) => limit.levelId === row.job_level_id)) continue;
       list.push({
         levelId: row.job_level_id,
         code: row.level.code,
@@ -348,6 +353,8 @@ async function writeLimit(row: BenefitRow, amount: number, startDate: string) {
         .from("welfare_benefit_limit")
         .update({ amount, effective_from: startDate })
         .eq("benefit_id", row.id)
+        .is("employee_id", null)
+        .is("job_level_id", null)
         .eq("effective_from", row.next_effective_from)
     : await supabaseAdmin.from("welfare_benefit_limit").insert({ benefit_id: row.id, amount, effective_from: startDate });
   if (error) throw error;
