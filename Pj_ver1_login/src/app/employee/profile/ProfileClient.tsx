@@ -101,9 +101,6 @@ export default function ProfileClient({ profile, roleLabel, editRequest = null }
               </p>
             </div>
           </div>
-          <Link href="/employee/withdraw" className={cx(pill.primary, "mb-2")}>
-            ยื่นคำขอ
-          </Link>
         </div>
         <div role="tablist" aria-label="ส่วนของโปรไฟล์" className="mt-4 flex flex-wrap gap-1 border-t border-line px-4 text-14">
           {TABS.map((item) => {

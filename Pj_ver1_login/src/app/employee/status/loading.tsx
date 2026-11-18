@@ -10,9 +10,7 @@ const LIST_COLS = "grid-cols-[150px_minmax(0,1.6fr)_minmax(0,1.2fr)_110px_130px_
 export default function StatusLoading() {
   return (
     <SkeletonScreen className="flex flex-col gap-4">
-      <PageHead title="ติดตามสถานะ" description={<span aria-hidden="true" className="mt-1 inline-block animate-pulse rounded bg-mist align-middle h-3.5 w-48" />}>
-        <Skeleton className="h-[38px] w-28 rounded-full" />
-      </PageHead>
+      <PageHead title="ติดตามสถานะ" description={<span aria-hidden="true" className="mt-1 inline-block animate-pulse rounded bg-mist align-middle h-3.5 w-48" />} />
 
       <Sheet>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5">

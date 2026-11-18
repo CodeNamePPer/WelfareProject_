@@ -8,7 +8,7 @@ import { ROLE_LABELS } from "@/lib/auth/roles";
 import { APPROVAL_FLOW } from "@/lib/claims/forms";
 import { APPROVED, HOLDER, RESERVED, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
 import type { ClaimRecord, EmployeeBenefit } from "@/lib/claims/types";
-import { BenefitThumb, ClaimPill, EmptyNote, RowLink, Sheet, UsageBar, pill } from "@/features/requester/ui";
+import { BenefitThumb, ClaimPill, EmptyNote, RowLink, Sheet, UsageBar } from "@/features/requester/ui";
 import { HomeTabs } from "@/features/requester/HomeTabs";
 import { isHomeTab } from "@/features/requester/home-tabs";
 import { ProfilePanels } from "./profile/ProfileClient";
@@ -170,11 +170,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                     })}
                   </ul>
                 )}
-                <div className="flex justify-end border-t border-line px-5 py-3">
-                  <Link href="/employee/withdraw" className={pill.primary}>
-                    ยื่นคำขอใหม่
-                  </Link>
-                </div>
               </>
             ),
             requests: (
@@ -230,9 +225,6 @@ function RequestsPanel({ claims, paidThisYear, awaiting }: { claims: ClaimRecord
     <>
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4 pb-2">
         <h2 className="text-16 font-semibold">คำขอของฉันและยอดจ่าย</h2>
-        <Link href="/employee/withdraw" className={pill.primary}>
-          ยื่นคำขอใหม่
-        </Link>
       </div>
       {claims.length === 0 ? (
         <EmptyNote>ยังไม่มีคำขอ</EmptyNote>
