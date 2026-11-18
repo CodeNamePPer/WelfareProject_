@@ -12,7 +12,7 @@ import { DEFAULT_PAY_SETTINGS, cutoffDateOf, daysInMonth, resolvePayDate, type P
 
 export const FIN_STATUSES: ClaimDbStatus[] = ["pending_finance", "finance_returned", "awaiting_payment", "paid"];
 
-export type FinPerson = { name: string; code: string; position: string | null; department: string | null };
+export type FinPerson = { name: string; code: string; position: string | null; department: string | null; photoUrl?: string | null };
 
 export type RoundState = "not_started" | "open" | "closed" | "paid";
 
@@ -163,7 +163,7 @@ export async function getFinanceData(): Promise<FinanceData | null> {
       const hr = [...claim.events].reverse().find((event) => event.kind === "hr_approved") ?? null;
       return {
         claim,
-        person: { name: employee?.name ?? claim.employeeName, code: claim.employeeCode, position: employee?.position ?? null, department: employee?.department ?? claim.department },
+        person: { name: employee?.name ?? claim.employeeName, code: claim.employeeCode, position: employee?.position ?? null, department: employee?.department ?? claim.department, photoUrl: employee?.photoUrl ?? null },
         roundKey,
         payDate: null,
         amount: claim.amountApproved ?? claim.amountRequested,
@@ -315,7 +315,7 @@ export async function getAdvanceItems(): Promise<AdvanceItem[] | null> {
       {
         claimNo: claim.claimNo,
         claimStatus: claim.status,
-        person: { name: employee?.name ?? claim.employeeName, code: claim.employeeCode, position: employee?.position ?? null, department: employee?.department ?? claim.department },
+        person: { name: employee?.name ?? claim.employeeName, code: claim.employeeCode, position: employee?.position ?? null, department: employee?.department ?? claim.department, photoUrl: employee?.photoUrl ?? null },
         benefitName: claim.benefitName,
         status: row.status,
         advanceAmount: Number(row.advance_amount),

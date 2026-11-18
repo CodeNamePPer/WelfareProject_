@@ -299,6 +299,7 @@ export default function AdminUsersClient({
                         person={{
                           name: u.name,
                           code: u.employeeId,
+                          photoUrl: p.photoUrl,
                           position: p.positionName,
                           department: p.departmentName,
                         }}
@@ -818,6 +819,7 @@ export function UserPanel({
           person={{
             name: user.name,
             code: user.employeeId,
+            photoUrl: p.photoUrl,
             position: p.positionName,
             department: p.departmentName,
             level: p.jobLevelName,

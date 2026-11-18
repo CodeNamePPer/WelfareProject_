@@ -6,6 +6,7 @@ export interface OrgMember {
   id: string;
   /** มีเฉพาะแผนกของผู้ที่ล็อกอิน แผนกอื่นส่งแค่ตำแหน่งไปถึงเบราว์เซอร์ */
   name?: string;
+  photoUrl?: string | null;
   role: string;
   isCurrentUser?: boolean;
 }
@@ -15,7 +16,7 @@ export interface OrgDepartment {
   name: string;
   summary: string;
   /** มีเฉพาะแผนกของผู้ที่ล็อกอิน */
-  head: { name: string; isMyManager: boolean; isMe: boolean } | null;
+  head: { name: string; photoUrl?: string | null; isMyManager: boolean; isMe: boolean } | null;
   employees: OrgMember[];
 }
 
@@ -34,6 +35,7 @@ interface DepartmentRow {
 interface EmployeeRow extends EmployeeNameParts {
   id: string;
   employee_code: string;
+  photo_url: string | null;
   department_id: string | null;
   manager_employee_id: string | null;
   position: { name_th: string } | null;
@@ -58,7 +60,7 @@ export async function getOrganization(code: string): Promise<Organization | null
         .returns<DepartmentRow[]>(),
       supabaseAdmin
         .from("employee")
-        .select("id, employee_code, title_th, first_name_th, last_name_th, department_id, manager_employee_id, position:position_id(name_th)")
+        .select("id, employee_code, photo_url, title_th, first_name_th, last_name_th, department_id, manager_employee_id, position:position_id(name_th)")
         .eq("employment_status", "active")
         .is("deleted_at", null)
         .order("employee_code")
@@ -84,12 +86,13 @@ export async function getOrganization(code: string): Promise<Organization | null
         summary: `${parent}พนักงาน ${members.length} คน`,
         head:
           isOwn && headRow
-            ? { name: employeeFullName(headRow), isMyManager: me.manager_employee_id === headRow.id, isMe: me.id === headRow.id }
+            ? { name: employeeFullName(headRow), photoUrl: headRow.photo_url ?? null, isMyManager: me.manager_employee_id === headRow.id, isMe: me.id === headRow.id }
             : null,
         employees: isOwn
           ? staff.map((person) => ({
               id: person.employee_code,
               name: employeeFullName(person),
+              photoUrl: person.photo_url ?? null,
               role: person.position?.name_th ?? NO_POSITION,
               isCurrentUser: person.id === me.id,
             }))

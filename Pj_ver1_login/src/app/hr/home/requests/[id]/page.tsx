@@ -153,6 +153,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
     person: {
       name,
       code: claim.employeeCode,
+      photoUrl: employee?.photoUrl ?? null,
       position: employee?.position ?? null,
       department: employee?.department ?? claim.department,
       level: employee?.jobLevel ?? null,

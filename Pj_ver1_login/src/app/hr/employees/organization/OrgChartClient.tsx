@@ -43,7 +43,7 @@ function PersonCard({ person, reports }: { person: OrgPerson; reports: number })
         head ? 'border-[1.5px] border-[#1D4ED8]' : 'border border-line',
       )}
     >
-      <Avatar name={person.name} size="sm" className="!size-9 !text-13" />
+      <Avatar name={person.name} src={person.photoUrl} size="sm" className="!size-9 !text-13" />
       <span className="min-w-0">
         <span className="block truncate text-13 font-semibold">{person.name}</span>
         <span className="block truncate text-12 text-muted">{person.position ?? '—'}</span>

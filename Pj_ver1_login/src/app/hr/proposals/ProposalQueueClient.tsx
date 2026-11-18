@@ -75,7 +75,7 @@ export function ProposalQueueClient({ rows, stats }: { rows: QueueProposal[]; st
                     </span>
                   </span>
                   <span className="flex items-center gap-2">
-                    <Avatar name={row.proposerName} size="sm" />
+                    <Avatar name={row.proposerName} src={row.proposerPhotoUrl} size="sm" />
                     <span className="text-13">
                       {row.proposerName}
                       <span className="block text-12 text-muted">{ROLE[row.proposerRole]}</span>

@@ -11,6 +11,7 @@ import { NAV, type NavSection } from './navigation';
 export interface SidebarUser {
   name: string;
   roleLabel: string;
+  photoUrl?: string | null;
 }
 
 interface SidebarProps {
@@ -184,11 +185,16 @@ export function Sidebar({
             <span
               aria-hidden="true"
               className={cx(
-                'flex size-8 shrink-0 items-center justify-center rounded-full text-13 font-semibold',
+                'flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-13 font-semibold',
                 profileActive ? 'bg-white text-primary-700' : 'bg-primary-50 text-primary-700 group-hover:bg-white',
               )}
             >
-              {userInitial}
+              {user.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
+                <img src={user.photoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                userInitial
+              )}
             </span>
             <span className={cx('min-w-0 flex-1 leading-tight', hideWhenCollapsed)}>
               <span className={cx('block truncate text-13 font-semibold', profileActive ? 'text-primary-700' : 'text-ink')}>

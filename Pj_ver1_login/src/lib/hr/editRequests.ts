@@ -67,6 +67,58 @@ export async function getMyPendingEditRequest(code: string): Promise<MyPendingEd
   return { submittedAt: data.submitted_at, labels: Object.keys(data.requested_fields ?? {}).map((field) => EDITABLE_FIELDS[field] ?? field) };
 }
 
+/** คำขอแก้ไขข้อมูลของพนักงานคนนี้ ใช้แสดงสถานะในโปรไฟล์และแจ้งเตือนของพนักงาน */
+export type MyEditRequest = {
+  id: string;
+  status: "pending" | "approved" | "rejected";
+  labels: string[];
+  submittedAt: string;
+  decidedAt: string | null;
+  /** ข้อความจาก HR (บังคับเมื่อไม่อนุมัติ) */
+  decisionNote: string | null;
+  deciderName: string | null;
+  deciderCode: string | null;
+};
+
+type MyRow = {
+  id: string;
+  status: MyEditRequest["status"];
+  requested_fields: Record<string, Change>;
+  submitted_at: string;
+  decided_at: string | null;
+  decision_note: string | null;
+  decider: { employee_code: string; first_name_th: string; last_name_th: string } | null;
+};
+
+/** คำขอล่าสุดของพนักงาน ใหม่สุดก่อน (ไม่รวมที่ยกเลิก/ลบ) โหลดไม่ได้คืน [] */
+export async function listMyEditRequests(code: string, limit = 20): Promise<MyEditRequest[]> {
+  const employeeId = await findEmployeeUuidByCode(code);
+  if (!employeeId) return [];
+  const { data, error } = await supabaseAdmin
+    .from("employee_edit_request")
+    .select("id, status, requested_fields, submitted_at, decided_at, decision_note, decider:decided_by(employee_code, first_name_th, last_name_th)")
+    .eq("employee_id", employeeId)
+    .in("status", ["pending", "approved", "rejected"])
+    .is("deleted_at", null)
+    .order("submitted_at", { ascending: false })
+    .limit(limit)
+    .returns<MyRow[]>();
+  if (error) {
+    console.error("[employee edit request] load mine failed", error);
+    return [];
+  }
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    status: row.status,
+    labels: Object.keys(row.requested_fields ?? {}).map((field) => EDITABLE_FIELDS[field] ?? field),
+    submittedAt: row.submitted_at,
+    decidedAt: row.decided_at,
+    decisionNote: row.decision_note,
+    deciderName: row.decider ? nameOf({ ...row.decider, position: null, department: null }) : null,
+    deciderCode: row.decider?.employee_code ?? null,
+  }));
+}
+
 /** พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง 1 เรื่องต่อคำขอ พร้อมหลักฐาน 1 ไฟล์ */
 export async function submitEmployeeEditRequest(code: string, topic: EmployeeChangeTopic, value: string, reason: string, evidence: File) {
   const next = value.trim();
@@ -122,7 +174,7 @@ export async function submitEmployeeEditRequest(code: string, topic: EmployeeCha
   }
   emailHr(
     "employee_edit_request",
-    { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอเปลี่ยน ${Object.keys(changes).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`], path: "/hr/employees/requests" },
+    { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอเปลี่ยน ${Object.keys(changes).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ")}`], path: "/hr/employees?tab=edits" },
     { exclude: [code] },
   );
 }
@@ -146,6 +198,7 @@ export type EditRequestItem = {
   id: string;
   employeeCode: string;
   employeeName: string;
+  employeePhotoUrl?: string | null;
   /** รหัส · ตำแหน่ง · แผนก */
   line: string;
   submittedAt: string;
@@ -155,7 +208,7 @@ export type EditRequestItem = {
   changes: { field: string; label: string; old: string; new: string }[];
 };
 
-type Person = { employee_code: string; first_name_th: string; last_name_th: string; position: { name_th: string } | null; department: { name_th: string } | null } | null;
+type Person = { employee_code: string; photo_url?: string | null; first_name_th: string; last_name_th: string; position: { name_th: string } | null; department: { name_th: string } | null } | null;
 type Row = { id: string; submitted_at: string; reason: string; evidence_name: string | null; requested_fields: Record<string, Change>; employee: Person };
 
 const show = (value: unknown) => (value === null || value === undefined || value === "" ? "—" : String(value));
@@ -165,7 +218,7 @@ const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.l
 export async function listPendingEditRequests(): Promise<EditRequestItem[] | null> {
   const { data, error } = await supabaseAdmin
     .from("employee_edit_request")
-    .select("id, submitted_at, reason, evidence_name, requested_fields, employee:employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th), department:department_id(name_th))")
+    .select("id, submitted_at, reason, evidence_name, requested_fields, employee:employee_id(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th), department:department_id(name_th))")
     .eq("status", "pending")
     .is("deleted_at", null)
     .order("submitted_at", { ascending: true })
@@ -178,10 +231,63 @@ export async function listPendingEditRequests(): Promise<EditRequestItem[] | nul
     id: row.id,
     employeeCode: row.employee?.employee_code ?? "",
     employeeName: nameOf(row.employee),
+    employeePhotoUrl: row.employee?.photo_url ?? null,
     line: [row.employee?.employee_code, row.employee?.position?.name_th, row.employee?.department?.name_th].filter(Boolean).join(" · "),
     submittedAt: row.submitted_at,
     reason: row.reason,
     evidenceName: row.evidence_name,
+    changes: Object.entries(row.requested_fields ?? {}).map(([field, change]) => ({ field, label: EDITABLE_FIELDS[field] ?? field, old: show(change?.old), new: show(change?.new) })),
+  }));
+}
+
+export type EditRequestHistoryItem = {
+  id: string;
+  employeeName: string;
+  /** รหัส · ตำแหน่ง · แผนก */
+  line: string;
+  status: "approved" | "rejected" | "cancelled";
+  submittedAt: string;
+  /** เวลาที่ตัดสิน (คำขอที่ยกเลิกใช้เวลาที่ยกเลิก) */
+  closedAt: string;
+  deciderName: string | null;
+  decisionNote: string | null;
+  reason: string;
+  changes: { field: string; label: string; old: string; new: string }[];
+};
+
+type HistoryRow = Row & {
+  status: EditRequestHistoryItem["status"];
+  decided_at: string | null;
+  updated_at: string;
+  decision_note: string | null;
+  decider: { first_name_th: string; last_name_th: string } | null;
+};
+
+/** ประวัติคำขอแก้ไขข้อมูลที่ปิดแล้ว (อนุมัติ ไม่อนุมัติ ยกเลิก) ใหม่สุดก่อน (null = โหลดไม่สำเร็จ) */
+export async function listEditRequestHistory(limit = 50): Promise<EditRequestHistoryItem[] | null> {
+  const { data, error } = await supabaseAdmin
+    .from("employee_edit_request")
+    .select(
+      "id, status, submitted_at, decided_at, updated_at, decision_note, reason, evidence_name, requested_fields, employee:employee_id(employee_code, first_name_th, last_name_th, position:position_id(name_th), department:department_id(name_th)), decider:decided_by(first_name_th, last_name_th)",
+    )
+    .in("status", ["approved", "rejected", "cancelled"])
+    .order("updated_at", { ascending: false })
+    .limit(limit)
+    .returns<HistoryRow[]>();
+  if (error) {
+    console.error("[hr edit requests] load history failed", error);
+    return null;
+  }
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    employeeName: nameOf(row.employee),
+    line: [row.employee?.employee_code, row.employee?.position?.name_th, row.employee?.department?.name_th].filter(Boolean).join(" · "),
+    status: row.status,
+    submittedAt: row.submitted_at,
+    closedAt: row.decided_at ?? row.updated_at,
+    deciderName: row.decider ? nameOf({ ...row.decider, employee_code: "", position: null, department: null }) : null,
+    decisionNote: row.decision_note,
+    reason: row.reason,
     changes: Object.entries(row.requested_fields ?? {}).map(([field, change]) => ({ field, label: EDITABLE_FIELDS[field] ?? field, old: show(change?.old), new: show(change?.new) })),
   }));
 }

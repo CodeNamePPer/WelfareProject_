@@ -1,7 +1,7 @@
 import { cx } from '@/lib/cx';
 import { initialsOf } from '@/features/hr/queue';
 
-// รูปย่อพนักงาน: มีรูปใช้รูป ไม่มีใช้อักษรย่อ (ฐานข้อมูลยังไม่มีรูปพนักงาน)
+// รูปย่อพนักงาน: มีรูปใช้รูป ไม่มีใช้อักษรย่อ
 const sizeClass = { sm: 'size-8 text-12', md: 'size-10 text-13', lg: 'size-16 text-[20px]' } as const;
 const toneClass = { mist: 'bg-mist text-ink-soft', blue: 'bg-[#DBEAFE] text-[#1E40AF]', orange: 'bg-[#FFEDD5] text-[#9A3412]' } as const;
 

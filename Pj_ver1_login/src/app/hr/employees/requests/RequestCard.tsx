@@ -45,7 +45,7 @@ export function RequestCard({ request, own }: { request: EditRequestItem; own: b
     <Card className="flex flex-col gap-3.5 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <Avatar name={request.employeeName} />
+          <Avatar name={request.employeeName} src={request.employeePhotoUrl} />
           <span className="min-w-0">
             <span className="block font-semibold">{request.employeeName}</span>
             <span className="block text-12 text-muted">{request.line}</span>

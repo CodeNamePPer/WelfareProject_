@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getEmployeeBenefits, getPaySettings, listClaims } from "@/lib/claims/service";
 import { getMyProfile } from "@/lib/employee/profile";
+import { listMyEditRequests } from "@/lib/hr/editRequests";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { APPROVAL_FLOW } from "@/lib/claims/forms";
 import { APPROVED, HOLDER, RESERVED, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
@@ -32,11 +33,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
   const { tab } = await searchParams;
   const initialTab = isHomeTab(tab) ? tab : "benefits";
-  const [profile, benefits, claims, paySettings] = await Promise.all([
+  const [profile, benefits, claims, paySettings, editRequests] = await Promise.all([
     getMyProfile(session.sub),
     getEmployeeBenefits(session.sub),
     listClaims({ employeeCode: session.sub }),
     getPaySettings().catch(() => undefined),
+    listMyEditRequests(session.sub, 1),
   ]);
   if (!profile || !benefits || !claims) {
     return <p className="text-13 text-status-rejected">โหลดข้อมูลสวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
@@ -65,8 +67,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
       <Sheet aria-label="โปรไฟล์" className="overflow-hidden">
         <div className="h-24 bg-blue-900" />
         <div className="flex flex-wrap items-end gap-4 px-6">
-          <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
-            {profile.initials}
+          <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
+            {profile.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
+              <img src={profile.photoUrl} alt="" className="size-full object-cover" />
+            ) : (
+              profile.initials
+            )}
           </div>
           <div className="min-w-0 pb-1">
             <h1 className="text-22 font-semibold">{profile.name}</h1>
@@ -197,7 +204,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
             ),
             profile: (
               <div className="p-5">
-                <ProfilePanels profile={profile} roleLabel={ROLE_LABELS[session.role] ?? session.role} />
+                <ProfilePanels profile={profile} roleLabel={ROLE_LABELS[session.role] ?? session.role} editRequest={editRequests[0] ?? null} />
               </div>
             ),
           }}

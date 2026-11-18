@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="bg-E00015" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E0E7FF"/>
+      <stop offset="100%" stop-color="#C7D2FE"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-E00015)"/>
+  
+  <!-- Neck -->
+  <rect x="176" y="226" width="48" height="58" rx="20" fill="#DDA880"/>
+  <!-- Shoulders & Suit -->
+  <path d="M72 400 C78 320 124 278 200 278 C276 278 322 320 328 400 Z" fill="#1E40AF"/>
+  <!-- Shirt V-neck / Collar -->
+  <path d="M164 280 L200 354 L236 280 Z" fill="#F8FAFC"/>
+  <path d="M164 280 L186 312 L200 296 L214 312 L236 280" fill="none" stroke="#CBD5E1" stroke-width="2"/>
+  <!-- Ears -->
+  <ellipse cx="136" cy="176" rx="10" ry="16" fill="#DDA880"/>
+  <ellipse cx="264" cy="176" rx="10" ry="16" fill="#DDA880"/>
+  <!-- Face -->
+  <path d="M138 158 C138 112 166 92 200 92 C234 92 262 112 262 158 C262 208 234 242 200 242 C166 242 138 208 138 158 Z" fill="#F2C5A0"/>
+  <!-- Eyebrows -->
+  <path d="M158 152 Q171 146 184 151" fill="none" stroke="#221E1D" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M216 151 Q229 146 242 152" fill="none" stroke="#221E1D" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <circle cx="171" cy="169" r="5.2" fill="#1E293B"/>
+  <circle cx="229" cy="169" r="5.2" fill="#1E293B"/>
+  <circle cx="172.8" cy="167.2" r="1.6" fill="#FFFFFF"/>
+  <circle cx="230.8" cy="167.2" r="1.6" fill="#FFFFFF"/>
+  <!-- Nose -->
+  <path d="M200 168 L196 188 Q200 192 205 189" fill="none" stroke="#DDA880" stroke-width="3" stroke-linecap="round"/>
+  <!-- Mouth -->
+  <path d="M180 205 Q200 223 220 205 Z" fill="#FFFFFF" stroke="#B96A58" stroke-width="2.5" stroke-linejoin="round"/>
+  
+  <path d="M133 160 C130 102 162 76 200 76 C240 76 270 102 267 160 C255 128 232 114 200 116 C168 118 145 128 133 160 Z" fill="#221E1D"/>
+</svg>

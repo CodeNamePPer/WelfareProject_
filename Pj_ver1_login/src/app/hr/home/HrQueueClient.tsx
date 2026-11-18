@@ -89,7 +89,7 @@ export function HrQueueClient({ rows, stats, description, initialTab }: { rows: 
     count: item.id === 'all' ? null : filtered.filter((row) => row.tab === item.id && (item.id !== 'pending' || row.action !== 'own')).length,
   }));
   const tabLabel = QUEUE_TABS.find((item) => item.id === tab)?.label ?? '';
-  const person = (row: QueueRow) => ({ name: row.employeeName, code: row.employeeCode, position: row.position, department: row.department, proxyBy: row.proxyBy });
+  const person = (row: QueueRow) => ({ name: row.employeeName, code: row.employeeCode, photoUrl: row.photoUrl, position: row.position, department: row.department, proxyBy: row.proxyBy });
 
   return (
     <>

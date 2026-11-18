@@ -166,7 +166,7 @@ export async function submitOwnEditRequest(code: string, wanted: Partial<Record<
     if (insertError.code === "23505") throw new ProfileError("มีคำขอแก้ไขข้อมูลที่รอตรวจอยู่แล้ว รอให้ HR ตรวจก่อน", 409);
     throw insertError;
   }
-  emailHr("employee_edit_request", { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอแก้ไขข้อมูลติดต่อ`], path: "/hr/employees/requests" }, { exclude: [code] });
+  emailHr("employee_edit_request", { subject: `คำขอแก้ไขข้อมูลพนักงาน ${code}`, lines: [`${code} ขอแก้ไขข้อมูลติดต่อ`], path: "/hr/employees?tab=edits" }, { exclude: [code] });
 }
 
 /** บันทึกการตั้งค่าแจ้งเตือนรายเรื่อง */

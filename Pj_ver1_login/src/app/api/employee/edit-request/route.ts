@@ -4,7 +4,7 @@ import { EMPLOYEE_CHANGE_TOPICS, EditRequestError, submitEmployeeEditRequest, ty
 
 export const runtime = "nodejs";
 
-// พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง (/employee/profile/changeprofile) ส่งเข้าคิว HR ที่ /hr/employees/requests
+// พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง (/employee/profile/changeprofile) ส่งเข้าคิว HR ที่แท็บคำขอแก้ไขข้อมูลใน /hr/employees
 // multipart: field, value, reason, evidence (ไฟล์ 1 ไฟล์)
 export async function POST(req: NextRequest) {
   const session = await getSession();

@@ -63,6 +63,7 @@ export type QueueRow = {
   tab: RowTab;
   employeeCode: string;
   employeeName: string;
+  photoUrl?: string | null;
   position: string | null;
   department: string;
   /** ชื่อหัวหน้าที่ยื่นแทน (null = ยื่นเอง) */

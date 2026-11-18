@@ -11,6 +11,7 @@ export type HrEmploymentStatus = "ACTIVE" | "RESIGNED" | "DECEASED";
 export interface HrEmployee {
   code: string;
   name: string;
+  photoUrl: string | null;
   email: string;
   /** แผนกที่สังกัด (null = ยังไม่ระบุ) */
   department: string | null;
@@ -30,6 +31,7 @@ type NameParts = { title_th: string | null; first_name_th: string; last_name_th:
 
 interface EmployeeRow extends NameParts {
   employee_code: string;
+  photo_url: string | null;
   email: string;
   employment_status: string;
   hire_date: string;
@@ -41,7 +43,7 @@ interface EmployeeRow extends NameParts {
   manager: (NameParts & { employee_code: string }) | null;
 }
 
-const COLUMNS = `employee_code, title_th, first_name_th, last_name_th, email,
+const COLUMNS = `employee_code, photo_url, title_th, first_name_th, last_name_th, email,
   employment_status, hire_date, resigned_date, deceased_date,
   department:department_id(name_th, parent:parent_department_id(name_th)),
   position:position_id(name_th),
@@ -59,6 +61,7 @@ function toHrEmployee(row: EmployeeRow): HrEmployee {
   return {
     code: row.employee_code,
     name: fullName(row),
+    photoUrl: row.photo_url ?? null,
     email: row.email,
     department: row.department?.name_th ?? null,
     parentDepartment: row.department?.parent?.name_th ?? null,

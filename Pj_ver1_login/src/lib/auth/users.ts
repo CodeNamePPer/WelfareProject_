@@ -26,6 +26,7 @@ export interface User {
 
 /** ข้อมูลพนักงานจากตาราง employee (อ่านอย่างเดียวในหน้าตั้งค่าผู้ใช้งาน) */
 export interface EmployeeProfile {
+  photoUrl: string | null;
   titleTh: string | null;
   firstNameTh: string;
   lastNameTh: string | null;
@@ -89,6 +90,7 @@ interface UserRow {
 
 interface EmployeeProfileRow {
   employee_code: string;
+  photo_url: string | null;
   title_th: string | null;
   first_name_th: string;
   last_name_th: string;
@@ -139,7 +141,7 @@ interface EmployeeProfileRow {
 const VIEW_COLUMNS = "employee_uuid, employee_id, email, name, role, status, last_login_at, updated_at";
 
 // อ่านจากตาราง employee เหมือนฝั่ง HR จึงเห็นพนักงานทุกคน รวมถึงคนที่ยังไม่มีบัญชีเข้าระบบ
-const EMPLOYEE_PROFILE_COLUMNS = `employee_code, title_th, first_name_th, last_name_th, first_name_en, last_name_en, nickname,
+const EMPLOYEE_PROFILE_COLUMNS = `employee_code, photo_url, title_th, first_name_th, last_name_th, first_name_en, last_name_en, nickname,
   email, phone, emergency_contact_name, emergency_contact_phone,
   address_line, subdistrict, district, province, postal_code,
   department_id, position_id, job_level_id, employment_status,
@@ -191,6 +193,7 @@ function toUserWithProfile(row: EmployeeProfileRow): UserWithProfile {
     lockedUntil: retryAfterSec > 0 ? new Date(Date.now() + retryAfterSec * 1000).toISOString() : null,
     failedAttempts: 0,
     profile: {
+      photoUrl: row.photo_url ?? null,
       titleTh: row.title_th,
       firstNameTh: row.first_name_th,
       lastNameTh: row.last_name_th === "-" ? null : row.last_name_th,

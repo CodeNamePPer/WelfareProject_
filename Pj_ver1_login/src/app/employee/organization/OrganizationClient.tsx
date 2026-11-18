@@ -16,14 +16,23 @@ function initialsOf(name: string) {
 }
 
 /** การ์ดบุคคลในผัง ถ้าไม่มีชื่อ (แผนกอื่น) แสดงเฉพาะตำแหน่ง */
-function PersonCard({ name, role, note, highlight = false }: { name?: string; role: string; note?: string; highlight?: boolean }) {
+function PersonCard({ name, photoUrl, role, note, highlight = false }: { name?: string; photoUrl?: string | null; role: string; note?: string; highlight?: boolean }) {
   return (
     <div className={cx("flex w-[230px] max-w-full items-center gap-2.5 rounded-lg bg-white p-3", highlight ? "border-2 border-primary-600 bg-primary-50" : "border border-line")}>
       <span
         aria-hidden="true"
-        className={cx("flex size-10 shrink-0 items-center justify-center rounded-full text-13 font-semibold", highlight ? "bg-primary-100 text-primary-700" : "bg-mist text-ink-soft")}
+        className={cx("flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-13 font-semibold", highlight ? "bg-primary-100 text-primary-700" : "bg-mist text-ink-soft")}
       >
-        {name ? initialsOf(name) : <Lock className="size-4" />}
+        {name ? (
+          photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
+            <img src={photoUrl} alt="" className="size-full object-cover" />
+          ) : (
+            initialsOf(name)
+          )
+        ) : (
+          <Lock className="size-4" />
+        )}
       </span>
       <span className="min-w-0">
         <span className="block truncate text-13 font-semibold">{name ?? role}</span>
@@ -89,6 +98,7 @@ export default function OrganizationClient({ organization }: { organization: Org
 
         <PersonCard
           name={isOwnDepartment ? (head ? `${head.name}${head.isMe ? " (คุณ)" : ""}` : "ยังไม่ได้กำหนดผู้จัดการ") : undefined}
+          photoUrl={isOwnDepartment ? head?.photoUrl : undefined}
           role={`ผู้จัดการ${selectedDepartment.name}`}
           note={head?.isMyManager ? "ผู้บังคับบัญชาของคุณ" : undefined}
           highlight={Boolean(head?.isMe)}
@@ -104,6 +114,7 @@ export default function OrganizationClient({ organization }: { organization: Org
                   <Stem />
                   <PersonCard
                     name={isOwnDepartment && employee.name ? `${employee.name}${employee.isCurrentUser ? " (คุณ)" : ""}` : undefined}
+                    photoUrl={isOwnDepartment ? employee.photoUrl : undefined}
                     role={employee.role}
                     note={isOwnDepartment ? employee.id : undefined}
                     highlight={isOwnDepartment && Boolean(employee.isCurrentUser)}

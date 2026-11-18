@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="bg-E00013" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F1F5F9"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-E00013)"/>
+  <circle cx="200" cy="78" r="34" fill="#2A211C"/><path d="M132 155 C132 200 138 225 148 238 L252 238 C262 225 268 200 268 155 Z" fill="#2A211C"/>
+  <!-- Neck -->
+  <rect x="176" y="226" width="48" height="58" rx="20" fill="#E0B088"/>
+  <!-- Shoulders & Suit -->
+  <path d="M72 400 C78 320 124 278 200 278 C276 278 322 320 328 400 Z" fill="#334155"/>
+  <!-- Shirt V-neck / Collar -->
+  <path d="M164 280 L200 354 L236 280 Z" fill="#FFFFFF"/>
+  <path d="M164 280 L186 312 L200 296 L214 312 L236 280" fill="none" stroke="#CBD5E1" stroke-width="2"/>
+  <!-- Ears -->
+  <ellipse cx="136" cy="176" rx="10" ry="16" fill="#E0B088"/>
+  <ellipse cx="264" cy="176" rx="10" ry="16" fill="#E0B088"/>
+  <!-- Face -->
+  <path d="M138 158 C138 112 166 92 200 92 C234 92 262 112 262 158 C262 208 234 242 200 242 C166 242 138 208 138 158 Z" fill="#F5CCA8"/>
+  <!-- Eyebrows -->
+  <path d="M158 152 Q171 146 184 151" fill="none" stroke="#2A211C" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M216 151 Q229 146 242 152" fill="none" stroke="#2A211C" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <circle cx="171" cy="169" r="5.2" fill="#1E293B"/>
+  <circle cx="229" cy="169" r="5.2" fill="#1E293B"/>
+  <circle cx="172.8" cy="167.2" r="1.6" fill="#FFFFFF"/>
+  <circle cx="230.8" cy="167.2" r="1.6" fill="#FFFFFF"/>
+  <!-- Nose -->
+  <path d="M200 168 L196 188 Q200 192 205 189" fill="none" stroke="#E0B088" stroke-width="3" stroke-linecap="round"/>
+  <!-- Mouth -->
+  <path d="M185 207 Q200 216 215 207" fill="none" stroke="#9F5445" stroke-width="3" stroke-linecap="round"/>
+  
+    <g stroke="#1E293B" stroke-width="3.2" fill="none">
+      <rect x="152" y="156" width="38" height="26" rx="8" fill="#FFFFFF" fill-opacity="0.18"/>
+      <rect x="210" y="156" width="38" height="26" rx="8" fill="#FFFFFF" fill-opacity="0.18"/>
+      <path d="M190 168 Q200 163 210 168"/>
+      <path d="M138 164 L152 166"/>
+      <path d="M248 166 L262 164"/>
+    </g>
+  <path d="M132 165 C132 108 162 84 200 84 C238 84 268 108 268 165 C262 135 240 118 212 118 C184 118 160 132 132 165 Z" fill="#2A211C"/>
+</svg>

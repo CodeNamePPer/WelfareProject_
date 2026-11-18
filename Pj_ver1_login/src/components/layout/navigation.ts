@@ -5,7 +5,6 @@ import {
   ChartColumn,
   FilePlus2,
   FileSpreadsheet,
-  FileText,
   Gift,
   History,
   LayoutDashboard,
@@ -14,6 +13,7 @@ import {
   Stamp,
   Network,
   UserCog,
+  UserPen,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -83,6 +83,8 @@ export const NAV: Record<NavSection, SectionConfig> = {
       { id: 'notifications', label: 'แจ้งเตือน', icon: Bell, href: '/hr/notifications' },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
+      // คำขอแก้ไขข้อมูลพนักงาน (H12) ผู้ใช้ขอให้อยู่ในเมนูแทนแท็บในหน้าจัดการพนักงาน
+      { id: 'edit-requests', label: 'คำขอแก้ไขข้อมูล', icon: UserPen, href: '/hr/employees?tab=edits', badgeLabel: 'รอตรวจ' },
       { id: 'reports', label: 'รายงานและสถิติ', icon: ChartColumn, href: '/hr/reports' },
       { id: 'logs', label: 'ประวัติการแก้ไข', icon: History, href: '/hr/logs' },
       REQUEST_ITEM,
@@ -97,10 +99,10 @@ export const NAV: Record<NavSection, SectionConfig> = {
     items: (notificationCount) => [
       { id: 'home', label: 'หน้าแรก · คิวคำขอ', icon: LayoutDashboard, href: '/hr/home', badge: notificationCount, badgeLabel: 'รอตรวจ' },
       { id: 'proposals', label: 'อนุมัติสวัสดิการใหม่', icon: Stamp, href: '/hr/proposals', badgeLabel: 'รออนุมัติ' },
-      { id: 'hr-claims', label: 'คำขอเบิกของ HR', icon: FileText, href: '/hr/hr-claims', badgeLabel: 'รอตรวจ' },
       { id: 'visibility', label: 'การแสดงสวัสดิการ', icon: Eye, href: '/hr/visibility' },
       { id: 'benefits', label: 'จัดการสวัสดิการ', icon: Gift, href: '/hr/benefits' },
       { id: 'employees', label: 'จัดการพนักงานและสิทธิ์', icon: Users, href: '/hr/employees' },
+      { id: 'edit-requests', label: 'คำขอแก้ไขข้อมูล', icon: UserPen, href: '/hr/employees?tab=edits', badgeLabel: 'รอตรวจ' },
       REQUEST_ITEM,
     ],
   },
@@ -143,9 +145,14 @@ export const NAV: Record<NavSection, SectionConfig> = {
 };
 
 /** Menu id for the current path: '/admin' -> 'home', '/admin/users/x' -> 'users', '/hr/home/approved' -> 'home'. */
+/** หน้าย่อยที่มีเมนูของตัวเอง (ไม่ใช้ส่วนแรกของ path เป็นเมนูที่เลือก) */
+const SUBPAGE_NAV: Record<string, string> = { '/hr/employees/requests': 'edit-requests' };
+
 export function activeNavId(section: NavSection, pathname: string | null): string {
   const { basePath } = NAV[section];
   if (!pathname) return '';
+  const subpage = Object.keys(SUBPAGE_NAV).find((path) => pathname === path || pathname.startsWith(`${path}/`));
+  if (subpage) return SUBPAGE_NAV[subpage];
   if (pathname === basePath) return 'home';
   if (!pathname.startsWith(basePath + '/')) return '';
   return pathname.slice(basePath.length + 1).split('/')[0] ?? '';

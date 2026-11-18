@@ -5,9 +5,10 @@ import { listClaims } from "@/lib/claims/service";
 import { HR_PENDING } from "@/features/hr/queue";
 import { isHrHead } from "@/lib/hr/hrHead";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
+import { listPendingEditRequests } from "@/lib/hr/editRequests";
 
 // แจ้งเตือนของ HR (ดีไซน์ H07) สร้างจากข้อมูลจริง ไม่มีตารางแจ้งเตือนแยก:
-//   คำขอใหม่รอตรวจ · การเงินส่งคำขอกลับ · ผลข้อเสนอสวัสดิการ (ของผู้เสนอ) · ข้อเสนอรออนุมัติ (ของหัวหน้า HR)
+//   คำขอใหม่รอตรวจ · การเงินส่งคำขอกลับ · คำขอแก้ไขข้อมูลพนักงาน · ผลข้อเสนอสวัสดิการ (ของผู้เสนอ) · ข้อเสนอรออนุมัติ (ของหัวหน้า HR)
 // สถานะอ่านแล้วเก็บในตาราง hr_notification_read ตาม key ของแต่ละรายการ (key มีเวลาของเหตุการณ์ต่อท้าย
 // เพื่อให้เหตุการณ์ใหม่ของคำขอหรือข้อเสนอเดิม เช่น ยื่นใหม่หลังแก้ไข กลับมาเป็นยังไม่อ่าน)
 
@@ -54,8 +55,9 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
   try {
     const head = await isHrHead({ sub: viewerCode, role });
     const since = new Date(Date.now() - DECIDED_DAYS * 86_400_000).toISOString();
-    const [claims, mine, waiting] = await Promise.all([
+    const [claims, edits, mine, waiting] = await Promise.all([
       listClaims({ statuses: HR_PENDING }),
+      listPendingEditRequests(),
       supabaseAdmin
         .from("welfare_benefit_proposal")
         .select(PROPOSAL_SELECT)
@@ -100,6 +102,20 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
           tone: "amber",
         });
       }
+    }
+    // H07 "คำขอแก้ไขข้อมูลพนักงาน" (โหลดไม่ได้ไม่ทำให้แจ้งเตือนอื่นหาย)
+    for (const request of edits ?? []) {
+      // คำขอของตัวเองตรวจเองไม่ได้ จึงไม่แจ้ง
+      if (request.employeeCode === viewerCode) continue;
+      const labels = [...new Set(request.changes.map((change) => change.label))];
+      notices.push({
+        id: `edit-request-${request.id}-${request.submittedAt}`,
+        at: request.submittedAt,
+        title: "คำขอแก้ไขข้อมูลพนักงาน",
+        body: `${request.employeeName} ขอเปลี่ยน${labels.join("และ")}`,
+        href: "/hr/employees?tab=edits",
+        tone: "green",
+      });
     }
     for (const row of mine.data ?? []) {
       if (row.status === "pending") continue;
