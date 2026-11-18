@@ -1,11 +1,13 @@
 'use client';
-import { Check, FileText, Lock, Upload } from "lucide-react";
+import { Check, FileText, Upload } from "lucide-react";
 
 import Link from "next/link";
 import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useRef, useState } from "react";
 import type { MyProfile } from "@/lib/employee/profile";
 import type { MyPendingEditRequest } from "@/lib/hr/editRequests";
+import { PageHead, Sheet, inputClass, labelClass, pill } from "@/features/requester/ui";
+import { cx } from "@/lib/cx";
 
 const draftStorageKey = "profile-change-draft";
 
@@ -14,16 +16,16 @@ const changeOptions = [
   { value: "email", label: "อีเมล", type: "email", placeholder: "ระบุอีเมลใหม่" },
   { value: "name", label: "ชื่อ-นามสกุล", type: "text", placeholder: "ระบุชื่อ-นามสกุลใหม่" },
   { value: "address", label: "ที่อยู่ปัจจุบัน", type: "textarea", placeholder: "ระบุที่อยู่ปัจจุบัน" },
+  // ผู้ติดต่อฉุกเฉินมี 2 ช่อง: ชื่อ (newValue) และเบอร์โทร (newPhone)
+  { value: "emergency", label: "ผู้ติดต่อฉุกเฉิน", type: "emergency", placeholder: "ชื่อ-นามสกุลผู้ติดต่อฉุกเฉิน" },
 ] as const;
 
 type ChangeField = (typeof changeOptions)[number]["value"];
 
-const inputClassName =
-  "min-h-10 w-full rounded-md border border-line bg-white px-3 py-2 text-13 text-ink outline-none transition placeholder:text-muted focus:border-primary-500 focus:ring-2 focus:ring-primary-100";
-
 type RequestDraft = {
   field: ChangeField;
   newValue: string;
+  newPhone?: string;
   reason: string;
 };
 
@@ -46,9 +48,11 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
     email: profile.email,
     name: profile.name,
     address: profile.address ?? "—",
+    emergency: profile.emergencyContact ?? "—",
   };
   const [field, setField] = useState<ChangeField>("phone");
   const [newValue, setNewValue] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [reason, setReason] = useState("");
   const [evidence, setEvidence] = useState<File | null>(null);
   const [agreed, setAgreed] = useState(false);
@@ -73,6 +77,7 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
         const draft = parsed as Partial<RequestDraft>;
         if (isChangeField(draft.field)) setField(draft.field);
         if (typeof draft.newValue === "string") setNewValue(draft.newValue);
+        if (typeof draft.newPhone === "string") setNewPhone(draft.newPhone);
         if (typeof draft.reason === "string") setReason(draft.reason);
       } catch {
         setNotice("เปิดฉบับร่างที่บันทึกไว้ไม่สำเร็จ คุณสามารถกรอกคำขอใหม่ได้");
@@ -105,7 +110,7 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
   }
 
   function saveDraft() {
-    const draft: RequestDraft = { field, newValue, reason };
+    const draft: RequestDraft = { field, newValue, newPhone, reason };
     try {
       window.localStorage.setItem(draftStorageKey, JSON.stringify(draft));
       setNotice(
@@ -132,6 +137,7 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
       const body = new FormData();
       body.set("field", field);
       body.set("value", newValue);
+      if (field === "emergency") body.set("value2", newPhone);
       body.set("reason", reason);
       body.set("evidence", evidence);
       const response = await fetch("/api/employee/edit-request", { method: "POST", body });
@@ -154,382 +160,262 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
     }
   }
 
+  const crumbs = [
+    { label: "พนักงาน", href: "/employee/profile" },
+    { label: "โปรไฟล์ของฉัน", href: "/employee/profile" },
+    { label: "ยื่นคำขอเปลี่ยนข้อมูล" },
+  ];
+
   return (
     <div className="mx-auto max-w-[1160px] group-data-[nav=collapsed]/shell:max-w-none px-1 pb-8 pt-2 text-13 text-ink">
-      <nav aria-label="เส้นทางนำทาง" className="mb-3 text-12 text-muted">
-        <Link href="/employee/profile" className="underline-offset-4 hover:text-ink hover:underline">
-          พนักงาน
-        </Link>
-        <span className="mx-2" aria-hidden="true">/</span>
-        <Link href="/employee/profile" className="underline-offset-4 hover:text-ink hover:underline">
-          โปรไฟล์ของฉัน
-        </Link>
-        <span className="mx-2" aria-hidden="true">/</span>
-        <span aria-current="page">ยื่นคำขอเปลี่ยนข้อมูล</span>
-      </nav>
-
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-22 font-semibold tracking-tight text-ink">
-            ยื่นคำขอเปลี่ยนข้อมูล
-          </h1>
-          <p className="mt-1 text-12 text-ink-soft">
-            กรอกข้อมูลที่ต้องการเปลี่ยนและแนบหลักฐาน · ช่องที่มี * จำเป็นต้องกรอก
-          </p>
-        </div>
-        <Link
-          href="/employee/profile"
-          className="inline-flex min-h-9 items-center rounded-md border border-line bg-white px-3 text-12 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+      <div className="mx-auto grid max-w-[720px] gap-5">
+        <PageHead
+          crumbs={crumbs}
+          title="ยื่นคำขอเปลี่ยนข้อมูล"
+          description="ฝ่ายบุคคลจะตรวจสอบก่อนเปลี่ยนข้อมูลในโปรไฟล์ · ช่องที่มี * จำเป็นต้องกรอก"
         >
-          กลับไปโปรไฟล์
-        </Link>
-      </header>
+          <Link href="/employee/profile" className={pill.quiet}>
+            กลับไปโปรไฟล์
+          </Link>
+        </PageHead>
 
-      <aside className="mb-4 flex items-start gap-3 rounded-md border border-line bg-surface px-4 py-3">
-        <Lock className="size-4 shrink-0 mt-0.5 text-ink-soft" aria-hidden="true" />
-        <div>
-          <h2 className="text-12 font-semibold text-ink">
-            ฝ่ายบุคคลเท่านั้นที่แก้ไขข้อมูลจริงได้
-          </h2>
-          <p className="mt-1 text-11 leading-5 text-ink-soft">
-            การส่งคำขอนี้ไม่เปลี่ยนข้อมูลของคุณโดยอัตโนมัติ ข้อมูลจะเปลี่ยนหลังจากฝ่ายบุคคลตรวจสอบและอนุมัติเท่านั้น
-          </p>
-        </div>
-      </aside>
-
-      <ol aria-label="ขั้นตอนการยื่นคำขอ" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-y border-line py-3 text-12">
-        <li aria-current="step" className="flex items-center gap-2 font-semibold text-ink">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-10 text-white">1</span>
-          กรอกข้อมูลและแนบหลักฐาน
-        </li>
-        <li className="text-muted" aria-hidden="true">→</li>
-        <li className="flex items-center gap-2 text-muted">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-line text-10">2</span>
-          รอฝ่ายบุคคลตรวจสอบ
-        </li>
-        <li className="text-muted" aria-hidden="true">→</li>
-        <li className="flex items-center gap-2 text-muted">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full border border-line text-10">3</span>
-          ติดตามผลในโปรไฟล์
-        </li>
-      </ol>
-
-      {submitted || pending ? (
-        <section
-          aria-labelledby="submitted-title"
-          className="rounded-lg border border-line bg-white p-6 sm:p-8"
-        >
-          <div className="mx-auto max-w-xl text-center">
-            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-700">
-              <Check className="size-4 shrink-0 text-18" aria-hidden="true" />
-            </span>
-            <h2 id="submitted-title" className="mt-4 text-17 font-semibold text-ink">
-              {submitted ? "ส่งคำขอให้ฝ่ายบุคคลแล้ว" : "มีคำขอที่รอฝ่ายบุคคลตรวจอยู่"}
-            </h2>
-            <p className="mt-2 text-13 leading-6 text-ink-soft">
-              {submitted
-                ? `คำขอเปลี่ยน${selectedOption.label}อยู่ระหว่างรอฝ่ายบุคคลตรวจสอบ ข้อมูลในโปรไฟล์จะเปลี่ยนหลังอนุมัติ`
-                : `คำขอเปลี่ยน${pending!.labels.join(", ")} ส่งเมื่อ ${thaiDateTime(pending!.submittedAt)} ส่งคำขอใหม่ได้หลังฝ่ายบุคคลตรวจคำขอนี้แล้ว`}
-            </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              <Link
-                href="/employee/profile"
-                className="inline-flex min-h-10 items-center rounded-md bg-primary-600 px-4 text-13 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-              >
-                กลับไปโปรไฟล์
-              </Link>
+        {submitted || pending ? (
+          <Sheet aria-labelledby="submitted-title" className="p-6 sm:p-8">
+            <div className="mx-auto max-w-xl text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-700">
+                <Check className="size-5 shrink-0" aria-hidden="true" />
+              </span>
+              <h2 id="submitted-title" className="mt-4 text-17 font-semibold text-ink">
+                {submitted ? "ส่งคำขอให้ฝ่ายบุคคลแล้ว" : "มีคำขอที่รอฝ่ายบุคคลตรวจอยู่"}
+              </h2>
+              <p className="mt-2 text-13 leading-6 text-ink-soft">
+                {submitted
+                  ? `คำขอเปลี่ยน${selectedOption.label}อยู่ระหว่างรอฝ่ายบุคคลตรวจสอบ ข้อมูลในโปรไฟล์จะเปลี่ยนหลังอนุมัติ`
+                  : `คำขอเปลี่ยน${pending!.labels.join(", ")} ส่งเมื่อ ${thaiDateTime(pending!.submittedAt)} ส่งคำขอใหม่ได้หลังฝ่ายบุคคลตรวจคำขอนี้แล้ว`}
+              </p>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <Link href="/employee/profile" className={pill.primary}>
+                  กลับไปโปรไฟล์
+                </Link>
+              </div>
             </div>
-          </div>
-        </section>
-      ) : (
-        <form onSubmit={submitRequest} className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(250px,0.8fr)]">
-          <div className="grid min-w-0 gap-4">
-            <section aria-labelledby="requester-title" className="rounded-md border border-line bg-white p-4">
-              <h2 id="requester-title" className="text-13 font-semibold text-ink">
-                ข้อมูลผู้ยื่นคำขอ
-              </h2>
-              <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <dt className="text-11 text-muted">ชื่อ-นามสกุล</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">{profile.name}</dd>
-                </div>
-                <div>
-                  <dt className="text-11 text-muted">รหัสพนักงาน</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">{profile.code}</dd>
-                </div>
-                <div>
-                  <dt className="text-11 text-muted">หน่วยงาน</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">{profile.department ?? "—"}</dd>
-                </div>
-              </dl>
-              <p className="mt-3 border-t border-slate-100 pt-3 text-11 text-ink-soft">
-                อีเมล {profile.email} · โทร. {profile.phone ?? "—"}
-              </p>
-              <p className="mt-2 text-10 text-muted">
-                ข้อมูลผู้ยื่นคำขอมาจากระบบ ไม่สามารถแก้ไขจากแบบฟอร์มนี้ได้
-              </p>
-            </section>
+          </Sheet>
+        ) : (
+          <form onSubmit={submitRequest} className="grid gap-2">
+            <Sheet aria-label="แบบฟอร์มคำขอเปลี่ยนข้อมูล" className="divide-y divide-line">
+              <div className="grid gap-4 p-5">
+                <h2 className="text-15 font-semibold text-ink">ข้อมูลที่ขอเปลี่ยน</h2>
 
-            <section aria-labelledby="change-details-title" className="rounded-md border border-line bg-white p-4">
-              <h2 id="change-details-title" className="text-13 font-semibold text-ink">
-                ข้อมูลที่ขอเปลี่ยน
-              </h2>
-
-              <div className="mt-3">
-                <label htmlFor="change-field" className="mb-1.5 block text-12 font-medium text-ink">
-                  เลือกข้อมูลที่ต้องการเปลี่ยน <span aria-hidden="true">*</span>
-                </label>
-                <select
-                  id="change-field"
-                  value={field}
-                  onChange={(event) => {
-                    setField(event.target.value as ChangeField);
-                    setNewValue("");
-                  }}
-                  className={inputClassName}
-                  required
-                >
-                  {changeOptions.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-                <p className="mt-1.5 text-10 leading-4 text-muted">
-                  เลือกได้หนึ่งรายการต่อคำขอ หากต้องการเปลี่ยนหลายรายการ กรุณาส่งคำขอแยก
-                </p>
-                {emailSelected && (
-                  <p role="note" className="mt-2 rounded-md border border-line bg-surface px-3 py-2 text-12 leading-5 text-ink-soft">
-                    อีเมลใช้เป็นชื่อเข้าระบบ จึงเปลี่ยนผ่านคำขอนี้ไม่ได้ กรุณาติดต่อผู้ดูแลระบบ (Admin) ให้เป็นผู้เปลี่ยน
+                <div>
+                  <label htmlFor="change-field" className={labelClass}>
+                    เลือกข้อมูลที่ต้องการเปลี่ยน <span aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="change-field"
+                    value={field}
+                    onChange={(event) => {
+                      setField(event.target.value as ChangeField);
+                      setNewValue("");
+                      setNewPhone("");
+                    }}
+                    className={inputClass}
+                    required
+                  >
+                    {changeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-12 text-muted">
+                    หนึ่งรายการต่อคำขอ หากต้องการเปลี่ยนหลายรายการ กรุณาส่งคำขอแยก
                   </p>
+                  {emailSelected && (
+                    <p role="note" className="mt-2 rounded-lg border border-line bg-surface px-3 py-2 text-13 leading-5 text-ink-soft">
+                      อีเมลใช้เป็นชื่อเข้าระบบ จึงเปลี่ยนผ่านคำขอนี้ไม่ได้ กรุณาติดต่อผู้ดูแลระบบ (Admin) ให้เป็นผู้เปลี่ยน
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p id="current-value-label" className={labelClass}>
+                      ค่าเดิมในโปรไฟล์
+                    </p>
+                    {/* แสดงเป็นข้อความ ไม่ใช่ช่องกรอก เพื่อไม่ให้ดูเหมือนแก้ไขได้ */}
+                    <div
+                      aria-labelledby="current-value-label"
+                      className="flex min-h-[42px] cursor-not-allowed items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-14 text-ink-soft"
+                    >
+                      <span className="min-w-0 break-words">{currentValues[field]}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="new-value" className={labelClass}>
+                      ค่าใหม่ที่ต้องการ <span aria-hidden="true">*</span>
+                    </label>
+                    {selectedOption.type === "emergency" ? (
+                      <div className="grid gap-2">
+                        <input
+                          id="new-value"
+                          type="text"
+                          value={newValue}
+                          onChange={(event) => setNewValue(event.target.value)}
+                          placeholder={selectedOption.placeholder}
+                          aria-label="ชื่อ-นามสกุลผู้ติดต่อฉุกเฉินใหม่"
+                          className={inputClass}
+                          required
+                        />
+                        <input
+                          type="tel"
+                          value={newPhone}
+                          onChange={(event) => setNewPhone(event.target.value)}
+                          placeholder="เบอร์โทรผู้ติดต่อฉุกเฉิน"
+                          aria-label="เบอร์โทรผู้ติดต่อฉุกเฉินใหม่"
+                          autoComplete="off"
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+                    ) : selectedOption.type === "textarea" ? (
+                      <textarea
+                        id="new-value"
+                        value={newValue}
+                        onChange={(event) => setNewValue(event.target.value)}
+                        placeholder={selectedOption.placeholder}
+                        rows={3}
+                        className={cx(inputClass, "h-auto py-2.5")}
+                        required
+                      />
+                    ) : (
+                      <input
+                        id="new-value"
+                        type={selectedOption.type}
+                        value={newValue}
+                        onChange={(event) => setNewValue(event.target.value)}
+                        placeholder={selectedOption.placeholder}
+                        autoComplete={field === "phone" ? "tel" : field === "email" ? "email" : "name"}
+                        className={inputClass}
+                        required
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="change-reason" className={labelClass}>
+                    เหตุผลในการขอเปลี่ยนข้อมูล <span aria-hidden="true">*</span>
+                  </label>
+                  <textarea
+                    id="change-reason"
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="อธิบายเหตุผลที่ต้องการเปลี่ยนข้อมูล"
+                    className={cx(inputClass, "h-auto py-2.5")}
+                    required
+                  />
+                  <p className="mt-1 text-right text-12 text-muted">{reason.length}/500</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 p-5">
+                <h2 id="evidence-title" className="text-15 font-semibold text-ink">
+                  หลักฐานประกอบคำขอ <span aria-hidden="true">*</span>
+                </h2>
+                <label
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    chooseEvidence(event.dataTransfer.files[0]);
+                  }}
+                  className="flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-surface px-4 py-4 text-center transition hover:border-primary-500 hover:bg-primary-50/40 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-600"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    // ไม่ใส่ required: ไฟล์ที่ลากมาวางไม่เข้า input นี้ (ซ่อนอยู่) เบราว์เซอร์จะบล็อกการส่งโดยมองไม่เห็นข้อความ
+                    // submitRequest ตรวจ evidence เองและแสดงข้อความแทน
+                    onChange={(event) => chooseEvidence(event.target.files?.[0])}
+                    className="sr-only"
+                    aria-label="เลือกไฟล์หลักฐาน"
+                  />
+                  <Upload className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
+                  <span className="mt-1 text-13 font-medium text-ink">
+                    {evidence ? "เลือกไฟล์ใหม่" : "ลากไฟล์มาที่นี่ หรือเลือกไฟล์"}
+                  </span>
+                  <span className="mt-1 text-12 text-muted">PDF, JPG, PNG · ไม่เกิน 10 MB · สูงสุด 1 ไฟล์</span>
+                </label>
+
+                {evidence && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <FileText className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="truncate text-13 font-medium text-ink">{evidence.name}</p>
+                        <p className="text-12 text-muted">{formatFileSize(evidence.size)}</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEvidence(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      aria-label={`ลบไฟล์ ${evidence.name}`}
+                      className="shrink-0 rounded px-2 py-1 text-12 text-ink-soft underline underline-offset-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
+                    >
+                      ลบ
+                    </button>
+                  </div>
                 )}
               </div>
 
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="current-value" className="mb-1.5 block text-12 font-medium text-ink-soft">
-                    ค่าเดิมในโปรไฟล์
-                  </label>
+              <div className="grid gap-4 p-5">
+                <label className="flex cursor-pointer items-start gap-2.5 text-13 leading-5 text-ink-soft">
                   <input
-                    id="current-value"
-                    value={currentValues[field]}
-                    readOnly
-                    className={`${inputClassName} bg-surface text-muted`}
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(event) => setAgreed(event.target.checked)}
+                    required
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-primary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
                   />
-                </div>
-                <div>
-                  <label htmlFor="new-value" className="mb-1.5 block text-12 font-medium text-ink">
-                    ค่าใหม่ที่ต้องการ <span aria-hidden="true">*</span>
-                  </label>
-                  {selectedOption.type === "textarea" ? (
-                    <textarea
-                      id="new-value"
-                      value={newValue}
-                      onChange={(event) => setNewValue(event.target.value)}
-                      placeholder={selectedOption.placeholder}
-                      rows={3}
-                      className={inputClassName}
-                      required
-                    />
-                  ) : (
-                    <input
-                      id="new-value"
-                      type={selectedOption.type}
-                      value={newValue}
-                      onChange={(event) => setNewValue(event.target.value)}
-                      placeholder={selectedOption.placeholder}
-                      autoComplete={field === "phone" ? "tel" : field === "email" ? "email" : "name"}
-                      className={inputClassName}
-                      required
-                    />
-                  )}
-                </div>
-              </div>
-              <p className="mt-1.5 text-10 text-muted">
-                ข้อมูลใหม่จะถูกบันทึกหลังจากฝ่ายบุคคลตรวจสอบและอนุมัติแล้วเท่านั้น
-              </p>
-
-              <div className="mt-3">
-                <label htmlFor="change-reason" className="mb-1.5 block text-12 font-medium text-ink">
-                  เหตุผลในการขอเปลี่ยนข้อมูล <span aria-hidden="true">*</span>
+                  <span>
+                    ฉันรับรองว่าข้อมูลและหลักฐานเป็นความจริง และยินยอมให้บริษัทตรวจสอบข้อมูลเพื่อดำเนินการตามคำขอ <span aria-hidden="true">*</span>
+                  </span>
                 </label>
-                <textarea
-                  id="change-reason"
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  rows={3}
-                  maxLength={500}
-                  placeholder="อธิบายเหตุผลที่ต้องการเปลี่ยนข้อมูล"
-                  className={inputClassName}
-                  required
-                />
-                <p className="mt-1 text-right text-10 text-muted">{reason.length}/500</p>
-              </div>
-            </section>
-
-            <section aria-labelledby="evidence-title" className="rounded-md border border-line bg-white p-4">
-              <h2 id="evidence-title" className="text-13 font-semibold text-ink">
-                หลักฐานประกอบคำขอ <span aria-hidden="true">*</span>
-              </h2>
-              <label
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  chooseEvidence(event.dataTransfer.files[0]);
-                }}
-                className="mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-line bg-surface px-4 py-4 text-center transition hover:border-primary-500 hover:bg-primary-50/40 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-600"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  // ไม่ใส่ required: ไฟล์ที่ลากมาวางไม่เข้า input นี้ (ซ่อนอยู่) เบราว์เซอร์จะบล็อกการส่งโดยมองไม่เห็นข้อความ
-                  // submitRequest ตรวจ evidence เองและแสดงข้อความแทน
-                  onChange={(event) => chooseEvidence(event.target.files?.[0])}
-                  className="sr-only"
-                  aria-label="เลือกไฟล์หลักฐาน"
-                />
-                <Upload className="size-4 shrink-0 text-14 text-ink-soft" aria-hidden="true" />
-                <span className="mt-1 text-12 font-medium text-ink">
-                  {evidence ? "เลือกไฟล์ใหม่" : "ลากไฟล์มาที่นี่ หรือเลือกไฟล์"}
-                </span>
-                <span className="mt-1 text-10 text-muted">PDF, JPG, PNG · ไม่เกิน 10 MB · สูงสุด 1 ไฟล์</span>
-              </label>
-
-              {evidence && (
-                <div className="mt-3 flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2.5">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <FileText className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="truncate text-12 font-medium text-ink">{evidence.name}</p>
-                      <p className="text-10 text-muted">{formatFileSize(evidence.size)}</p>
-                    </div>
+                {submitError && (
+                  <p role="alert" className="rounded-lg border border-line bg-white px-3 py-2 text-13 leading-5 text-status-rejected">
+                    {submitError}
+                  </p>
+                )}
+                {notice && (
+                  <p role="status" aria-live="polite" className="rounded-lg border border-line bg-surface px-3 py-2 text-13 leading-5 text-ink-soft">
+                    {notice}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Link href="/employee/profile" className={pill.quiet}>
+                    ยกเลิก
+                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={saveDraft} className={pill.outline}>
+                      บันทึกฉบับร่าง
+                    </button>
+                    <button type="submit" disabled={sending || emailSelected} className={pill.primary}>
+                      {sending ? "กำลังส่ง..." : "ส่งคำขอให้ฝ่ายบุคคล"}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEvidence(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    aria-label={`ลบไฟล์ ${evidence.name}`}
-                    className="shrink-0 rounded px-2 py-1 text-11 text-ink-soft underline underline-offset-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                  >
-                    ลบ
-                  </button>
-                </div>
-              )}
-            </section>
-
-            <div>
-              <label className="flex cursor-pointer items-start gap-2.5 text-12 leading-5 text-ink-soft">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(event) => setAgreed(event.target.checked)}
-                  required
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-line accent-primary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                />
-                <span>
-                  ฉันรับรองว่าข้อมูลและหลักฐานเป็นความจริง และยินยอมให้บริษัทตรวจสอบข้อมูลเพื่อดำเนินการตามคำขอ <span aria-hidden="true">*</span>
-                </span>
-              </label>
-              {submitError && (
-                <p role="alert" className="mt-3 rounded-md border border-line bg-white px-3 py-2 text-12 leading-5 text-status-rejected">
-                  {submitError}
-                </p>
-              )}
-              {notice && (
-                <p role="status" aria-live="polite" className="mt-3 rounded-md border border-line bg-surface px-3 py-2 text-12 leading-5 text-ink-soft">
-                  {notice}
-                </p>
-              )}
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-                <Link
-                  href="/employee/profile"
-                  className="inline-flex min-h-10 items-center rounded-md border border-line bg-white px-4 text-12 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                >
-                  ยกเลิก
-                </Link>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={saveDraft}
-                    className="min-h-10 rounded-md border border-line bg-white px-4 text-12 font-medium text-ink-soft transition hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600"
-                  >
-                    บันทึกฉบับร่าง
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={sending || emailSelected}
-                    className="min-h-10 rounded-md bg-primary-600 px-4 text-12 font-medium text-white transition hover:bg-primary-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {sending ? "กำลังส่ง..." : "ส่งคำขอให้บุคคล"}
-                  </button>
                 </div>
               </div>
-            </div>
-          </div>
+            </Sheet>
 
-          <aside className="grid content-start gap-4">
-            <section aria-labelledby="review-title" className="rounded-md border border-line bg-white p-4">
-              <h2 id="review-title" className="text-13 font-semibold text-ink">ตรวจสอบก่อนส่ง</h2>
-              <dl className="mt-3 space-y-3">
-                <div>
-                  <dt className="text-10 text-muted">ข้อมูลที่ขอเปลี่ยน</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">{selectedOption.label}</dd>
-                </div>
-                <div>
-                  <dt className="text-10 text-muted">ค่าเดิมในโปรไฟล์</dt>
-                  <dd className="mt-1 break-words text-12 font-medium text-ink">{currentValues[field]}</dd>
-                </div>
-                <div>
-                  <dt className="text-10 text-muted">ค่าที่ขอเปลี่ยน</dt>
-                  <dd className="mt-1 break-words text-12 font-medium text-ink">{newValue || "ยังไม่ได้ระบุ"}</dd>
-                </div>
-                <div className="border-t border-line pt-3">
-                  <dt className="text-10 text-muted">หลักฐานที่แนบ</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">{evidence ? "1 ไฟล์" : "ยังไม่ได้แนบ"}</dd>
-                </div>
-                <div>
-                  <dt className="text-10 text-muted">ส่งถึง</dt>
-                  <dd className="mt-1 text-12 font-medium text-ink">ฝ่ายบุคคล (HR)</dd>
-                </div>
-              </dl>
-              <p className="mt-3 border-t border-slate-100 pt-3 text-10 leading-5 text-muted">
-                การส่งคำขอไม่ได้เปลี่ยนข้อมูลทันที ข้อมูลจะเปลี่ยนหลังผ่านการตรวจสอบและอนุมัติ
-              </p>
-            </section>
-
-            <section aria-labelledby="process-title" className="rounded-md border border-line bg-white p-4">
-              <h2 id="process-title" className="text-13 font-semibold text-ink">หลังส่งคำขอ</h2>
-              <ol className="mt-3 divide-y divide-slate-200">
-                <li className="flex gap-2.5 py-3 first:pt-0">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-primary-50 text-10 font-medium text-ink-soft">1</span>
-                  <div>
-                    <h3 className="text-12 font-medium text-ink">ฝ่ายบุคคลตรวจสอบ</h3>
-                    <p className="mt-1 text-10 leading-4 text-muted">ตรวจสอบข้อมูลและหลักฐานประกอบคำขอ</p>
-                  </div>
-                </li>
-                <li className="flex gap-2.5 py-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-primary-50 text-10 font-medium text-ink-soft">2</span>
-                  <div>
-                    <h3 className="text-12 font-medium text-ink">อนุมัติและบันทึกข้อมูล</h3>
-                    <p className="mt-1 text-10 leading-4 text-muted">ข้อมูลใหม่จะแสดงในโปรไฟล์หลังอนุมัติ</p>
-                  </div>
-                </li>
-                <li className="flex gap-2.5 py-3 last:pb-0">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-primary-50 text-10 font-medium text-ink-soft">3</span>
-                  <div>
-                    <h3 className="text-12 font-medium text-ink">ตรวจสอบผลในโปรไฟล์</h3>
-                    <p className="mt-1 text-10 leading-4 text-muted">ดูสถานะและผลการเปลี่ยนข้อมูลได้ที่หน้าโปรไฟล์</p>
-                  </div>
-                </li>
-              </ol>
-              <p className="mt-3 border-t border-slate-100 pt-3 text-10 leading-5 text-muted">
-                หากมีข้อสงสัย โปรดติดต่อฝ่ายบุคคลของคุณ
-              </p>
-            </section>
-          </aside>
-        </form>
-      )}
+            <p className="px-1 text-12 text-muted">
+              ผู้ยื่น {profile.name} · {profile.code} · {profile.department ?? "—"} · หลังส่งแล้วติดตามผลได้ที่หน้าโปรไฟล์
+            </p>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

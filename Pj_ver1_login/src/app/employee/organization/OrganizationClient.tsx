@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from "react";
-import { Lock } from "lucide-react";
 import type { Organization } from "@/lib/employee/organization";
 import { cx } from "@/lib/cx";
 import { PageHead, Pill, Sheet } from "@/features/requester/ui";
@@ -31,7 +30,7 @@ function PersonCard({ name, photoUrl, role, note, highlight = false }: { name?: 
             initialsOf(name)
           )
         ) : (
-          <Lock className="size-4" />
+          <span aria-hidden="true">—</span>
         )}
       </span>
       <span className="min-w-0">
