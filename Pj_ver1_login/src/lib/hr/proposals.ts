@@ -233,6 +233,14 @@ export async function withdrawProposal(id: string, actorCode: string, note: stri
   const { error } = await supabaseAdmin.from("welfare_benefit_proposal").update({ status: "withdrawn" }).eq("id", id);
   if (error) throw error;
   await addEvent(id, "withdrawn", own.actorId, own.proposer_role, note.trim() || null);
+  // ฉบับร่างยังไม่เคยส่งถึงหัวหน้า HR จึงไม่ต้องแจ้ง
+  if (own.status !== "draft") {
+    emailHr(
+      "proposal_pending",
+      { subject: "ผู้เสนอถอนข้อเสนอสวัสดิการแล้ว", lines: ["ข้อเสนอนี้ไม่ต้องพิจารณาแล้ว", ...(note.trim() ? [`เหตุผล: ${note.trim()}`] : [])], path: `/hr/proposals/${id}` },
+      { only: "hr_head", exclude: [actorCode] },
+    );
+  }
 }
 
 /** รหัสสวัสดิการถัดไป WEL-014, WEL-015, ... */

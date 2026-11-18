@@ -9,6 +9,8 @@ import { proxyReasonOf } from "../../features/hr/queue";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, maxClaimsLabel } from "./forms";
 import { emailHr, isHrEmployee } from "../hr/emailNotify";
+import { afterResponse } from "../email/notify";
+import { sendClaimNotices } from "./notify";
 import { signBenefitImages } from "../benefitImages";
 import type { BudgetKind, ClaimAction, ClaimDbStatus, ClaimEventKind, ClaimRecord, EmployeeBenefit } from "./types";
 
@@ -552,6 +554,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   // คำขอของ HR ตรวจได้เฉพาะหัวหน้า HR / HR คนอื่น จึงไม่ส่งถึงเจ้าของและผู้ยื่น
   emailHr(resubmitted ? "claim_resubmitted" : "claim_new", message, { exclude: [input.employeeCode, actor.sub] });
   if (ownerIsHr) emailHr("hr_claim_pending", message, { only: "hr_head", exclude: [input.employeeCode, actor.sub] });
+  notifyClaim(claim.claim_no, resubmitted ? "resubmitted" : "submitted", actor.sub);
   return { claimNo: claim.claim_no, status: "pending_hr" };
 }
 
@@ -624,6 +627,7 @@ export async function setPayDate(claimNos: string[], date: string | null, reason
       p_note: reason.trim(),
     });
     if (rpcError) throw rpcError;
+    notifyClaim(claim.claim_no as string, "pay_date_changed", actor.sub, reason.trim());
   }
 }
 
@@ -661,6 +665,7 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
       p_claim_id: claim.id, p_from: claim.status, p_to: "cancelled", p_kind: "cancelled", p_actor: actorId, p_actor_role: actor.role, p_note: note,
     });
     if (error) throw error;
+    notifyClaim(claim.claimNo, "cancelled", actor.sub, note);
     return;
   }
 
@@ -688,6 +693,7 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
     });
     if (error) throw error;
     if (claim.advance) await recordAdvancePaid(claim);
+    notifyClaim(claim.claimNo, "paid", actor.sub);
     return;
   }
 
@@ -729,6 +735,7 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
     p_pay_round_id: payRoundId,
   });
   if (error) throw error;
+  notifyClaim(claim.claimNo, rule.kind, actor.sub, note);
 }
 
 export async function getAttachmentUrl(attachmentId: string, actor: ClaimActor): Promise<string | null> {
@@ -833,6 +840,7 @@ export async function submitAdvanceReceipt(
     amount_after: input.amount,
   });
   if (eventError) console.error("[claims] receipt event write failed", { claimNo }, eventError);
+  notifyClaim(claimNo, "receipt_submitted", actor.sub);
   emailHr(
     "advance_receipt",
     { subject: `ใบเสร็จเบิกล่วงหน้ารอตรวจ ${claimNo}`, lines: [`${claimNo} ${claim.benefitName}`, `ยอดล่วงหน้า ${advance.advanceAmount.toLocaleString("th-TH")} บาท · ยอดตามใบเสร็จ ${input.amount.toLocaleString("th-TH")} บาท`], path: `/hr/home/advances/${encodeURIComponent(claimNo)}` },
@@ -840,21 +848,15 @@ export async function submitAdvanceReceipt(
   );
 }
 
-const STATUS_WORD: Partial<Record<ClaimDbStatus, string>> = {
-  needs_revision: "HR ส่งกลับให้แก้ไข",
-  pending_finance: "HR อนุมัติแล้ว ส่งต่อการเงิน",
-  awaiting_payment: "การเงินอนุมัติจ่ายแล้ว รอโอนตามรอบ",
-  paid: "โอนเงินแล้ว",
-  rejected: "ไม่อนุมัติ",
-};
-
-/** HR ที่เปิดอีเมล "สถานะคำขอเบิกของฉัน" ได้อีเมลเมื่อคำขอของตัวเองเปลี่ยนสถานะ */
-export async function emailOwnerStatus(claimNo: string, actorCode: string) {
-  const claim = await getClaim(claimNo).catch(() => null);
-  if (!claim || claim.employeeCode === actorCode) return;
-  const word = STATUS_WORD[claim.status];
-  if (!word) return;
-  emailHr("my_claim_status", { subject: `คำขอ ${claim.claimNo}: ${word}`, lines: [`${claim.claimNo} ${claim.benefitName}`, `สถานะ: ${word}`], path: `/employee/status?id=${encodeURIComponent(claim.claimNo)}` }, { only: [claim.employeeCode] });
+/**
+ * อีเมลแจ้งผู้ขอ / การเงิน / HR ตามเหตุการณ์ (lib/claims/notify.ts)
+ * โหลดคำขอใหม่หลังตอบ request แล้ว ข้อความจึงตรงกับสถานะที่บันทึกจริง · actorCode null = ระบบทำเอง
+ */
+export function notifyClaim(claimNo: string, kind: ClaimEventKind, actorCode: string | null, note: string | null = null) {
+  afterResponse(`claim:${kind}`, async () => {
+    const claim = await getClaim(claimNo);
+    if (claim) await sendClaimNotices(claim, kind, actorCode, note);
+  });
 }
 
 let lastOverdueSweep = 0;
@@ -869,12 +871,12 @@ export async function cancelOverdueAdvances(force = false): Promise<number> {
   try {
     const { data, error } = await supabaseAdmin
       .from("welfare_claim_advance")
-      .select("id, claim_id, status, advance_amount, claim:claim_id!inner(status, deleted_at)")
+      .select("id, claim_id, status, advance_amount, claim:claim_id!inner(claim_no, status, deleted_at)")
       .in("status", ["awaiting_receipt", "receipt_returned"])
       .not("advance_paid_at", "is", null)
       .lt("receipt_due_date", bangkokDate())
       .is("claim.deleted_at", null)
-      .returns<{ id: string; claim_id: string; status: string; advance_amount: number | string; claim: { status: ClaimDbStatus } }[]>();
+      .returns<{ id: string; claim_id: string; status: string; advance_amount: number | string; claim: { claim_no: string; status: ClaimDbStatus } }[]>();
     if (error) throw error;
     let cancelled = 0;
     for (const row of data ?? []) {
@@ -894,6 +896,7 @@ export async function cancelOverdueAdvances(force = false): Promise<number> {
         .from("welfare_claim_event")
         .insert({ claim_id: row.claim_id, kind: "advance_cancelled", from_status: row.claim.status, to_status: row.claim.status, actor_employee_id: null, actor_role: "SYSTEM", note, amount_before: amount, amount_after: 0 });
       if (eventError) console.error("[claims] overdue event write failed", { advanceId: row.id }, eventError);
+      notifyClaim(row.claim.claim_no, "advance_cancelled", null, note);
     }
     return cancelled;
   } catch (err) {
