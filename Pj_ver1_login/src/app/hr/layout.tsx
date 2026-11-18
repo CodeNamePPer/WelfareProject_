@@ -6,7 +6,6 @@ import { ROLE_LABELS } from "@/lib/auth/roles";
 import { cancelOverdueAdvances, countClaimsForHr } from "@/lib/claims/service";
 import { isHrHead } from "@/lib/hr/hrHead";
 import { countHrNotifications } from "@/lib/hr/notifications";
-import { countPendingEditRequests } from "@/lib/hr/editRequests";
 import { countPendingProposals } from "@/lib/hr/proposals";
 import { getMyProfile } from "@/lib/employee/profile";
 import { AppShell } from "@/components/layout/AppShell";
@@ -35,11 +34,10 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
   // หัวหน้า HR เห็นเมนูของหัวหน้า HR พร้อมจำนวนข้อเสนอที่รออนุมัติ – นับต่อทันทีที่รู้ว่าเป็นหัวหน้า ไม่ต้องรอตัวนับอื่น
   // คำขอเบิกของ HR รวมอยู่ในคิวคำขอหน้าแรกแล้ว จึงไม่มีเมนูแยก
   const headCounts = isHrHead(session).then(async (isHead) => ({ head: isHead, proposals: isHead ? await countPendingProposals() : 0 }));
-  const [waiting, notifications, { head, proposals }, editRequests, profile] = await Promise.all([
+  const [waiting, notifications, { head, proposals }, profile] = await Promise.all([
     countClaimsForHr(),
     countHrNotifications(session.sub, session.role),
     headCounts,
-    countPendingEditRequests().catch(() => 0),
     getMyProfile(session.sub).catch(() => null),
   ]);
 
@@ -49,7 +47,7 @@ export default async function HrLayout({ children }: { children: ReactNode }) {
       <AppShell
         section={head ? "hr_head" : "hr"}
         notificationCount={waiting}
-        badges={head ? { proposals, "edit-requests": editRequests } : { notifications, "edit-requests": editRequests }}
+        badges={head ? { proposals } : { notifications }}
         user={{ name: session.name, roleLabel: head ? "หัวหน้าฝ่ายบุคคล" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
       >
         <div className="hr-app">{children}</div>
