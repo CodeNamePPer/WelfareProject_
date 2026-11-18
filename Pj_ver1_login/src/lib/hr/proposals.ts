@@ -436,7 +436,7 @@ export async function decideProposal(id: string, decision: "approve" | "needs_in
 // อ่าน
 // -----------------------------------------------------------------------------
 
-type Person = { employee_code: string; first_name_th: string; last_name_th: string; position: { name_th: string } | null } | null;
+type Person = { employee_code: string; photo_url: string | null; first_name_th: string; last_name_th: string; position: { name_th: string } | null } | null;
 const nameOf = (person: Person) => (person ? `${person.first_name_th} ${person.last_name_th === "-" ? "" : person.last_name_th}`.trim() : "—");
 
 export type ProposalSummary = {
@@ -451,6 +451,7 @@ export type ProposalSummary = {
   imagePath: string | null;
   proposerName: string;
   proposerCode: string | null;
+  proposerPhotoUrl?: string | null;
   proposerRole: "HR" | "SUPER_ADMIN";
   submittedAt: string | null;
   createdAt: string;
@@ -479,7 +480,7 @@ type SummaryRow = {
 };
 
 const SUMMARY_SELECT =
-  "id, proposal_no, kind, status, benefit_id, name_th, category, image_path, budget_type, proposer_role, submitted_at, created_at, decision_note, benefit:benefit_id(code, name_th), proposer:proposed_by(employee_code, first_name_th, last_name_th, position:position_id(name_th)), limits:welfare_benefit_proposal_limit(amount)";
+  "id, proposal_no, kind, status, benefit_id, name_th, category, image_path, budget_type, proposer_role, submitted_at, created_at, decision_note, benefit:benefit_id(code, name_th), proposer:proposed_by(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th)), limits:welfare_benefit_proposal_limit(amount)";
 
 const PER: Record<BudgetType, string> = { yearly: "ปี", monthly: "เดือน", per_claim: "ครั้ง" };
 const baht = (value: number) => value.toLocaleString("th-TH", { maximumFractionDigits: 2 });
@@ -504,6 +505,7 @@ function toSummary(row: SummaryRow): ProposalSummary {
     imagePath: row.image_path,
     proposerName: nameOf(row.proposer),
     proposerCode: row.proposer?.employee_code ?? null,
+    proposerPhotoUrl: row.proposer?.photo_url ?? null,
     proposerRole: row.proposer_role,
     submittedAt: row.submitted_at,
     createdAt: row.created_at,

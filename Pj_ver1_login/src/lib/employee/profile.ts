@@ -15,6 +15,7 @@ export interface MyProfile {
   code: string;
   name: string;
   initials: string;
+  photoUrl: string | null;
   statusLabel: string;
   department: string | null;
   position: string | null;
@@ -33,6 +34,7 @@ export interface MyProfile {
 
 interface ProfileRow extends EmployeeNameParts {
   employee_code: string;
+  photo_url: string | null;
   email: string;
   phone: string | null;
   emergency_contact_name: string | null;
@@ -105,7 +107,7 @@ export const getMyProfile = cache(async (code: string): Promise<MyProfile | null
       supabaseAdmin
         .from("employee")
         .select(
-          `employee_code, title_th, first_name_th, last_name_th, email, phone,
+          `employee_code, photo_url, title_th, first_name_th, last_name_th, email, phone,
            emergency_contact_name, emergency_contact_phone,
            address_line, subdistrict, district, province, postal_code,
            employment_status, hire_date,
@@ -125,6 +127,7 @@ export const getMyProfile = cache(async (code: string): Promise<MyProfile | null
       code: data.employee_code,
       name: employeeFullName(data),
       initials: initialsOf(data),
+      photoUrl: data.photo_url ?? null,
       statusLabel: employmentStatusLabel(data.employment_status.toUpperCase()),
       department: data.department?.name_th ?? null,
       position: data.position?.name_th ?? null,

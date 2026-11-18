@@ -103,6 +103,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
             person={{
               name: employee.name,
               code: employee.code,
+              photoUrl: employee.photoUrl,
               position: employee.position,
               department: employee.department,
               level: employee.jobLevel,

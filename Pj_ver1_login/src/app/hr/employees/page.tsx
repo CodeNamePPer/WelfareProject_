@@ -4,8 +4,9 @@ import { listClaims } from "@/lib/claims/service";
 import { bangkokToday } from "@/lib/claims/requester";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { HrPage } from "@/features/hr/ui";
-import { countPendingEditRequests } from "@/lib/hr/editRequests";
-import { EmployeesClient, type EmployeeRow } from "./EmployeesClient";
+import { getSession } from "@/lib/auth/get-session";
+import { listEditRequestHistory, listPendingEditRequests } from "@/lib/hr/editRequests";
+import { EmployeesClient, type EmployeeRow, type EmployeesTab } from "./EmployeesClient";
 
 export const metadata: Metadata = { title: "จัดการพนักงานและสิทธิ์" };
 
@@ -16,9 +17,10 @@ export const dynamic = "force-dynamic";
 const NOT_COUNTED = new Set(["draft", "cancelled", "rejected"]);
 
 // H05 จัดการพนักงานและสิทธิ์
-export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; tab?: string | string[] }> }) {
   const [employees, claims, maxClaims, params] = await Promise.all([getHrEmployees(), listClaims(), getBenefitMaxClaims().catch(() => null), searchParams]);
-  const editRequests = await countPendingEditRequests().catch(() => 0);
+  // คำขอแก้ไขข้อมูล (H12) และประวัติ แสดงเป็นแท็บในหน้านี้
+  const [session, editRequests, editHistory] = await Promise.all([getSession(), listPendingEditRequests(), listEditRequestHistory()]);
   if (!employees) return <p className="text-13 text-status-rejected">โหลดรายชื่อพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   const year = bangkokToday().slice(0, 4);
@@ -31,6 +33,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const rows: EmployeeRow[] = employees.map((employee) => ({
     code: employee.code,
     name: employee.name,
+    photoUrl: employee.photoUrl,
     department: employee.department ?? "ไม่ระบุแผนก",
     position: employee.position ?? "ไม่ระบุตำแหน่ง",
     positionName: employee.position,
@@ -47,9 +50,11 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
 
   // ลิงก์จากคิวคำขอส่งรหัสพนักงานมาเป็น ?q= เพื่อเปิดรายชื่อที่ค้นหาไว้แล้ว
   const initialQuery = typeof params.q === "string" ? params.q : "";
+  // ?tab=edits / ?tab=history เปิดแท็บคำขอแก้ไขข้อมูลหรือประวัติ (ลิงก์จากแจ้งเตือนและเมนู)
+  const initialTab: EmployeesTab = params.tab === "edits" || params.tab === "history" || params.tab === "left" ? params.tab : "active";
   return (
     <HrPage>
-      <EmployeesClient rows={rows} maxClaimsTotal={maxTotal} initialQuery={initialQuery} editRequests={editRequests} />
+      <EmployeesClient key={initialTab} rows={rows} maxClaimsTotal={maxTotal} initialQuery={initialQuery} initialTab={initialTab} editRequests={editRequests} editHistory={editHistory} viewerCode={session?.sub ?? ""} />
     </HrPage>
   );
 }

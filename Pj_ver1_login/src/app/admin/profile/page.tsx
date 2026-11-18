@@ -62,6 +62,7 @@ export default async function AdminProfilePage() {
     emailEnabled: isEmailConfigured(),
     name: profile.name,
     initials: profile.initials,
+    photoUrl: profile.photoUrl,
     code: profile.code,
     position: profile.position,
     department: profile.department,

@@ -74,6 +74,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
         tab,
         employeeCode: claim.employeeCode,
         employeeName: person?.name ?? claim.employeeName,
+        photoUrl: person?.photoUrl ?? null,
         position: person?.position ?? null,
         department: person?.department ?? claim.department ?? "ไม่ระบุแผนก",
         proxyBy: proxy ? claim.submittedByName : null,

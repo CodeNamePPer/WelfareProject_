@@ -46,6 +46,7 @@ export default async function HrProfilePage() {
     emailEnabled: isEmailConfigured(),
     name: profile.name,
     initials: profile.initials,
+    photoUrl: profile.photoUrl,
     code: profile.code,
     position: profile.position,
     department: profile.department,

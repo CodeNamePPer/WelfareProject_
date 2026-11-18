@@ -68,6 +68,7 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
     person: {
       name: employee?.name ?? claim.employeeName,
       code: claim.employeeCode,
+      photoUrl: employee?.photoUrl ?? null,
       position: employee?.position ?? null,
       department: employee?.department ?? claim.department,
       level: employee?.jobLevel ?? null,

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { cancelOverdueAdvances, countClaimsToRevise } from "@/lib/claims/service";
 import { countUnreadNotifications } from "@/lib/employee/notifications";
+import { getMyProfile } from "@/lib/employee/profile";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -29,7 +30,11 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
   // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
   await cancelOverdueAdvances();
 
-  const [todoCount, unreadCount] = await Promise.all([countClaimsToRevise(session.sub), countUnreadNotifications(session.sub)]);
+  const [todoCount, unreadCount, profile] = await Promise.all([
+    countClaimsToRevise(session.sub),
+    countUnreadNotifications(session.sub),
+    getMyProfile(session.sub).catch(() => null),
+  ]);
   const hiddenNavIds = Object.values(BACK_LINK_BY_ROLE).filter((id) => id !== BACK_LINK_BY_ROLE[session.role]);
 
   return (
@@ -40,7 +45,7 @@ export default async function EmployeeLayout({ children }: { children: ReactNode
         notificationCount={todoCount}
         badges={{ notifications: unreadCount }}
         hiddenNavIds={hiddenNavIds}
-        user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role }}
+        user={{ name: session.name, roleLabel: ROLE_LABELS[session.role] ?? session.role, photoUrl: profile?.photoUrl ?? null }}
       >
         {/* ความกว้างเนื้อหาและระยะห่างระหว่างส่วนตามดีไซน์ฝั่งผู้ส่งคำขอ */}
         <div className="mx-auto flex w-full max-w-[1140px] group-data-[nav=collapsed]/shell:max-w-none flex-col gap-4 text-14 text-ink">{children}</div>

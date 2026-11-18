@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import type { MyProfile } from "@/lib/employee/profile";
+import type { MyEditRequest } from "@/lib/hr/editRequests";
 import { cx } from "@/lib/cx";
 import { Pill, Sheet, pill } from "@/features/requester/ui";
 
@@ -37,6 +38,33 @@ function LockedField({ label, value }: { label: string; value: string }) {
   );
 }
 
+const thaiDateTime = (iso: string) => new Date(iso).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
+
+/** สถานะคำขอแก้ไขข้อมูลล่าสุด ให้พนักงานรู้ว่าคำขออยู่ขั้นไหน (ตาราง employee_edit_request) */
+function EditRequestStatus({ request }: { request: MyEditRequest }) {
+  const what = `คำขอเปลี่ยน${request.labels.join(", ")}`;
+  const sent = `ส่งเมื่อ ${thaiDateTime(request.submittedAt)} น.`;
+  const by = request.deciderName ? ` โดย ${request.deciderName}` : "";
+  const decided = request.decidedAt ? `${thaiDateTime(request.decidedAt)} น.` : "";
+  const view =
+    request.status === "pending"
+      ? { tone: "amber" as const, label: "รอ HR ตรวจสอบ", box: "border-amber-200 bg-amber-50", text: `${what} · ${sent} ข้อมูลในโปรไฟล์จะเปลี่ยนหลัง HR อนุมัติ` }
+      : request.status === "approved"
+        ? { tone: "green" as const, label: "HR อนุมัติแล้ว", box: "border-green-200 bg-green-50", text: `${what} · บันทึกลงโปรไฟล์แล้วเมื่อ ${decided}${by}` }
+        : { tone: "red" as const, label: "ไม่อนุมัติ", box: "border-red-200 bg-red-50", text: `${what} · ${decided}${by}` };
+  return (
+    <div role="status" aria-label="สถานะคำขอแก้ไขข้อมูลล่าสุด" className={cx("rounded-lg border px-3.5 py-3 text-13", view.box)}>
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold">คำขอแก้ไขข้อมูลล่าสุด</span>
+        <Pill tone={view.tone}>{view.label}</Pill>
+      </p>
+      <p className="mt-1 text-ink-soft">{view.text}</p>
+      {request.status === "rejected" && request.decisionNote ? <p className="mt-1 text-ink">ข้อความจาก HR: {request.decisionNote}</p> : null}
+      {request.status === "rejected" ? <p className="mt-1 text-12 text-muted">แก้ไขตามข้อความแล้วส่งคำขอใหม่ได้</p> : null}
+    </div>
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -46,7 +74,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-export default function ProfileClient({ profile, roleLabel }: { profile: MyProfile; roleLabel: string }) {
+export default function ProfileClient({ profile, roleLabel, editRequest = null }: { profile: MyProfile; roleLabel: string; editRequest?: MyEditRequest | null }) {
   const [tab, setTab] = useState<TabId>("personal");
 
   return (
@@ -55,8 +83,13 @@ export default function ProfileClient({ profile, roleLabel }: { profile: MyProfi
         <div className="h-24 bg-blue-900" />
         <div className="flex flex-wrap items-end justify-between gap-4 px-6">
           <div className="flex flex-wrap items-end gap-4">
-            <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
-              {profile.initials}
+            <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-primary-100 text-[32px] font-semibold text-primary-700">
+              {profile.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
+                <img src={profile.photoUrl} alt="" className="size-full object-cover" />
+              ) : (
+                profile.initials
+              )}
             </div>
             <div className="min-w-0 pb-1">
               <h1 className="text-22 font-semibold">{profile.name}</h1>
@@ -97,16 +130,16 @@ export default function ProfileClient({ profile, roleLabel }: { profile: MyProfi
       </Sheet>
 
       <div role="tabpanel" id={`profile-panel-${tab}`} aria-labelledby={`profile-tab-${tab}`} className="flex flex-col gap-4">
-        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} />
+        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} editRequest={editRequest} />
       </div>
     </>
   );
 }
 
-type ProfileProps = { profile: MyProfile; roleLabel: string };
+type ProfileProps = { profile: MyProfile; roleLabel: string; editRequest?: MyEditRequest | null };
 
 /** เนื้อหาของแต่ละส่วนในโปรไฟล์ ใช้ทั้งหน้าโปรไฟล์และแท็บข้อมูลส่วนตัวในหน้าหลัก */
-function ProfileSection({ tab, profile, roleLabel }: ProfileProps & { tab: TabId }) {
+function ProfileSection({ tab, profile, roleLabel, editRequest = null }: ProfileProps & { tab: TabId }) {
   return (
     <>
     {tab === "personal" ? (
@@ -135,6 +168,7 @@ function ProfileSection({ tab, profile, roleLabel }: ProfileProps & { tab: TabId
               ส่งคำขอแก้ไขข้อมูล
             </Link>
           </div>
+          {editRequest ? <EditRequestStatus request={editRequest} /> : null}
           <dl className="grid gap-x-4 gap-y-3.5 sm:grid-cols-2">
             <Fact label="โทรศัพท์">{profile.phone ?? EMPTY}</Fact>
             <Fact label="ผู้ติดต่อฉุกเฉิน">{profile.emergencyContact ?? EMPTY}</Fact>
@@ -190,7 +224,7 @@ function ProfileSection({ tab, profile, roleLabel }: ProfileProps & { tab: TabId
 }
 
 /** แท็บข้อมูลส่วนตัวในหน้าหลัก สลับส่วนย่อยในที่เดิม ไม่เปลี่ยนหน้า */
-export function ProfilePanels({ profile, roleLabel }: ProfileProps) {
+export function ProfilePanels({ profile, roleLabel, editRequest = null }: ProfileProps) {
   const [tab, setTab] = useState<TabId>("personal");
   return (
     <div className="flex flex-col gap-4">
@@ -217,7 +251,7 @@ export function ProfilePanels({ profile, roleLabel }: ProfileProps) {
         })}
       </div>
       <div role="tabpanel" id="home-profile-panel" aria-labelledby={`home-profile-tab-${tab}`} className="flex flex-col gap-4">
-        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} />
+        <ProfileSection tab={tab} profile={profile} roleLabel={roleLabel} editRequest={editRequest} />
       </div>
     </div>
   );

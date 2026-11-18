@@ -7,6 +7,7 @@ import { getHrHeadCode } from "@/lib/hr/hrHead";
 export type OrgPerson = {
   code: string;
   name: string;
+  photoUrl: string | null;
   position: string | null;
   department: string | null;
   /** รหัสระดับ เช่น L1 */
@@ -21,6 +22,7 @@ export type OrgPerson = {
 type Row = {
   id: string;
   employee_code: string;
+  photo_url: string | null;
   first_name_th: string;
   last_name_th: string;
   department: { name_th: string } | null;
@@ -36,7 +38,7 @@ export async function getOrgPeople(): Promise<OrgPerson[] | null> {
       supabaseAdmin
         .from("employee")
         .select(
-          "id, employee_code, first_name_th, last_name_th, department:department_id(name_th), position:position_id(name_th), job_level:job_level_id(code, name_th), manager:manager_employee_id(employee_code, employment_status, deleted_at)",
+          "id, employee_code, photo_url, first_name_th, last_name_th, department:department_id(name_th), position:position_id(name_th), job_level:job_level_id(code, name_th), manager:manager_employee_id(employee_code, employment_status, deleted_at)",
         )
         .eq("employment_status", "active")
         .is("deleted_at", null)
@@ -52,6 +54,7 @@ export async function getOrgPeople(): Promise<OrgPerson[] | null> {
     return (employees.data ?? []).map((row) => ({
       code: row.employee_code,
       name: `${row.first_name_th} ${row.last_name_th === "-" ? "" : row.last_name_th}`.trim(),
+      photoUrl: row.photo_url ?? null,
       position: row.position?.name_th ?? null,
       department: row.department?.name_th ?? null,
       level: row.job_level?.code ?? null,

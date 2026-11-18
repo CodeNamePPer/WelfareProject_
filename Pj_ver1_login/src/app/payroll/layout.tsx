@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/get-session";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { supabaseAdmin } from "@/lib/supabase";
 import { cancelOverdueAdvances } from "@/lib/claims/service";
+import { getMyProfile } from "@/lib/employee/profile";
 import { AppShell } from "@/components/layout/AppShell";
 import { ToastProvider } from "@/components/ui/Toast";
 import { NavigationProgress } from "@/components/ui/NavigationProgress";
@@ -36,7 +37,10 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
   // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
   await cancelOverdueAdvances();
   const admin = session.role === "SUPER_ADMIN";
-  const badges = admin ? undefined : await financeBadges().catch(() => undefined);
+  const [badges, profile] = await Promise.all([
+    admin ? Promise.resolve(undefined) : financeBadges().catch(() => undefined),
+    getMyProfile(session.sub).catch(() => null),
+  ]);
 
   return (
     <ToastProvider>
@@ -46,7 +50,7 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
         notificationCount={0}
         badges={badges}
         hiddenNavIds={admin ? ADMIN_HIDDEN_NAV : undefined}
-        user={{ name: session.name, roleLabel: session.role === "FINANCE" ? "ฝ่ายการเงิน (Finance)" : (ROLE_LABELS[session.role] ?? session.role) }}
+        user={{ name: session.name, roleLabel: session.role === "FINANCE" ? "ฝ่ายการเงิน (Finance)" : (ROLE_LABELS[session.role] ?? session.role), photoUrl: profile?.photoUrl ?? null }}
       >
         <div className="payroll-app">{children}</div>
       </AppShell>

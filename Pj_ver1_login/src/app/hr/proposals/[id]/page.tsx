@@ -85,7 +85,7 @@ export default async function ProposalReviewPage({ params }: { params: Params })
             amount={previewAmount}
           />
           <Card className="flex items-center gap-2.5 px-4 py-3.5">
-            <Avatar name={proposal.proposerName} />
+            <Avatar name={proposal.proposerName} src={proposal.proposerPhotoUrl} />
             <span className="text-13">
               <b className="font-semibold">{proposal.proposerName}</b>
               <span className="block text-muted">{[proposal.proposerPosition, proposal.proposerCode].filter(Boolean).join(" · ")}</span>

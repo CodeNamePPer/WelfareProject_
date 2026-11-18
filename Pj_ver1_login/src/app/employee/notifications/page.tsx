@@ -8,6 +8,7 @@ import type { ClaimEventKind } from "@/lib/claims/types";
 import { cx } from "@/lib/cx";
 import { EmptyNote, PageHead, RowLink, Sheet } from "@/features/requester/ui";
 import { getNotificationsSeenAt } from "@/lib/employee/notifications";
+import { listMyEditRequests, type MyEditRequest } from "@/lib/hr/editRequests";
 import { MarkAllSeen } from "./MarkAllSeen";
 
 export const metadata: Metadata = { title: "แจ้งเตือน" };
@@ -35,6 +36,26 @@ const VISUAL: Record<ClaimEventKind, Visual> = {
   refund_received: { title: "รับเงินคืนส่วนต่างแล้ว", icon: CircleCheck, tone: "bg-status-approved-soft text-status-approved-ink" },
 };
 
+// คำขอแก้ไขข้อมูลส่วนตัว (employee_edit_request): ส่งแล้ว → HR อนุมัติ / ไม่อนุมัติ
+const EDIT_VISUAL: Record<"submitted" | "approved" | "rejected", Visual> = {
+  submitted: { title: "ส่งคำขอแก้ไขข้อมูลแล้ว", icon: FileText, tone: "bg-status-pending-soft text-status-pending-ink" },
+  approved: { title: "HR อนุมัติคำขอแก้ไขข้อมูลแล้ว", icon: CircleCheck, tone: "bg-status-approved-soft text-status-approved-ink" },
+  rejected: { title: "HR ไม่อนุมัติคำขอแก้ไขข้อมูล", icon: CircleX, tone: "bg-status-rejected-soft text-status-rejected-ink" },
+};
+
+type Item = { key: string; at: string; visual: Visual; body: string; href: string; mine: boolean };
+
+function editRequestItems(request: MyEditRequest, viewerCode: string): Item[] {
+  const what = `คำขอเปลี่ยน${request.labels.join(", ")}`;
+  const items: Item[] = [{ key: `edit-${request.id}-submitted`, at: request.submittedAt, visual: EDIT_VISUAL.submitted, body: `${what} · รอ HR ตรวจสอบ`, href: "/employee/profile", mine: true }];
+  if (request.status !== "pending" && request.decidedAt) {
+    const by = request.deciderName ? ` · โดย ${request.deciderName}` : "";
+    const body = request.status === "approved" ? `${what} บันทึกลงโปรไฟล์แล้ว${by}` : `${what}${by}${request.decisionNote ? ` · ${request.decisionNote}` : ""}`;
+    items.push({ key: `edit-${request.id}-${request.status}`, at: request.decidedAt, visual: EDIT_VISUAL[request.status], body, href: "/employee/profile", mine: request.deciderCode === viewerCode });
+  }
+  return items;
+}
+
 const GROUPS = ["วันนี้", "สัปดาห์นี้", "ก่อนหน้านี้"] as const;
 const MAX_ITEMS = 60;
 
@@ -46,21 +67,30 @@ export default async function EmployeeNotificationsPage() {
     redirect("/login");
   }
 
-  const [claims, seenAt] = await Promise.all([listClaims({ employeeCode: session.sub }), getNotificationsSeenAt(session.sub)]);
+  const [claims, seenAt, editRequests] = await Promise.all([listClaims({ employeeCode: session.sub }), getNotificationsSeenAt(session.sub), listMyEditRequests(session.sub)]);
   if (!claims) {
     return <p className="text-13 text-status-rejected">โหลดแจ้งเตือนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   }
 
   const today = bangkokToday();
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const items = claims
-    .flatMap((claim) => claim.events.map((event, index) => ({ key: `${claim.id}-${index}`, claim, event })))
-    .sort((a, b) => b.event.at.localeCompare(a.event.at))
+  const claimItems: Item[] = claims.flatMap((claim) =>
+    claim.events.map((event, index) => ({
+      key: `${claim.id}-${index}`,
+      at: event.at,
+      visual: VISUAL[event.kind],
+      body: `${claim.claimNo} ${claim.benefitName} ${baht(claim.amountRequested)}${event.actorName && event.actorCode !== session.sub ? ` · โดย ${event.actorName}` : ""}${event.note ? ` · ${event.note}` : ""}`,
+      href: `/employee/status?id=${encodeURIComponent(claim.claimNo)}`,
+      mine: event.actorCode === session.sub,
+    })),
+  );
+  const items = [...claimItems, ...editRequests.flatMap((request) => editRequestItems(request, session.sub))]
+    .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, MAX_ITEMS)
     .map((item) => {
-      const day = new Date(item.event.at).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-      const unread = item.event.actorCode !== session.sub && (!seenAt || item.event.at > seenAt);
-      return { ...item, unread, group: day === today ? GROUPS[0] : item.event.at >= weekAgo ? GROUPS[1] : GROUPS[2], time: day === today ? thaiTime(item.event.at) : thaiDayMonth(item.event.at) };
+      const day = new Date(item.at).toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+      const unread = !item.mine && (!seenAt || item.at > seenAt);
+      return { ...item, unread, group: day === today ? GROUPS[0] : item.at >= weekAgo ? GROUPS[1] : GROUPS[2], time: day === today ? thaiTime(item.at) : thaiDayMonth(item.at) };
     });
 
   const unreadCount = items.filter((item) => item.unread).length;
@@ -69,7 +99,7 @@ export default async function EmployeeNotificationsPage() {
     <>
       <PageHead
         title="แจ้งเตือน"
-        description={unreadCount > 0 ? `ยังไม่ได้อ่าน ${unreadCount} รายการ · ความเคลื่อนไหวของคำขอสวัสดิการของคุณ เรียงจากล่าสุด` : "ความเคลื่อนไหวของคำขอสวัสดิการของคุณ เรียงจากล่าสุด"}
+        description={unreadCount > 0 ? `ยังไม่ได้อ่าน ${unreadCount} รายการ · ความเคลื่อนไหวของคำขอของคุณ เรียงจากล่าสุด` : "ความเคลื่อนไหวของคำขอของคุณ เรียงจากล่าสุด"}
       >
         <MarkAllSeen unread={unreadCount} />
       </PageHead>
@@ -84,21 +114,16 @@ export default async function EmployeeNotificationsPage() {
             return (
               <section key={group} aria-label={group}>
                 <h2 className="bg-surface px-5 py-2.5 text-12 font-semibold text-muted">{group}</h2>
-                {rows.map(({ key, claim, event, time, unread }) => {
-                  const visual = VISUAL[event.kind];
+                {rows.map(({ key, visual, body, href, time, unread }) => {
                   const Icon = visual.icon;
                   return (
-                    <RowLink key={key} href={`/employee/status?id=${encodeURIComponent(claim.claimNo)}`} className="!flex items-start gap-3.5 py-3.5">
+                    <RowLink key={key} href={href} className="!flex items-start gap-3.5 py-3.5">
                       <span aria-hidden="true" className={cx("flex size-9 shrink-0 items-center justify-center rounded-full", visual.tone)}>
                         <Icon className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className={cx("block", unread ? "font-semibold" : "font-medium")}>{visual.title}</span>
-                        <span className="block text-13 text-ink-soft">
-                          {claim.claimNo} {claim.benefitName} {baht(claim.amountRequested)}
-                          {event.actorName && event.actorCode !== session.sub ? ` · โดย ${event.actorName}` : ""}
-                          {event.note ? ` · ${event.note}` : ""}
-                        </span>
+                        <span className="block text-13 text-ink-soft">{body}</span>
                       </span>
                       <span className="flex items-center gap-2 text-12 whitespace-nowrap text-muted">
                         {time}

@@ -3,7 +3,8 @@ import { supabaseAdmin } from "../supabase";
 import { findEmployeeUuidByCode } from "../auth/users";
 
 // สถานะอ่านแล้วของแจ้งเตือนพนักงาน: เก็บเวลาที่อ่านล่าสุดต่อคนในตาราง employee_notification_seen
-// แจ้งเตือนคือ welfare_claim_event ของคำขอที่เป็นของพนักงาน ยังไม่อ่าน = เกิดหลัง seen_at และคนอื่นเป็นผู้ทำ
+// แจ้งเตือนคือ welfare_claim_event ของคำขอที่เป็นของพนักงาน และผลคำขอแก้ไขข้อมูล (employee_edit_request)
+// ยังไม่อ่าน = เกิดหลัง seen_at และคนอื่นเป็นผู้ทำ
 
 /** เวลาที่อ่านล่าสุด (null = ยังไม่เคยกดอ่าน ทุกรายการถือว่ายังไม่อ่าน) */
 export async function getNotificationsSeenAt(code: string): Promise<string | null> {
@@ -30,9 +31,19 @@ export async function countUnreadNotifications(code: string): Promise<number> {
       .is("claim.deleted_at", null)
       .or(`actor_employee_id.is.null,actor_employee_id.neq.${employeeId}`);
     if (seen?.seen_at) query = query.gt("created_at", seen.seen_at);
-    const { count, error } = await query;
+    // ผลคำขอแก้ไขข้อมูลส่วนตัวที่ HR ตัดสินแล้ว
+    let edits = supabaseAdmin
+      .from("employee_edit_request")
+      .select("id", { count: "exact", head: true })
+      .eq("employee_id", employeeId)
+      .in("status", ["approved", "rejected"])
+      .neq("decided_by", employeeId)
+      .is("deleted_at", null);
+    if (seen?.seen_at) edits = edits.gt("decided_at", seen.seen_at);
+    const [{ count, error }, editCount] = await Promise.all([query, edits]);
     if (error) throw error;
-    return count ?? 0;
+    if (editCount.error) console.error("[employee notifications] count edit requests failed", editCount.error);
+    return (count ?? 0) + (editCount.count ?? 0);
   } catch (err) {
     console.error("[employee notifications] count unread failed", err);
     return 0;
