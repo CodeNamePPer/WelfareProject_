@@ -381,7 +381,8 @@ export default function ChangeProfileClient({ profile, pending }: { profile: MyP
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
-                  required
+                  // ไม่ใส่ required: ไฟล์ที่ลากมาวางไม่เข้า input นี้ (ซ่อนอยู่) เบราว์เซอร์จะบล็อกการส่งโดยมองไม่เห็นข้อความ
+                  // submitRequest ตรวจ evidence เองและแสดงข้อความแทน
                   onChange={(event) => chooseEvidence(event.target.files?.[0])}
                   className="sr-only"
                   aria-label="เลือกไฟล์หลักฐาน"
