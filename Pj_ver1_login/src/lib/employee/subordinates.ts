@@ -18,10 +18,13 @@ interface MemberRow {
   position: { name_th: string } | null;
 }
 
+const MEMBER_COLUMNS = "employee_code, title_th, first_name_th, last_name_th, department:department_id(name_th), position:position_id(name_th)";
+
 /**
- * พนักงานที่หัวหน้าแผนกยื่นคำขอแทนได้: ยื่นแทนได้เฉพาะคนที่เป็นหัวหน้าแผนก (department.head_employee_id)
- * และเฉพาะพนักงานที่ยังทำงานอยู่ในแผนกที่ตัวเองเป็นหัวหน้า ไม่รวมตัวเอง
- * คืน [] เมื่อไม่ได้เป็นหัวหน้าแผนก และ null เมื่อโหลดไม่สำเร็จ
+ * พนักงานที่หัวหน้ายื่นคำขอแทนได้ ไม่รวมตัวเอง และเฉพาะคนที่ยังทำงานอยู่:
+ *   - ลูกน้องโดยตรง (employee.manager_employee_id = ตัวเอง ซึ่ง Admin/HR กำหนดในช่อง "หัวหน้า")
+ *   - พนักงานในแผนกที่ตัวเองเป็นหัวหน้าแผนก (department.head_employee_id)
+ * คืน [] เมื่อไม่ได้เป็นหัวหน้าของใคร และ null เมื่อโหลดไม่สำเร็จ
  * ใช้ทั้งฟอร์มยื่นคำขอและตอนบันทึกคำขอ (lib/claims/service.ts) ให้กฎตรงกัน
  */
 export const getSubordinates = cache(async (headCode: string): Promise<Subordinate[] | null> => {
@@ -32,15 +35,14 @@ export const getSubordinates = cache(async (headCode: string): Promise<Subordina
 
     const { data: departments, error: departmentError } = await supabaseAdmin.from("department").select("id").eq("head_employee_id", head.id).is("deleted_at", null);
     if (departmentError) throw departmentError;
-    if (!departments?.length) return [];
+    const departmentIds = (departments ?? []).map((department) => department.id as string);
 
+    // ลูกน้องโดยตรง หรืออยู่ในแผนกที่เป็นหัวหน้า
+    const filter = [`manager_employee_id.eq.${head.id}`, ...(departmentIds.length ? [`department_id.in.(${departmentIds.join(",")})`] : [])].join(",");
     const { data, error } = await supabaseAdmin
       .from("employee")
-      .select("employee_code, title_th, first_name_th, last_name_th, department:department_id(name_th), position:position_id(name_th)")
-      .in(
-        "department_id",
-        departments.map((department) => department.id),
-      )
+      .select(MEMBER_COLUMNS)
+      .or(filter)
       .neq("id", head.id)
       .eq("employment_status", "active")
       .is("deleted_at", null)
@@ -54,7 +56,7 @@ export const getSubordinates = cache(async (headCode: string): Promise<Subordina
       position: row.position?.name_th ?? "-",
     }));
   } catch (err) {
-    console.error("[employee] load department members failed", err);
+    console.error("[employee] load subordinates failed", err);
     return null;
   }
 });

@@ -13,7 +13,7 @@ export type RequesterSummary = {
   position?: string | null;
   department?: string | null;
   photoUrl?: string | null;
-  /** ชื่อหัวหน้าแผนกที่ยื่นแทน (null = ยื่นเอง) */
+  /** ชื่อหัวหน้าที่ยื่นแทน (null = ยื่นเอง) */
   proxyBy?: string | null;
 };
 
