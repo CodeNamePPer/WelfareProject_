@@ -3,6 +3,7 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useNavTransition } from '@/lib/useNavTransition';
 import { useToast } from '@/components/ui/Toast';
+import { ProfilePhotoEditor } from '@/components/ProfilePhotoEditor';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { cx } from '@/lib/cx';
@@ -191,14 +192,12 @@ export function ProfileClient({ data }: { data: ProfileData }) {
         <div aria-hidden="true" className="h-24 bg-[#1E3A8A]" />
         <div className="flex flex-wrap items-end justify-between gap-4 px-4 pb-4 sm:px-6">
           <div className="flex min-w-0 flex-wrap items-end gap-4">
-            <div aria-hidden="true" className="-mt-[52px] flex size-[104px] shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#DBEAFE] text-[32px] font-semibold text-[#1E40AF]">
-              {data.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- รูปโปรไฟล์พนักงานในระบบ
-                <img src={data.photoUrl} alt="" className="size-full object-cover" />
-              ) : (
-                data.initials || '?'
-              )}
-            </div>
+            <ProfilePhotoEditor
+              photoUrl={data.photoUrl}
+              initials={data.initials}
+              className="-mt-[52px]"
+              circleClassName="size-[104px] border-4 border-white bg-[#DBEAFE] text-[32px] font-semibold text-[#1E40AF]"
+            />
             <div className="min-w-0 pb-1">
               <h1 className="text-22 font-semibold text-ink">{data.name}</h1>
               <p className="text-ink-soft">{[data.position, data.department].filter(Boolean).join(' · ')}</p>
