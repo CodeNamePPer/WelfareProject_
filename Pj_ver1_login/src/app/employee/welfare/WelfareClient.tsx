@@ -6,7 +6,7 @@ import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
 import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
-import { Lock, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import type { FadedBenefit } from '@/lib/hr/benefitVisibility';
 import { AdvanceTag } from '@/features/requester/BenefitPicker';
 
@@ -129,8 +129,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                                     <p className="text-12 text-muted">
                                         {benefit.code} · {benefit.category}
                                     </p>
-                                    <h2 className="flex items-center gap-1.5 text-16 font-semibold text-ink-soft">
-                                        <Lock className="size-4 shrink-0" aria-hidden="true" />
+                                    <h2 className="text-16 font-semibold text-ink-soft">
                                         {benefit.name}
                                     </h2>
                                     {benefit.description ? <p className="text-13 text-muted">{benefit.description}</p> : null}

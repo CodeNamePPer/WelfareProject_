@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { FileDown, Lock, Paperclip } from 'lucide-react';
+import { FileDown, Paperclip } from 'lucide-react';
 import { Breadcrumb } from '../../components/ui/Breadcrumb';
 import { Button } from '../../components/ui/Button';
 import { ExportCsvDialog } from '../../components/ui/ExportCsvDialog';
@@ -509,11 +509,7 @@ function ClaimPanel({
           {(claim.attachmentItems ?? claim.attachments.map((name) => ({ id: name, name, isRestricted: false, src: undefined }))).map((file) => (
             <li key={file.id} className="flex items-center justify-between gap-[8px] text-13 text-ink">
               <div className="flex min-w-0 items-center gap-[8px]">
-                {file.isRestricted ? (
-                  <Lock className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                ) : (
-                  <Paperclip className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                )}
+                <Paperclip className="size-4 shrink-0 text-muted" aria-hidden="true" />
                 {file.src && !file.isRestricted ? (
                   <a
                     href={file.src}

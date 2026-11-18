@@ -2,7 +2,7 @@
 
 import { useNavTransition } from '@/lib/useNavTransition';
 import { useEffect, useRef, useState } from 'react';
-import { FileText, Image as ImageIcon, Lock, Upload, X } from 'lucide-react';
+import { FileText, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
@@ -30,7 +30,7 @@ const PROXY_REASONS = ['ป่วย / พักรักษาตัว', 'ล�
 
 const money = (value: number) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 const baht2 = (value: number) => `฿${money(value)}`;
-const lockedClass = 'h-[42px] w-full cursor-not-allowed rounded-lg border border-line bg-slate-100 pr-3 pl-[34px] text-14 text-slate-400 outline-none';
+const lockedClass = 'h-[42px] w-full cursor-not-allowed rounded-lg border border-line bg-slate-100 px-3 text-14 text-slate-600 outline-none';
 const Required = () => <span className="text-danger"> *</span>;
 
 /** ปุ่มสลับแบบแคปซูล (ยื่นให้ตัวเอง / ยื่นแทน) */
@@ -341,18 +341,14 @@ export default function WithdrawClient({
                         ) : null}
 
                         <div className="rounded-lg border border-dashed border-line bg-surface px-4 py-3.5">
-                            <p className="mb-2.5 flex items-center gap-1.5 text-12 text-slate-400">
-                                <Lock className="size-3.5" aria-hidden="true" />
+                            <p className="mb-2.5 text-12 text-muted">
                                 ข้อมูลผู้ขอ
                             </p>
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 {personFields.map((field) => (
                                     <div key={field.label}>
-                                        <p className="mb-1.5 text-13 font-medium text-slate-400">{field.label}</p>
-                                        <div className="relative">
-                                            <Lock className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-                                            <input readOnly aria-readonly="true" aria-label={`${field.label} (แก้ไขไม่ได้)`} value={field.value} className={lockedClass} />
-                                        </div>
+                                        <p className="mb-1.5 text-13 font-medium text-ink-soft">{field.label}</p>
+                                        <input readOnly aria-readonly="true" aria-label={`${field.label} (แก้ไขไม่ได้)`} value={field.value} className={lockedClass} />
                                     </div>
                                 ))}
                             </div>

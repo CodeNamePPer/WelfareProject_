@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Lock } from 'lucide-react';
 import { cx } from '@/lib/cx';
 import { useToast } from '@/components/ui/Toast';
 import type { UnavailableBenefit, UnavailableDisplay } from '@/lib/hr/benefitVisibility';
@@ -84,8 +83,7 @@ export function VisibilityClient({ rows }: { rows: UnavailableBenefit[] }) {
       {sample ? (
         <Card className="flex flex-wrap items-center gap-4 px-5 py-4">
           <div className="w-[220px] rounded-[8px] border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-3 text-13 text-[#6B778C]">
-            <div className="flex items-center gap-1.5">
-              <Lock className="size-3.5 text-[#94A3B8]" aria-hidden="true" />
+            <div>
               <b className="font-semibold">{sample.name}</b>
             </div>
             <div>{sample.reason}</div>

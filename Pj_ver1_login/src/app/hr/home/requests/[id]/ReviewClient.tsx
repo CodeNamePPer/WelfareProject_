@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Lock } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import type { Attachment, ClaimDbStatus } from '@/lib/claims/types';
 import { baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -172,7 +172,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                         index === doc ? 'border-[1.5px] border-[#1D4ED8] bg-[#EFF6FF] text-[#1E40AF]' : 'border border-[#E2E8F0] bg-white text-ink',
                       )}
                     >
-                      {item.locked ? <Lock className="size-3" aria-label="จำกัดสิทธิ์" /> : null}
+                      {item.locked ? <span className="sr-only">จำกัดสิทธิ์ </span> : null}
                       {item.label}
                     </button>
                   ))}

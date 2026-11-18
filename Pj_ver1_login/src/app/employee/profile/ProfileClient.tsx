@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Lock } from "lucide-react";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { ProfilePhotoEditor } from "@/components/ProfilePhotoEditor";
 import type { MyProfile } from "@/lib/employee/profile";
@@ -24,15 +23,14 @@ type TabId = (typeof TABS)[number]["id"];
 function LockedField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="mb-1.5 text-13 font-medium text-muted">{label}</p>
-      <div className="relative">
-        <Lock className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+      <p className="mb-1.5 text-13 font-medium text-ink-soft">{label}</p>
+      <div>
         <input
           readOnly
           aria-readonly="true"
           aria-label={`${label} (แก้ไขไม่ได้)`}
           value={value}
-          className="h-[42px] w-full cursor-not-allowed rounded-lg border border-line bg-slate-100 pr-3 pl-[34px] text-14 text-muted outline-none"
+          className="h-[42px] w-full cursor-not-allowed rounded-lg border border-line bg-slate-100 px-3 text-14 text-slate-600 outline-none"
         />
       </div>
     </div>

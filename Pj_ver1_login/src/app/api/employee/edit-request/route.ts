@@ -5,7 +5,7 @@ import { EMPLOYEE_CHANGE_TOPICS, EditRequestError, submitEmployeeEditRequest, ty
 export const runtime = "nodejs";
 
 // พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง (/employee/profile/changeprofile) ส่งเข้าคิว HR ที่แท็บคำขอแก้ไขข้อมูลใน /hr/employees
-// multipart: field, value, reason, evidence (ไฟล์ 1 ไฟล์)
+// multipart: field, value, value2 (เบอร์โทรผู้ติดต่อฉุกเฉิน), reason, evidence (ไฟล์ 1 ไฟล์)
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!(evidence instanceof File) || evidence.size === 0) return NextResponse.json({ error: "แนบหลักฐานประกอบคำขอ" }, { status: 400 });
 
   try {
-    await submitEmployeeEditRequest(session.sub, field as EmployeeChangeTopic, text("value"), text("reason"), evidence);
+    await submitEmployeeEditRequest(session.sub, field as EmployeeChangeTopic, text("value"), text("reason"), evidence, text("value2"));
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
     if (err instanceof EditRequestError) return NextResponse.json({ error: err.message }, { status: err.status });

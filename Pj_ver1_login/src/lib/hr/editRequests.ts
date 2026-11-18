@@ -44,8 +44,8 @@ const EVIDENCE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
 
 /** ข้อมูลที่พนักงานเลือกขอเปลี่ยนในฟอร์ม changeprofile (อีเมลเป็นชื่อเข้าระบบ จึงต้องให้ Admin เปลี่ยน) */
-export type EmployeeChangeTopic = "phone" | "name" | "address";
-export const EMPLOYEE_CHANGE_TOPICS: EmployeeChangeTopic[] = ["phone", "name", "address"];
+export type EmployeeChangeTopic = "phone" | "name" | "address" | "emergency";
+export const EMPLOYEE_CHANGE_TOPICS: EmployeeChangeTopic[] = ["phone", "name", "address", "emergency"];
 
 /** คำขอที่ยังรอ HR ตรวจของพนักงานคนนี้ (มีได้ครั้งละ 1 คำขอ) */
 export type MyPendingEditRequest = { submittedAt: string; labels: string[] };
@@ -120,8 +120,9 @@ export async function listMyEditRequests(code: string, limit = 20): Promise<MyEd
   }));
 }
 
-/** พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง 1 เรื่องต่อคำขอ พร้อมหลักฐาน 1 ไฟล์ */
-export async function submitEmployeeEditRequest(code: string, topic: EmployeeChangeTopic, value: string, reason: string, evidence: File) {
+/** พนักงานยื่นคำขอเปลี่ยนข้อมูลของตัวเอง 1 เรื่องต่อคำขอ พร้อมหลักฐาน 1 ไฟล์
+ *  ผู้ติดต่อฉุกเฉิน: value = ชื่อ, value2 = เบอร์โทร */
+export async function submitEmployeeEditRequest(code: string, topic: EmployeeChangeTopic, value: string, reason: string, evidence: File, value2 = "") {
   const next = value.trim();
   if (!next) throw new EditRequestError("ระบุค่าใหม่ที่ต้องการ");
   if (!reason.trim()) throw new EditRequestError("ระบุเหตุผลในการขอเปลี่ยนข้อมูล");
@@ -131,16 +132,25 @@ export async function submitEmployeeEditRequest(code: string, topic: EmployeeCha
 
   const { data: me, error } = await supabaseAdmin
     .from("employee")
-    .select("id, phone, first_name_th, last_name_th, address_line")
+    .select("id, phone, first_name_th, last_name_th, address_line, emergency_contact_name, emergency_contact_phone")
     .eq("employee_code", code)
     .is("deleted_at", null)
-    .maybeSingle<{ id: string; phone: string | null; first_name_th: string; last_name_th: string; address_line: string | null }>();
+    .maybeSingle<{
+      id: string;
+      phone: string | null;
+      first_name_th: string;
+      last_name_th: string;
+      address_line: string | null;
+      emergency_contact_name: string | null;
+      emergency_contact_phone: string | null;
+    }>();
   if (error) throw error;
   if (!me) throw new EditRequestError("ไม่พบข้อมูลพนักงาน", 404);
 
   const changes: Record<string, { old: string | null; new: string }> = {};
+  const validPhone = (phone: string) => /^[0-9+\-\s()]{9,20}$/.test(phone);
   if (topic === "phone") {
-    if (!/^[0-9+\-\s()]{9,20}$/.test(next)) throw new EditRequestError("เบอร์โทรศัพท์ไม่ถูกต้อง");
+    if (!validPhone(next)) throw new EditRequestError("เบอร์โทรศัพท์ไม่ถูกต้อง");
     if (next !== (me.phone ?? "")) changes.phone = { old: me.phone, new: next };
   } else if (topic === "name") {
     const [first, ...rest] = next.split(/\s+/);
@@ -148,6 +158,12 @@ export async function submitEmployeeEditRequest(code: string, topic: EmployeeCha
     const last = rest.join(" ") || "-";
     if (first !== me.first_name_th) changes.first_name_th = { old: me.first_name_th, new: first };
     if (last !== me.last_name_th) changes.last_name_th = { old: me.last_name_th, new: last };
+  } else if (topic === "emergency") {
+    const phone = value2.trim();
+    if (!phone) throw new EditRequestError("ระบุเบอร์โทรผู้ติดต่อฉุกเฉิน");
+    if (!validPhone(phone)) throw new EditRequestError("เบอร์โทรผู้ติดต่อฉุกเฉินไม่ถูกต้อง");
+    if (next !== (me.emergency_contact_name ?? "")) changes.emergency_contact_name = { old: me.emergency_contact_name, new: next };
+    if (phone !== (me.emergency_contact_phone ?? "")) changes.emergency_contact_phone = { old: me.emergency_contact_phone, new: phone };
   } else {
     if (next !== (me.address_line ?? "")) changes.address_line = { old: me.address_line, new: next };
   }
