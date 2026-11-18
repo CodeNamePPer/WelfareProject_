@@ -305,17 +305,26 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
   try {
     const { data: employee, error: employeeError } = await supabaseAdmin
       .from("employee")
-      .select("id, employment_status, department_id, department:department_id(parent_department_id)")
+      .select("id, employment_status, department_id, job_level_id, department:department_id(parent_department_id)")
       .eq("employee_code", code)
       .is("deleted_at", null)
       .maybeSingle()
-      .returns<{ id: string; employment_status: string; department_id: string | null; department: { parent_department_id: string | null } | null } | null>();
+      .returns<{ id: string; employment_status: string; department_id: string | null; job_level_id: string | null; department: { parent_department_id: string | null } | null } | null>();
     if (employeeError) throw employeeError;
     if (!employee || employee.employment_status !== "active") return [];
 
+    const today = bangkokDate();
+    // วงเงินลำดับเดียวกับ guard_welfare_claim: รายคน > ตามระดับตำแหน่ง > วงเงินกลาง (ไม่งั้นหน้าจอให้ยื่นแต่ฐานข้อมูลปฏิเสธ)
+    const scope = [`employee_id.eq.${employee.id}`, "and(employee_id.is.null,job_level_id.is.null)"];
+    if (employee.job_level_id) scope.push(`and(employee_id.is.null,job_level_id.eq.${employee.job_level_id})`);
     const [benefits, limits, restrictions, usage] = await Promise.all([
       supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type, max_claims, max_claims_note, eligibility_note, required_documents, allow_advance, advance_receipt_days, image_path").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
-      supabaseAdmin.from("v_welfare_benefit_current").select("id, current_amount").returns<{ id: string; current_amount: number | string | null }[]>(),
+      supabaseAdmin
+        .from("welfare_benefit_limit")
+        .select("benefit_id, amount, effective_from, employee_id, job_level_id")
+        .lte("effective_from", today)
+        .or(scope.join(","))
+        .returns<{ benefit_id: string; amount: number | string; effective_from: string; employee_id: string | null; job_level_id: string | null }[]>(),
       supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department_id").returns<{ benefit_id: string; department_id: string }[]>(),
       fetchUsage([employee.id]),
     ]);
@@ -323,8 +332,13 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
     if (limits.error) throw limits.error;
     if (restrictions.error) throw restrictions.error;
 
-    const today = bangkokDate();
-    const limitOf = new Map((limits.data ?? []).map((row) => [row.id, row.current_amount]));
+    const rank = (row: { employee_id: string | null; job_level_id: string | null }) => (row.employee_id ? 2 : row.job_level_id ? 1 : 0);
+    const best = new Map<string, { amount: number | string; effective_from: string; employee_id: string | null; job_level_id: string | null }>();
+    for (const row of limits.data ?? []) {
+      const current = best.get(row.benefit_id);
+      if (!current || rank(row) > rank(current) || (rank(row) === rank(current) && row.effective_from > current.effective_from)) best.set(row.benefit_id, row);
+    }
+    const limitOf = new Map([...best].map(([id, row]) => [id, row.amount]));
     const memberOf = [employee.department_id, employee.department?.parent_department_id].filter(Boolean);
 
     const images = await signBenefitImages((benefits.data ?? []).map((benefit) => benefit.image_path));

@@ -87,6 +87,8 @@ export default function WithdrawClient({
     const [receiptDate, setReceiptDate] = useState(initial?.receiptDate ?? '');
     const [advanceChoice, setAdvanceChoice] = useState(initial?.isAdvance ?? false);
     const [files, setFiles] = useState<File[]>([]);
+    // ไฟล์ที่อัปโหลดเข้าฉบับร่างแล้วในหน้านี้ (บันทึกร่าง หรือส่งไม่ผ่านแต่บันทึกร่างไว้) ล้างออกจากรายการแล้วแต่ยังนับเป็นเอกสารแนบ
+    const [uploadedCount, setUploadedCount] = useState(0);
     const [dragging, setDragging] = useState(false);
     const [agreed, setAgreed] = useState(false);
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -102,10 +104,12 @@ export default function WithdrawClient({
     const amountField = fields.find((field) => field.key === 'amount');
     const detailFields = fields.filter((field) => field.key !== 'amount');
     const amount = Number(values.amount) || 0;
-    const overLimit = Boolean(benefit) && amount > (benefit?.remaining ?? 0);
+    const revising = Boolean(initial?.revisionNote);
+    // คำขอที่ส่งกลับมาแก้ไขกันวงเงินไว้อยู่แล้ว (ฐานข้อมูลไม่นับตัวเองซ้ำ) จึงคืนยอดเดิมก่อนเทียบ ไม่งั้นแก้แล้วส่งใหม่ไม่ได้
+    const available = (benefit?.remaining ?? 0) + (revising ? Number(initial?.values.amount) || 0 : 0);
+    const overLimit = Boolean(benefit) && amount > available;
     // คำขอที่ส่งกลับมาแก้ไขถูกนับอยู่แล้ว จึงไม่กันซ้ำที่หน้าจอ ฐานข้อมูลตรวจอีกชั้นตอนส่ง
     const outOfClaims = Boolean(benefit) && benefit!.maxClaims !== null && benefit!.claimsThisYear >= benefit!.maxClaims! && !initial;
-    const revising = Boolean(initial?.revisionNote);
     // ยื่นล่วงหน้าได้เฉพาะสวัสดิการที่เปิดไว้ ระหว่างแก้ไขเปลี่ยนประเภทไม่ได้
     const advance = advanceChoice && Boolean(benefit?.allowAdvance);
     const typeLocked = revising;
@@ -125,6 +129,7 @@ export default function WithdrawClient({
         setBenefitCode(firstSelectable(nextList));
         setValues({});
         setClaimNo('');
+        setUploadedCount(0);
         setAdvanceChoice(false);
         setError('');
         setNotice('');
@@ -143,7 +148,7 @@ export default function WithdrawClient({
         if (outOfClaims) return `เบิกสวัสดิการนี้ครบ ${benefit?.maxClaims} ครั้งของปีนี้แล้ว`;
         const missing = fields.some((field) => !field.optional && !values[field.key]?.trim());
         if (missing || amount <= 0) return 'กรุณากรอกข้อมูลให้ครบถ้วน';
-        if (benefit && amount > benefit.remaining) return `ยอดเบิกเกินวงเงินคงเหลือ ${money(benefit.remaining)} บาท`;
+        if (overLimit) return `ยอดเบิกเกินวงเงินคงเหลือ ${money(available)} บาท`;
         return '';
     }
 
@@ -178,10 +183,14 @@ export default function WithdrawClient({
             const data = await response.json();
             if (data.claimNo) setClaimNo(data.claimNo);
             if (!response.ok) {
-                if (data.claimNo) setFiles([]);
+                if (data.claimNo) {
+                    setUploadedCount((count) => count + files.length);
+                    setFiles([]);
+                }
                 setError(data.error ?? 'บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
                 return;
             }
+            setUploadedCount((count) => count + files.length);
             setFiles([]);
             if (submit && !proxy) {
                 leaving = true;
@@ -192,6 +201,7 @@ export default function WithdrawClient({
                 // คำขอที่ยื่นแทนเป็นของพนักงานคนนั้น จึงไม่อยู่ในรายการของคุณ ล้างฟอร์มไว้ยื่นรายการถัดไป
                 setNotice(`ส่งคำขอ ${data.claimNo} แทน ${person.fullName} แล้ว`);
                 setClaimNo('');
+                setUploadedCount(0);
                 setValues({});
                 setNote('');
                 setReceiptNo('');
@@ -213,7 +223,7 @@ export default function WithdrawClient({
         if (problem) return setError(problem);
         if (!advance) {
             if (!receiptNo.trim() || !receiptDate) return setError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
-            if (files.length + (initial?.attachments.length ?? 0) === 0) return setError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
+            if (files.length + uploadedCount + (initial?.attachments.length ?? 0) === 0) return setError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
         }
         if (!agreed) return setError('กรุณายืนยันความถูกต้องของข้อมูลก่อนส่งคำขอ');
         void send(true);
@@ -232,7 +242,7 @@ export default function WithdrawClient({
     ];
     const documents = advance ? ['ใบเสนอราคาหรือใบแจ้งค่าใช้จ่าย (ถ้ามี)', ...(benefit?.documents ?? [])] : ['ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน', ...(benefit?.documents ?? [])];
     // ผู้ยื่นคือคนที่กรอกฟอร์มเสมอ ส่วนผู้รับสิทธิ์คือเจ้าของวงเงินที่ถูกหัก (ตัวเอง หรือพนักงานที่ยื่นแทน)
-    const remainingAfter = benefit ? Math.max(benefit.remaining - (initial ? 0 : amount), 0) : 0;
+    const remainingAfter = benefit ? Math.max(available - amount, 0) : 0;
     const summary: { label: string; value: string; strong?: boolean; danger?: boolean }[] = [
         { label: 'ผู้ยื่น', value: proxy ? `${applicant.fullName} (หัวหน้า)` : applicant.fullName },
         { label: 'ผู้รับสิทธิ์', value: proxy ? `${person.fullName} · ${person.code}` : 'ตัวเอง' },
@@ -511,7 +521,7 @@ export default function WithdrawClient({
                                     type="number"
                                     inputMode="decimal"
                                     min={0}
-                                    max={benefit?.remaining}
+                                    max={benefit ? available : undefined}
                                     step="0.01"
                                     value={values.amount ?? ''}
                                     onChange={(e) => setValue('amount', e.target.value)}
@@ -522,7 +532,7 @@ export default function WithdrawClient({
                                 />
                                 {benefit ? (
                                     <p id="amount-hint" role={overLimit ? 'alert' : undefined} className={cx('mt-1 text-12', overLimit ? 'text-status-rejected' : 'text-muted')}>
-                                        {overLimit ? `ยอดเบิกเกินวงเงินคงเหลือ ${money(benefit.remaining)} บาท` : `ไม่เกินวงเงินคงเหลือ ${baht(benefit.remaining)}`}
+                                        {overLimit ? `ยอดเบิกเกินวงเงินคงเหลือ ${money(available)} บาท` : `ไม่เกินวงเงินคงเหลือ ${baht(available)}`}
                                     </p>
                                 ) : null}
                             </div>
