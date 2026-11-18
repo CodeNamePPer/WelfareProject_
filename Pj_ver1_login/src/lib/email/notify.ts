@@ -2,11 +2,12 @@ import "server-only";
 import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { Role } from "@/lib/auth/roles";
+import { getHrHeadCode } from "@/lib/hr/hrHead";
 import { deliverableEmail } from "./address";
 import { escapeHtml, isEmailConfigured, sendEmail } from "./resend";
 
 // อีเมลแจ้งเตือนเรื่องคำขอ ใช้ร่วมกันทุกบทบาท (ผู้ขอ HR การเงิน Admin)
-// ส่งหลังตอบ request แล้ว (after) อีเมลส่งไม่ได้ไม่กระทบงานหลัก · ไม่ตั้ง RESEND_API_KEY = ไม่ส่ง
+// ส่งหลังตอบ request แล้ว (after) อีเมลส่งไม่ได้ไม่กระทบงานหลัก · ไม่ตั้ง Gmail / Resend = ไม่ส่ง
 
 export type NoticeMessage = { subject: string; lines: string[]; path: string };
 
@@ -30,11 +31,30 @@ export function renderNotice(message: NoticeMessage, footer = DEFAULT_FOOTER) {
   return { text, html };
 }
 
+/**
+ * ช่วงทดสอบ: EMAIL_ONLY_TO จำกัดว่าอีเมลแจ้งเตือนของใครถูกส่งจริง (ฉบับที่ส่งยังเข้ากล่อง EMAIL_TEST_TO ถ้าตั้งไว้)
+ *   hr_head            เฉพาะอีเมลถึงหัวหน้า HR คนปัจจุบัน
+ *   E00010,E00002      เฉพาะรหัสพนักงานเหล่านี้ (ใส่ hr_head ปนได้)
+ *   เว้นว่าง            ส่งทุกคนตามปกติ
+ */
+async function allowedRecipients(label: string, recipients: Recipient[]) {
+  const only = (process.env.EMAIL_ONLY_TO ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+  if (only.length === 0) return recipients;
+  const codes = new Set(only.filter((value) => value !== "hr_head"));
+  if (only.includes("hr_head")) {
+    const head = await getHrHeadCode();
+    if (head) codes.add(head);
+  }
+  const allowed = recipients.filter((recipient) => codes.has(recipient.code));
+  if (allowed.length < recipients.length) console.info("[email] skipped (EMAIL_ONLY_TO)", { label, skipped: recipients.filter((r) => !codes.has(r.code)).map((r) => r.code) });
+  return allowed;
+}
+
 /** ส่งทีละคน บันทึกผลลง log (ส่งพลาดไม่ throw) */
 export async function deliver(label: string, recipients: Recipient[], message: NoticeMessage, footer?: string) {
   const { text, html } = renderNotice(message, footer);
   const seen = new Set<string>();
-  for (const recipient of recipients) {
+  for (const recipient of await allowedRecipients(label, recipients)) {
     if (seen.has(recipient.code)) continue;
     seen.add(recipient.code);
     const result = await sendEmail({ to: recipient.email, subject: message.subject, text, html });

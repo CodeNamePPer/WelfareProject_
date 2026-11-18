@@ -22,7 +22,7 @@ export function generateTempPassword(): string {
 
 export type TempPasswordDelivery = { emailedTo: string | null; emailError: string | null; fallback: ResetFallback | null };
 
-/** ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่า Resend / ส่งพลาด) ผู้เรียกต้องแสดงบนจอแทน */
+/** ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่าการส่งอีเมล / ส่งพลาด) ผู้เรียกต้องแสดงบนจอแทน */
 export async function deliverTempPassword(
   contactEmail: string | null,
   mail: { subject: string; text: string; html: string },

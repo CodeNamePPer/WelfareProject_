@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     clearFailures(target.email.toLowerCase());
     clearFailures(employeeId.toLowerCase());
 
-    // ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่า Resend / ส่งพลาด) ให้แสดงบนจอแทน
+    // ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่าการส่งอีเมล / ส่งพลาด) ให้แสดงบนจอแทน
     const contactEmail = deliverableEmail(target.profile.contactEmail);
     const mail = resetEmail(target.name, target.email, tempPassword, new URL("/login", req.url).toString());
     const { emailedTo, emailError, fallback } = await deliverTempPassword(contactEmail, mail);

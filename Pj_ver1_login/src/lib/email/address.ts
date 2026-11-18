@@ -14,7 +14,7 @@ export type ResetFallback = "no-email" | "not-configured" | "send-failed";
 
 /** สถานะการส่งอีเมลของระบบ ส่งจาก server ไปให้หน้าจอ admin (ไม่มีคีย์หรือความลับ) */
 export type EmailDelivery = {
-  /** ตั้งค่า RESEND_API_KEY แล้ว */
+  /** ตั้งค่าการส่งอีเมลแล้ว (Gmail หรือ Resend) */
   configured: boolean;
   /** ช่วงทดสอบ: ทุกฉบับส่งไปที่อีเมลนี้แทนผู้รับจริง */
   testTo: string | null;
