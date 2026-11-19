@@ -55,10 +55,9 @@ export default function OrganizationClient({ organization }: { organization: Org
   return (
     <>
       <PageHead
-        title="โครงสร้างองค์กร"
-        description={ownDepartmentName ? `ข้อมูลจากระบบ HR · พนักงานที่ทำงานอยู่ · แผนกของคุณ: ${ownDepartmentName}` : "ข้อมูลจากระบบ HR · บัญชีของคุณยังไม่ได้ระบุหน่วยงาน"}
+        title="โครงสร้างขององค์กร"
       />
-
+<br />
       <Sheet aria-labelledby="org-departments" className="flex flex-col gap-3 p-5">
         <h2 id="org-departments" className="text-16 font-semibold">
           หน่วยงานระดับฝ่าย

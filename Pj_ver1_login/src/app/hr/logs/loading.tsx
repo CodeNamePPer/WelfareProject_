@@ -10,7 +10,7 @@ export default function HrLogLoading() {
   return (
     <SkeletonScreen>
       <HrPage>
-        <HeadSkeleton title="ประวัติการแก้ไข" description="การกระทำของ HR ทั้งหมด ค่าก่อนและหลังแก้ไข · แก้ไขหรือลบไม่ได้" actions={1} />
+        <HeadSkeleton title="ประวัติการแก้ไข" />
         <Card>
           <TabsSkeleton widths={["w-16", "w-24", "w-24", "w-20"]} />
           <div className="hidden md:block">

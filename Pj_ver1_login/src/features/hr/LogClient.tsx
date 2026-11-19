@@ -35,7 +35,7 @@ export function LogClient({
   tabs = HR_TABS,
   initialTab = 'all',
   title = 'ประวัติการแก้ไข',
-  description = 'การกระทำของ HR ทั้งหมด ค่าก่อนและหลังแก้ไข · แก้ไขหรือลบไม่ได้',
+  description,
   csvName = 'hr-log.csv',
 }: {
   entries: LogRow[];

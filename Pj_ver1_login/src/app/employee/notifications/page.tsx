@@ -103,7 +103,7 @@ export default async function EmployeeNotificationsPage() {
       >
         <MarkAllSeen unread={unreadCount} />
       </PageHead>
-
+<br />
       <Sheet className="overflow-hidden">
         {items.length === 0 ? (
           <EmptyNote>ยังไม่มีแจ้งเตือน เมื่อยื่นคำขอแล้ว ความเคลื่อนไหวจะแสดงที่นี่</EmptyNote>

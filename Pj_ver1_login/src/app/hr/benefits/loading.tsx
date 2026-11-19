@@ -7,7 +7,7 @@ const COLS = "grid-cols-[64px_minmax(0,2fr)_minmax(0,1fr)_120px_120px_120px]";
 export default function BenefitsLoading() {
   return (
     <SkeletonScreen className="flex w-full flex-col gap-4 text-14 leading-[1.55] text-ink">
-      <PageHeader title="จัดการสวัสดิการ" description="ข้อมูลชุดเดียวกับที่พนักงานเห็น · สร้าง แก้ไข หรือปิดสวัสดิการต้องเสนอผ่านหัวหน้า HR ทุกครั้ง" />
+      <PageHeader title="จัดการสวัสดิการ"  />
       <Card>
         <div className="px-5 pt-3.5 pb-2">
           <Skeleton className="h-5 w-56" />
