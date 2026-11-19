@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getAllUsersWithProfile, getOrgOptions, getUserWithProfileById } from "@/lib/auth/users";
 import { ButtonLink, HrPage, PageHeader } from "@/features/hr/ui";
+import { employeeChoices } from "@/lib/employeeChoices";
 import { EditEmployeeClient } from "./EditEmployeeClient";
 
 export const dynamic = "force-dynamic";
@@ -30,9 +31,7 @@ export default async function EditEmployeePage({ params }: { params: Params }) {
 
   if (!user) notFound();
 
-  const managerChoices = allUsers
-    .filter((u) => u.status === "ACTIVE" && u.employeeId !== user.employeeId)
-    .map((u) => ({ value: u.employeeId, label: `${u.name} (${u.employeeId})` }));
+  const managerChoices = employeeChoices(allUsers, user.employeeId, orgOptions.departments);
 
   const subtitle = [
     user.employeeId,
