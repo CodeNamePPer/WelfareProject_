@@ -339,7 +339,14 @@ export async function getUserWithProfileById(employeeId: string): Promise<UserWi
   return data ? toUserWithProfile(data as unknown as EmployeeProfileRow) : null;
 }
 
-export type OrgOption = { id: string; name: string };
+export type OrgOption = {
+  id: string;
+  name: string;
+  /** เฉพาะแผนก: หน่วยงานแม่ */
+  parentId?: string;
+  /** เฉพาะแผนก: รหัสพนักงานของหัวหน้าแผนก (เฉพาะคนที่ยังทำงานอยู่) */
+  headCode?: string;
+};
 export type OrgOptions = { departments: OrgOption[]; positions: OrgOption[]; jobLevels: OrgOption[] };
 
 /** ตัวเลือกแผนก / ตำแหน่ง / ระดับ ที่ยังใช้งานอยู่ */
@@ -354,9 +361,33 @@ export async function getOrgOptions(): Promise<OrgOptions> {
     if (error) throw error;
     return (data as { id: string; name_th: string }[]).map((r) => ({ id: r.id, name: r.name_th }));
   };
+  const loadDepartments = async (): Promise<OrgOption[]> => {
+    const { data, error } = await supabaseAdmin
+      .from("department")
+      .select("id, name_th, parent_department_id, head:head_employee_id(employee_code, deleted_at, employment_status)")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("name_th", { ascending: true });
+    if (error) throw error;
+    type Row = {
+      id: string;
+      name_th: string;
+      parent_department_id: string | null;
+      head: { employee_code: string; deleted_at: string | null; employment_status: string } | null;
+    };
+    return (data as unknown as Row[]).map((r) => {
+      const head = r.head && !r.head.deleted_at && r.head.employment_status === "active" ? r.head.employee_code : undefined;
+      return {
+        id: r.id,
+        name: r.name_th,
+        ...(r.parent_department_id ? { parentId: r.parent_department_id } : {}),
+        ...(head ? { headCode: head } : {}),
+      };
+    });
+  };
   try {
     const [departments, positions, jobLevels] = await Promise.all([
-      load("department", "name_th"),
+      loadDepartments(),
       load("position", "name_th"),
       load("job_level", "rank_order"),
     ]);

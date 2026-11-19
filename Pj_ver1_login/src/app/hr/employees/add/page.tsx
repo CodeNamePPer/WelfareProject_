@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { choiceText, groupByDepartment, suggestManager } from "@/lib/employeeChoices";
 import { PageHeader, ReadOnlyInput } from "@/features/hr/ui";
 import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
@@ -45,7 +46,7 @@ type EmployeeForm = {
 type FieldKey = keyof EmployeeForm;
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
-type OrgOption = { id: string; name: string };
+type OrgOption = { id: string; name: string; group?: string; position?: string; isDeptHead?: boolean; parentId?: string; headCode?: string };
 type OrgChoices = { departments: OrgOption[]; positions: OrgOption[]; jobLevels: OrgOption[]; managers: OrgOption[] };
 
 const otherPrefix = "อื่น ๆ";
@@ -216,6 +217,12 @@ export default function AddEmployeePage() {
   const [saveError, setSaveError] = useState("");
   const [org, setOrg] = useState<OrgChoices>({ departments: [], positions: [], jobLevels: [], managers: [] });
   const { departments, positions, jobLevels, managers } = org;
+  /** หัวหน้าแผนกที่เลือก (ต้องอยู่ในรายชื่อหัวหน้าที่เลือกได้) */
+  const managerFor = (departmentId: string) => {
+    const code = suggestManager(departments, departmentId);
+    return code && managers.some((item) => item.id === code) ? code : "";
+  };
+  const suggestedManager = managerFor(form.department);
   const [optionsFailed, setOptionsFailed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const stepTitleRef = useRef<HTMLHeadingElement>(null);
@@ -284,6 +291,16 @@ export default function AddEmployeePage() {
       stepTitleRef.current?.focus();
     }
   }, [focusRequest]);
+
+  // เลือกแผนกแล้วใส่หัวหน้าแผนกให้ ถ้าช่องหัวหน้ายังว่าง หรือยังเป็นค่าที่ระบบเลือกให้จากแผนกเดิม (HR เลือกเองแล้วจะไม่ทับ)
+  function changeDepartment(departmentId: string) {
+    const previous = managerFor(form.department);
+    updateField("department", departmentId);
+    if (form.managerCode === "" || form.managerCode === previous) {
+      const next = managerFor(departmentId);
+      setForm((current) => ({ ...current, managerCode: next }));
+    }
+  }
 
   function updateField<Key extends FieldKey>(key: Key, value: EmployeeForm[Key]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -463,7 +480,7 @@ export default function AddEmployeePage() {
                     </label>
                     <label className={fieldClass("department")}>
                       <span>แผนก</span>
-                      <select required value={form.department} onChange={(event) => updateField("department", event.target.value)} {...invalidProps("department")}>
+                      <select required value={form.department} onChange={(event) => changeDepartment(event.target.value)} {...invalidProps("department")}>
                         <option value="">เลือกแผนก</option>
                         {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                       </select>
@@ -488,8 +505,22 @@ export default function AddEmployeePage() {
                       <span>หัวหน้า</span>
                       <select value={form.managerCode} onChange={(event) => updateField("managerCode", event.target.value)}>
                         <option value="">— ไม่ระบุ —</option>
-                        {managers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                        {groupByDepartment(managers).map(({ group, items }) => (
+                          <optgroup key={group} label={group}>
+                            {items.map((item) => <option key={item.id} value={item.id}>{choiceText({ label: item.name, position: item.position, isDeptHead: item.isDeptHead })}</option>)}
+                          </optgroup>
+                        ))}
                       </select>
+                      {suggestedManager && form.managerCode === suggestedManager ? (
+                        <small>หัวหน้าของแผนกที่เลือก (ระบบเลือกให้ เปลี่ยนได้)</small>
+                      ) : suggestedManager ? (
+                        <small>
+                          หัวหน้าแผนกนี้คือ {optionName(managers, suggestedManager)}{" "}
+                          <button type="button" className="font-medium text-primary-600 underline-offset-2 hover:underline" onClick={() => updateField("managerCode", suggestedManager)}>
+                            ใช้คนนี้
+                          </button>
+                        </small>
+                      ) : null}
                     </label>
                     {optionsFailed && <p className="employee-save-error employee-add-field-wide" role="alert">โหลดรายการแผนกและตำแหน่งไม่สำเร็จ กรุณารีเฟรชหน้านี้</p>}
                   </div>

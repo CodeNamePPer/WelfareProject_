@@ -28,6 +28,7 @@ import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 import { employmentStatusLabel } from "@/lib/employmentStatus";
 import { tenureOf } from "@/lib/tenure";
+import { choiceText, employeeChoices, groupByDepartment, suggestManager, type EmployeeChoice } from "@/lib/employeeChoices";
 
 export type User = {
   employeeId: string; // Primary Key
@@ -176,9 +177,7 @@ export default function AdminUsersClient({
             isSelf={selected.employeeId === currentUserId}
             emailDelivery={emailDelivery}
             orgOptions={orgOptions}
-            managerChoices={users
-              .filter((u) => u.status === "ACTIVE" && u.employeeId !== selected.employeeId)
-              .map((u) => ({ value: u.employeeId, label: `${u.name} (${u.employeeId})` }))}
+            managerChoices={employeeChoices(users, selected.employeeId, orgOptions.departments)}
             onSaved={(updated) => setUsers((prev) => prev.map((u) => (u.employeeId === updated.employeeId ? updated : u)))}
           />
         </div>
@@ -323,6 +322,33 @@ const inputClass =
 
 type InfoRow = [label: string, value: ReactNode];
 
+/** ทีมของหัวหน้า แบบอ่านอย่างเดียว ย้ายคนเปลี่ยนที่ช่อง "หัวหน้า" ของคนนั้น */
+function TeamList({ headOf, deptTeam, directTeam }: { headOf: string[]; deptTeam: Choice[]; directTeam: Choice[] }) {
+  const person = (c: Choice, showDept: boolean) => (
+    <li key={c.value}>
+      {c.label}
+      <span className="text-muted">{[c.position, showDept ? c.group : null].filter(Boolean).map((t) => ` · ${t}`).join("")}</span>
+    </li>
+  );
+  return (
+    <div className="flex flex-col gap-[8px]">
+      {headOf.length ? (
+        <div>
+          <p className="text-12 text-muted">ในแผนก {headOf.join(", ")} (หัวหน้าแผนก · อัตโนมัติ)</p>
+          {deptTeam.length ? <ul>{deptTeam.map((c) => person(c, headOf.length > 1))}</ul> : <p>ยังไม่มีพนักงานในแผนก</p>}
+        </div>
+      ) : null}
+      {directTeam.length ? (
+        <div>
+          <p className="text-12 text-muted">ขึ้นตรงเพิ่มเติม (ตั้งหัวหน้าเป็นคนนี้)</p>
+          <ul>{directTeam.map((c) => person(c, true))}</ul>
+        </div>
+      ) : null}
+      <p className="text-12 text-muted">ย้ายคนเข้าออกทีม แก้ที่ช่อง &quot;หัวหน้า&quot; ของคนนั้น</p>
+    </div>
+  );
+}
+
 function InfoRows({ rows }: { rows: InfoRow[] }) {
   const filled = rows.filter(([, value]) => value);
   const missing = rows.filter(([, value]) => !value).map(([label]) => label);
@@ -344,7 +370,28 @@ function InfoRows({ rows }: { rows: InfoRow[] }) {
   );
 }
 
-export type Choice = { value: string; label: string; disabled?: boolean };
+/** ตัวเลือกในช่องเลือก ตัวเลือกที่มี group (แผนก) จะถูกจัดเป็นกลุ่ม */
+export type Choice = EmployeeChoice;
+
+/** ตัวเลือกของช่องเลือก: "— ไม่ระบุ —" ขึ้นก่อน ที่เหลือจัดกลุ่มตามแผนก (คนที่ไม่มีแผนกไว้กลุ่มท้าย) */
+function ChoiceOptions({ options }: { options: Choice[] }) {
+  const option = (o: Choice) => (
+    <option key={o.value} value={o.value} disabled={o.disabled}>
+      {choiceText(o)}
+    </option>
+  );
+  if (!options.some((o) => o.group)) return <>{options.map(option)}</>;
+  return (
+    <>
+      {options.filter((o) => o.value === "").map(option)}
+      {groupByDepartment(options.filter((o) => o.value !== "")).map(({ group, items }) => (
+        <optgroup key={group} label={group}>
+          {items.map(option)}
+        </optgroup>
+      ))}
+    </>
+  );
+}
 
 type FieldDef = {
   key: string;
@@ -357,6 +404,8 @@ type FieldDef = {
   inputMode?: "numeric" | "tel" | "email";
   maxLength?: number;
   list?: string;
+  /** ช่องเลือก: ค่าที่แนะนำตามค่าอื่นในฟอร์ม แสดงปุ่ม "ใช้คนนี้" เมื่อยังไม่ตรง */
+  suggest?: (values: Record<string, string>) => Choice | undefined;
 };
 
 type Values = Record<string, string>;
@@ -407,18 +456,23 @@ function SectionForm({
               {f.required ? <span className="text-danger"> *</span> : null}
             </span>
           );
+          const suggestion = f.type === "select" ? f.suggest?.(values) : undefined;
           return f.type === "select" ? (
             <div key={f.key} className={cx("flex min-w-0 flex-col gap-[6px]", f.wide && "col-span-2")}>
               <span className="text-13 font-medium text-ink" aria-hidden="true">
                 {labelText}
               </span>
               <Select label={f.label} value={values[f.key]} onChange={(e) => set(e.target.value)} required={f.required}>
-                {f.options?.map((o) => (
-                  <option key={o.value} value={o.value} disabled={o.disabled}>
-                    {o.label}
-                  </option>
-                ))}
+                <ChoiceOptions options={f.options ?? []} />
               </Select>
+              {suggestion ? (
+                <p className="text-12 font-normal text-muted">
+                  หัวหน้าแผนกนี้คือ {suggestion.label}{" "}
+                  <button type="button" className="font-medium text-primary-600 underline-offset-2 hover:underline" onClick={() => set(suggestion.value)}>
+                    ใช้คนนี้
+                  </button>
+                </p>
+              ) : null}
             </div>
           ) : (
             <label key={f.key} className={cx("flex min-w-0 flex-col gap-[6px] text-13 font-medium text-ink", f.wide && "col-span-2")}>
@@ -571,6 +625,10 @@ export function UserPanel({
     p.managerCode && !managerChoices.some((m) => m.value === p.managerCode)
       ? [{ value: p.managerCode, label: managerLabel ?? p.managerCode }, ...managerChoices]
       : managerChoices;
+  // ทีม (อ่านอย่างเดียว): คนในแผนกที่เป็นหัวหน้าแผนก (อัตโนมัติ) + คนที่ตั้งหัวหน้าเป็นคนนี้ ไม่นับซ้ำ
+  const headOf = orgOptions.departments.filter((d) => d.headCode === user.employeeId).map((d) => d.name);
+  const deptTeam = managerChoices.filter((c) => c.group && headOf.includes(c.group));
+  const directTeam = managerChoices.filter((c) => c.managerCode === user.employeeId && !deptTeam.includes(c));
 
   const sections: { id: SectionId; title: string; rows: InfoRow[]; fields: FieldDef[]; initial: Values }[] = [
     {
@@ -718,6 +776,9 @@ export function UserPanel({
         ["ตำแหน่ง", p.positionName],
         ["ระดับ", p.jobLevelName],
         ["หัวหน้า", managerLabel],
+        ...(headOf.length || directTeam.length
+          ? ([[`ทีม (${deptTeam.length + directTeam.length} คน)`, <TeamList key="team" headOf={headOf} deptTeam={deptTeam} directTeam={directTeam} />]] as InfoRow[])
+          : []),
         ["วันเริ่มงาน", p.hireDate ? formatThaiDate(p.hireDate) : null],
         ...(endDate
           ? ([
@@ -731,7 +792,19 @@ export function UserPanel({
         { key: "positionId", label: "ตำแหน่ง", type: "select", wide: true, options: toChoices(orgOptions.positions, p.positionId, p.positionName) },
         { key: "jobLevelId", label: "ระดับ", type: "select", options: toChoices(orgOptions.jobLevels, p.jobLevelId, p.jobLevelName) },
         { key: "hireDate", label: "วันเริ่มงาน", type: "date", required: true },
-        { key: "managerCode", label: "หัวหน้า", type: "select", wide: true, options: [EMPTY_CHOICE, ...managers] },
+        {
+          key: "managerCode",
+          label: "หัวหน้า",
+          type: "select",
+          wide: true,
+          options: [EMPTY_CHOICE, ...managers],
+          // แนะนำหัวหน้าแผนกเมื่อย้ายแผนกในการแก้ไขนี้ หรือยังไม่มีหัวหน้า (ไม่เปลี่ยนให้เอง เพราะหัวหน้าเป็นผู้อนุมัติคำขอ)
+          suggest: (v) => {
+            if (v.departmentId === (p.departmentId ?? "") && v.managerCode) return undefined;
+            const code = suggestManager(orgOptions.departments, v.departmentId, user.employeeId);
+            return code && code !== v.managerCode ? managers.find((m) => m.value === code) : undefined;
+          },
+        },
       ],
       initial: {
         departmentId: p.departmentId ?? "",

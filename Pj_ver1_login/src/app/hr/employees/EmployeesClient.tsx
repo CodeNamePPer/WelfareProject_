@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Pagination } from '@/components/tailgrids/core/pagination';
 import { cx } from '@/lib/cx';
 import { Badge, ButtonLink, Card, EmptyState, FilterPill, PageHeader, RequesterCompact, Tabs, fieldClass } from '@/features/hr/ui';
 import type { EditRequestHistoryItem, EditRequestItem } from '@/lib/hr/editRequests';
@@ -31,6 +32,8 @@ type Tab = EmployeesTab;
 
 // คอลัมน์ตามดีไซน์ H05
 const COLS = 'grid-cols-[minmax(0,2fr)_minmax(0,1.4fr)_140px_110px_120px]';
+/** แสดงทีละ 20 คน เกินนี้ขึ้นตัวเลือกหน้า */
+const PAGE_SIZE = 20;
 const unique = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b, 'th'));
 
 export function EmployeesClient({
@@ -69,6 +72,18 @@ export function EmployeesClient({
       (!position || row.position === position) &&
       (!level || row.level === level),
   );
+
+  // เกิน 20 คนแบ่งหน้า เปลี่ยนแท็บหรือตัวกรองแล้วกลับไปหน้าแรก
+  const [page, setPage] = useState(1);
+  const filterKey = `${tab}|${q}|${department}|${position}|${level}`;
+  const [pageKey, setPageKey] = useState(filterKey);
+  if (pageKey !== filterKey) {
+    setPageKey(filterKey);
+    setPage(1);
+  }
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = shown.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <>
@@ -145,7 +160,7 @@ export function EmployeesClient({
                   <span>สถานะ</span>
                   <span />
                 </div>
-                {shown.map((row) => (
+                {pageRows.map((row) => (
                   <Link
                     key={row.code}
                     href={`/hr/employees/${encodeURIComponent(row.code)}`}
@@ -164,6 +179,14 @@ export function EmployeesClient({
                   </Link>
                 ))}
               </div>
+              {shown.length > PAGE_SIZE ? (
+                <div className="flex flex-col gap-2 border-t border-[#F1F5F9] px-5 py-3">
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setPage} />
+                  <p className="text-center text-12 text-muted tabular-nums">
+                    แสดง {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, shown.length)} จาก {shown.length} คน
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
         </>

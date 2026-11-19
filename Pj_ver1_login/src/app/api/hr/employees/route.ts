@@ -29,9 +29,16 @@ export async function GET() {
     return NextResponse.json({ error: "ไม่มีสิทธิ์ดำเนินการ" }, { status: 403 });
   }
   const [{ departments, positions, jobLevels }, employees] = await Promise.all([getOrgOptions(), getHrEmployees()]);
+  const heads = new Set(departments.map((d) => d.headCode).filter(Boolean));
   const managers = (employees ?? [])
     .filter((employee) => employee.status === "ACTIVE")
-    .map((employee) => ({ id: employee.code, name: `${employee.name} (${employee.code})` }));
+    .map((employee) => ({
+      id: employee.code,
+      name: `${employee.name} (${employee.code})`,
+      group: employee.department ?? undefined,
+      position: employee.position ?? undefined,
+      isDeptHead: heads.has(employee.code),
+    }));
   return NextResponse.json({ departments, positions, jobLevels, managers }, { headers: { "Cache-Control": "no-store" } });
 }
 
