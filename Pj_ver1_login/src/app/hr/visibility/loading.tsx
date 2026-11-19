@@ -12,7 +12,6 @@ export default function VisibilityLoading() {
       <HrPage>
         <HeadSkeleton
           title="การแสดงสวัสดิการที่ใช้ไม่ได้"
-          description="หัวหน้า HR กำหนดว่าสวัสดิการที่ปิดอยู่ ไม่มีวงเงินปีนี้ หรือพนักงานไม่มีสิทธิ์ จะซ่อนหรือแสดงเป็นการ์ดสีเทา"
         />
         <Card>
           <TableSkeleton

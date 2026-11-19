@@ -88,7 +88,7 @@ export function VisibilityClient({ rows }: { rows: UnavailableBenefit[] }) {
             </div>
             <div>{sample.reason}</div>
           </div>
-          <p className="m-0 flex-[1_1_300px] text-13 text-ink-soft">ตัวอย่างการ์ดสีเทาที่พนักงานเห็นในหน้าสิทธิ์สวัสดิการ ยื่นคำขอไม่ได้ · การเปลี่ยนแปลงบันทึกใน Log และมีผลทันที</p>
+          <p className="m-0 flex-[1_1_300px] text-13 text-ink-soft">ตัวอย่างการ์ดสีเทาที่พนักงานเห็นในหน้าสิทธิ์สวัสดิการ ยื่นคำขอไม่ได้ · การเปลี่ยนแปลงบันทึกใน Log และมีทันที</p>
         </Card>
       ) : null}
     </>

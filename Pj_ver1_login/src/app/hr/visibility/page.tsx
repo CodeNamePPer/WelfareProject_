@@ -17,8 +17,7 @@ export default async function VisibilityPage() {
   return (
     <HrPage>
       <PageHeader
-        title="การแสดงสวัสดิการที่ใช้ไม่ได้"
-        description="หัวหน้า HR กำหนดว่าสวัสดิการที่ปิดอยู่ ไม่มีวงเงินปีนี้ หรือพนักงานไม่มีสิทธิ์ จะซ่อนหรือแสดงเป็นการ์ดสีเทา"
+        title="สวัสดิการที่ไม่ได้ใช้งาน"
       />
       {rows === null ? <p className="text-13 text-status-rejected-ink">โหลดรายการสวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p> : <VisibilityClient rows={rows} />}
     </HrPage>

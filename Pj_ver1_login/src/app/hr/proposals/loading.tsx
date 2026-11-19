@@ -10,7 +10,7 @@ export default function ProposalQueueLoading() {
   return (
     <SkeletonScreen>
       <HrPage>
-        <HeadSkeleton title="อนุมัติสวัสดิการใหม่" description="ข้อเสนอจาก HR และ Admin รอหัวหน้า HR ตัดสินใจ อนุมัติแล้วจะเพิ่มเข้าตาราง welfare_benefit ทันที" />
+        <HeadSkeleton title="อนุมัติสวัสดิการใหม่"/>
         <StatsSkeleton count={3} />
         <Card>
           <TabsSkeleton widths={["w-20", "w-24", "w-24", "w-20"]} />

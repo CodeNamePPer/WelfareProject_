@@ -31,7 +31,7 @@ export function ProposalQueueClient({ rows, stats }: { rows: QueueProposal[]; st
 
   return (
     <>
-      <PageHeader title="อนุมัติสวัสดิการใหม่" description="ข้อเสนอจาก HR และ Admin รอหัวหน้า HR ตัดสินใจ อนุมัติแล้วจะเพิ่มเข้าตาราง welfare_benefit ทันที" />
+      <PageHeader title="อนุมัติสวัสดิการใหม่" />
       <StatRow>
         {stats.map((stat) => (
           <StatTile key={stat.label} label={stat.label} value={stat.value} note={stat.note} tone={stat.warn ? 'warn' : 'default'} />
