@@ -64,7 +64,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
     />
 </label>
             </div>
-
+<br />
             {shown.length === 0 ? (
                 <Sheet className="px-4 py-10 text-center text-13 text-muted">
                     <p>{benefits.length === 0 ? 'ยังไม่มีสวัสดิการที่คุณใช้สิทธิ์ได้ในขณะนี้' : 'ไม่พบสวัสดิการที่ตรงกับการค้นหา'}</p>

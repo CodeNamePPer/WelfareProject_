@@ -283,7 +283,7 @@ export default function WithdrawClient({
             <PageHead
                 crumbs={revising ? [{ label: 'ติดตามสถานะ', href: '/employee/status' }, { label: claimNo }] : [{ label: 'ภาพรวม', href: '/employee' }, { label: 'ยื่นคำขอ' }]}
                 title={revising ? `แก้ไขคำขอ ${claimNo}` : 'ยื่นคำขอสวัสดิการ'}
-                description={revising ? benefit?.name : `กรอกเฉพาะช่องที่มีเครื่องหมาย * ข้อมูลพนักงานดึงจากระบบ HR อัตโนมัติ${claimNo ? ` · ${claimNo}` : ''}`}
+                description={revising ? benefit?.name : `กรอกเฉพาะช่องที่มีเครื่องหมาย * ข้อมูลพนักงานดึงจากระบบ อัตโนมัติ${claimNo ? ` · ${claimNo}` : ''}`}
             />
 
             {initial?.revisionNote ? (
@@ -293,7 +293,7 @@ export default function WithdrawClient({
                     <p className="text-12 text-orange-800">วงเงินยังกันไว้ให้ระหว่างแก้ไข ถ้ายกเลิกคำขอ ระบบคืนวงเงินและจำนวนครั้ง</p>
                 </section>
             ) : null}
-
+<br />
             <div className="flex flex-wrap items-start gap-4">
                 <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
                     {/* 1. ชื่อผู้ส่งคำขอ */}
