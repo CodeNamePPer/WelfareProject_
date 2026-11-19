@@ -765,13 +765,14 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
   if (!rule.roles.includes(actor.role)) throw new ClaimInputError("ไม่มีสิทธิ์ดำเนินการ");
   if (!rule.from.includes(claim.status)) throw new ClaimInputError("สถานะคำขอเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่");
   if (rule.needsNote && !note) throw new ClaimInputError(rule.needsNote);
-  // ตัดสินคำขอของตัวเอง (หรือที่ตัวเองยื่นแทนคนอื่น) ไม่ได้ และคำขอของ HR ต้องให้หัวหน้า HR ตรวจ
+  // ตัดสินคำขอของตัวเอง (หรือที่ตัวเองยื่นแทนคนอื่น) ไม่ได้ และคำขอของ HR คนอื่นต้องให้หัวหน้า HR ตรวจ (ส่วนคำขอของหัวหน้า HR เองให้ HR คนอื่นตรวจ)
   if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) {
     throw new ClaimInputError("ตัดสินคำขอของตัวเองหรือที่ตัวเองยื่นแทนไม่ได้");
   }
   if (rule.roles.includes("HR") && (await isHrEmployee(claim.employeeCode))) {
-    const { isHrHead } = await import("../hr/hrHead");
-    if (!(await isHrHead({ sub: actor.sub, role: actor.role }))) {
+    const { getHrHeadCode } = await import("../hr/hrHead");
+    const headCode = await getHrHeadCode();
+    if (headCode && claim.employeeCode !== headCode && claim.submittedByCode !== headCode && actor.sub !== headCode) {
       throw new ClaimInputError("คำขอของพนักงาน HR ต้องให้หัวหน้า HR เป็นผู้ตรวจสอบ");
     }
   }
