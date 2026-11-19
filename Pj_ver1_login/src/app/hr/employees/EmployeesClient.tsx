@@ -1,10 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { FileUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Pagination } from '@/components/tailgrids/core/pagination';
+import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
-import { Badge, ButtonLink, Card, EmptyState, FilterPill, PageHeader, RequesterCompact, Tabs, fieldClass } from '@/features/hr/ui';
+import { useNavTransition } from '@/lib/useNavTransition';
+import { ImportEmployeesCsvDialog } from '@/features/hr/ImportEmployeesCsvDialog';
+import { Badge, Button, ButtonLink, Card, EmptyState, FilterPill, PageHeader, RequesterCompact, Tabs, fieldClass } from '@/features/hr/ui';
 import type { EditRequestHistoryItem, EditRequestItem } from '@/lib/hr/editRequests';
 import { EditHistory } from './requests/EditHistory';
 import { RequestCard } from './requests/RequestCard';
@@ -55,12 +59,31 @@ export function EmployeesClient({
   editHistory: EditRequestHistoryItem[] | null;
   viewerCode: string;
 }) {
+  const nav = useNavTransition();
+  const { notify } = useToast();
   const [tab, setTab] = useState<Tab>(initialTab);
   const editCount = editRequests?.length ?? 0;
   const [query, setQuery] = useState(initialQuery);
   const [department, setDepartment] = useState('');
   const [position, setPosition] = useState('');
   const [level, setLevel] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = sessionStorage.getItem('employee-notice');
+        if (saved) {
+          sessionStorage.removeItem('employee-notice');
+          setNotice(saved);
+        }
+      } catch {
+        // Ignore storage access errors
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const activeCount = rows.filter((row) => row.active).length;
   const q = query.trim().toLowerCase();
@@ -90,7 +113,32 @@ export function EmployeesClient({
       <PageHeader
         title="จัดการพนักงานและสิทธิ์"
         description={`${rows.length} คน · ทำงานอยู่ ${activeCount} · พ้นสภาพ ${rows.length - activeCount}`}
-        actions={<ButtonLink href="/hr/employees/add">เพิ่มพนักงาน</ButtonLink>}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <FileUp className="size-4" aria-hidden="true" />
+              นำเข้า CSV
+            </Button>
+            <ButtonLink href="/hr/employees/add">เพิ่มพนักงาน</ButtonLink>
+          </>
+        }
+      />
+
+      {notice ? (
+        <p role="status" className="rounded-[8px] border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-2.5 text-13 font-medium text-[#166534]">
+          {notice}
+        </p>
+      ) : null}
+
+      <ImportEmployeesCsvDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(created) => {
+          const msg = `นำเข้าพนักงานจากไฟล์ CSV สำเร็จ ${created.length} คน`;
+          setNotice(msg);
+          notify(msg);
+          nav.refresh();
+        }}
       />
 
       <Card>

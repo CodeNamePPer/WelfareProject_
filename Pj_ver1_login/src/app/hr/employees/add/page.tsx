@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, FileUp } from "lucide-react";
 import { choiceText, groupByDepartment, suggestManager } from "@/lib/employeeChoices";
-import { PageHeader, ReadOnlyInput } from "@/features/hr/ui";
+import { ImportEmployeesCsvDialog } from "@/features/hr/ImportEmployeesCsvDialog";
+import { Button, PageHeader, ReadOnlyInput } from "@/features/hr/ui";
 import { useNavTransition } from "@/lib/useNavTransition";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 
@@ -46,7 +47,7 @@ type EmployeeForm = {
 type FieldKey = keyof EmployeeForm;
 type FieldErrors = Partial<Record<FieldKey, string>>;
 
-type OrgOption = { id: string; name: string; group?: string; position?: string; isDeptHead?: boolean; parentId?: string; headCode?: string };
+type OrgOption = { id: string; code?: string; name: string; group?: string; position?: string; isDeptHead?: boolean; parentId?: string; headCode?: string };
 type OrgChoices = { departments: OrgOption[]; positions: OrgOption[]; jobLevels: OrgOption[]; managers: OrgOption[] };
 
 const otherPrefix = "อื่น ๆ";
@@ -215,6 +216,8 @@ export default function AddEmployeePage() {
   const [today, setToday] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [csvOpen, setCsvOpen] = useState(false);
+  const [importedViaCsv, setImportedViaCsv] = useState(false);
   const [org, setOrg] = useState<OrgChoices>({ departments: [], positions: [], jobLevels: [], managers: [] });
   const { departments, positions, jobLevels, managers } = org;
   /** หัวหน้าแผนกที่เลือก (ต้องอยู่ในรายชื่อหัวหน้าที่เลือกได้) */
@@ -425,9 +428,35 @@ export default function AddEmployeePage() {
             <PageHeader
               crumbs={[{ label: "จัดการพนักงานและสิทธิ์", href: "/hr/employees" }, { label: "เพิ่มพนักงาน" }]}
               title="เพิ่มพนักงาน"
-              description="กรอกข้อมูลพนักงานเพื่อกำหนดสิทธิ์และคำนวณสวัสดิการ"
+              description="กรอกข้อมูลพนักงานเพื่อกำหนดสิทธิ์และคำนวณสวัสดิการ หรือนำเข้าหลายคนพร้อมกันผ่านไฟล์ CSV"
+              actions={
+                <Button variant="secondary" onClick={() => setCsvOpen(true)}>
+                  <FileUp className="size-4" aria-hidden="true" />
+                  นำเข้าผ่านไฟล์ CSV
+                </Button>
+              }
             />
           </div>
+
+          <ImportEmployeesCsvDialog
+            open={csvOpen}
+            orgOptions={{
+              departments: org.departments,
+              positions: org.positions,
+              jobLevels: org.jobLevels,
+            }}
+            onClose={() => {
+              setCsvOpen(false);
+              if (importedViaCsv) {
+                nav.navigate("/hr/employees", { refresh: true });
+              }
+            }}
+            onImported={(created) => {
+              sessionStorage.removeItem(draftKey);
+              sessionStorage.setItem("employee-notice", `นำเข้าพนักงานจากไฟล์ CSV สำเร็จ ${created.length} คน`);
+              setImportedViaCsv(true);
+            }}
+          />
 
           {restored && (
             <p className="employee-draft-notice" role="status">

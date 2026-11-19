@@ -2,12 +2,14 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { CircleCheck, Copy, FileDown, KeyRound, Pencil, TriangleAlert } from "lucide-react";
+import { CircleCheck, Copy, FileDown, FileUp, KeyRound, Pencil, TriangleAlert } from "lucide-react";
 import { ROLES, ROLE_LABELS, type Role } from "@/lib/auth/roles";
 import { Button as AdminButton } from "@/components/ui/Button";
 import { ExportCsvDialog } from "@/components/ui/ExportCsvDialog";
 import { Select } from "@/components/ui/Select";
 import { Tag } from "@/components/ui/Tag";
+import { useToast } from "@/components/ui/Toast";
+import { ImportEmployeesCsvDialog } from "@/features/hr/ImportEmployeesCsvDialog";
 import {
   Badge,
   Button,
@@ -24,6 +26,7 @@ import { downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
 import { useDetailParam } from "@/lib/useDetailParam";
+import { useNavTransition } from "@/lib/useNavTransition";
 import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 import { employmentStatusLabel } from "@/lib/employmentStatus";
@@ -95,7 +98,14 @@ export default function AdminUsersClient({
   /** ระบบส่งอีเมลได้หรือไม่ ใช้บอกล่วงหน้าว่ารหัสชั่วคราวจะไปทางอีเมลหรือแสดงบนจอ */
   emailDelivery: EmailDelivery;
 }) {
+  const nav = useNavTransition();
+  const { notify } = useToast();
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [prevInitialUsers, setPrevInitialUsers] = useState<User[]>(initialUsers);
+  if (prevInitialUsers !== initialUsers) {
+    setPrevInitialUsers(initialUsers);
+    setUsers(initialUsers);
+  }
   const detail = useDetailParam("user");
   const [tab, setTab] = useState<Tab>("active");
   const [query, setQuery] = useState("");
@@ -104,6 +114,7 @@ export default function AdminUsersClient({
   const [level, setLevel] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const listedUsers = useMemo(() => users.filter((u) => u.status !== "DECEASED"), [users]);
   const activeCount = useMemo(() => listedUsers.filter((u) => u.status === "ACTIVE").length, [listedUsers]);
@@ -188,11 +199,27 @@ export default function AdminUsersClient({
           title="จัดการพนักงานและผู้ใช้งานระบบ"
           description={`${listedUsers.length} คน · ทำงานอยู่ ${activeCount} · พ้นสภาพ ${listedUsers.length - activeCount}`}
           actions={
-            <Button variant="secondary" onClick={() => setExporting(true)} disabled={shown.length === 0}>
-              <FileDown className="size-4" aria-hidden="true" />
-              ส่งออก CSV
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" onClick={() => setImporting(true)}>
+                <FileUp className="size-4" aria-hidden="true" />
+                นำเข้า CSV
+              </Button>
+              <Button variant="secondary" onClick={() => setExporting(true)} disabled={shown.length === 0}>
+                <FileDown className="size-4" aria-hidden="true" />
+                ส่งออก CSV
+              </Button>
+            </div>
           }
+        />
+
+        <ImportEmployeesCsvDialog
+          open={importing}
+          orgOptions={orgOptions}
+          onClose={() => setImporting(false)}
+          onImported={(created) => {
+            notify(`นำเข้าพนักงานจากไฟล์ CSV สำเร็จ ${created.length} คน`);
+            nav.refresh();
+          }}
         />
 
         <ExportCsvDialog

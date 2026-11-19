@@ -109,11 +109,30 @@ export interface NewEmployee {
   mother_last_name: string | null;
 }
 
+export interface CreatedHrEmployee {
+  code: string;
+  name: string;
+}
+
 /** เพิ่มพนักงานลงตาราง employee แล้วคืนรหัสพนักงานที่ระบบออกให้ */
 export async function createHrEmployee(employee: NewEmployee): Promise<string> {
   const { data, error } = await supabaseAdmin.from("employee").insert(employee).select("employee_code").single();
   if (error) throw error;
   return (data as { employee_code: string }).employee_code;
+}
+
+/** เพิ่มพนักงานหลายคนพร้อมกันในคำสั่งเดียว แล้วคืนรหัสพนักงานที่ระบบออกให้ */
+export async function createHrEmployees(employees: NewEmployee[]): Promise<CreatedHrEmployee[]> {
+  if (employees.length === 0) return [];
+  const { data, error } = await supabaseAdmin
+    .from("employee")
+    .insert(employees)
+    .select("employee_code, first_name_th, last_name_th");
+  if (error) throw error;
+  return ((data ?? []) as { employee_code: string; first_name_th: string; last_name_th: string }[]).map((row) => ({
+    code: row.employee_code,
+    name: `${row.first_name_th} ${row.last_name_th}`.trim(),
+  }));
 }
 
 /** พนักงานคนเดียวตามรหัส – undefined = ไม่พบ, null = โหลดไม่สำเร็จ (เหมือน getHrEmployees) */
