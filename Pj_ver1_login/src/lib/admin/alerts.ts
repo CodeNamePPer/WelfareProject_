@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { findEmployeeUuidByCode } from "@/lib/auth/users";
 import { supabaseAdmin } from "../supabase";
 import type { AdminAlert, AlertCategory } from "../../types";
 
@@ -45,6 +46,46 @@ interface ProposalAlertRow {
   benefit: { name_th: string } | null;
 }
 
+/** key ใน hr_notification_read (ตารางอ่านแล้วตาม key) · มีสถานะ+เวลาต่อท้าย การตัดสินครั้งใหม่จึงกลับมายังไม่อ่าน */
+const proposalReadKey = (row: Pick<ProposalAlertRow, "id" | "status" | "decided_at" | "updated_at">) => `admin-prop-${row.id}-${row.status}-${row.decided_at ?? row.updated_at}`;
+
+function proposalAlertQuery() {
+  return supabaseAdmin
+    .from("welfare_benefit_proposal")
+    .select("id, proposal_no, name_th, status, decision_note, decided_at, updated_at, benefit:benefit_id(name_th)")
+    .eq("proposer_role", "SUPER_ADMIN")
+    .in("status", ["needs_info", "approved", "rejected"])
+    .is("deleted_at", null)
+    .gte("updated_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+    .order("updated_at", { ascending: false })
+    .returns<ProposalAlertRow[]>();
+}
+
+async function proposalReadKeys(viewerCode: string): Promise<Set<string>> {
+  const employeeId = await findEmployeeUuidByCode(viewerCode);
+  if (!employeeId) return new Set();
+  const { data, error } = await supabaseAdmin.from("hr_notification_read").select("notice_key").eq("employee_id", employeeId).like("notice_key", "admin-prop-%");
+  if (error) {
+    console.error("[ALERT] proposal read state failed", error);
+    return new Set();
+  }
+  return new Set((data ?? []).map((row) => row.notice_key as string));
+}
+
+/** บันทึกว่าอ่านแจ้งเตือนข้อเสนอแล้ว: ids = รหัสข้อเสนอ (ไม่มี prefix) หรือ "all" = ทุกรายการที่แสดงอยู่ */
+export async function markProposalAlertsRead(viewerCode: string, ids: string[] | "all"): Promise<void> {
+  const employeeId = await findEmployeeUuidByCode(viewerCode);
+  if (!employeeId) throw new Error("employee not found");
+  const { data, error } = await proposalAlertQuery();
+  if (error) throw error;
+  const rows = (data ?? []).filter((row) => ids === "all" || ids.includes(row.id));
+  if (rows.length === 0) return;
+  const write = await supabaseAdmin
+    .from("hr_notification_read")
+    .upsert(rows.map((row) => ({ employee_id: employeeId, notice_key: proposalReadKey(row) })), { onConflict: "employee_id,notice_key", ignoreDuplicates: true });
+  if (write.error) throw write.error;
+}
+
 const PROPOSAL_ALERT_TITLE: Record<ProposalAlertRow["status"], string> = {
   needs_info: "หัวหน้า HR ขอข้อมูลข้อเสนอสวัสดิการเพิ่มเติม",
   approved: "หัวหน้า HR อนุมัติข้อเสนอสวัสดิการแล้ว",
@@ -58,23 +99,15 @@ const PROPOSAL_ALERT_TITLE: Record<ProposalAlertRow["status"], string> = {
  */
 export const getAdminAlerts = cache(async (viewerId: string): Promise<AdminAlert[]> => {
   try {
-    const since30d = new Date(Date.now() - 30 * 86_400_000).toISOString();
-    const [{ data, error }, proposalsRes] = await Promise.all([
+    const [{ data, error }, proposalsRes, readKeys] = await Promise.all([
       supabaseAdmin
         .from("admin_notifications")
         .select("id, category, title, description, actionable, resolved_at, created_at, admin_notification_reads(employee_id)")
         .eq("admin_notification_reads.employee_id", viewerId)
         .order("created_at", { ascending: false })
         .limit(LIMIT),
-      supabaseAdmin
-        .from("welfare_benefit_proposal")
-        .select("id, proposal_no, name_th, status, decision_note, decided_at, updated_at, benefit:benefit_id(name_th)")
-        .eq("proposer_role", "SUPER_ADMIN")
-        .in("status", ["needs_info", "approved", "rejected"])
-        .is("deleted_at", null)
-        .gte("updated_at", since30d)
-        .order("updated_at", { ascending: false })
-        .returns<ProposalAlertRow[]>(),
+      proposalAlertQuery(),
+      proposalReadKeys(viewerId),
     ]);
     if (error) throw error;
 
@@ -98,7 +131,7 @@ export const getAdminAlerts = cache(async (viewerId: string): Promise<AdminAlert
         title: `${PROPOSAL_ALERT_TITLE[row.status]}: ${benefitName}`,
         description: `ข้อเสนอ ${row.proposal_no}${row.decision_note ? ` · ${row.decision_note}` : ""}`,
         ...relativeTime(iso),
-        unread: row.status === "needs_info",
+        unread: row.status === "needs_info" && !readKeys.has(proposalReadKey(row)),
         actionable: row.status === "needs_info",
         sortIso: iso,
       };

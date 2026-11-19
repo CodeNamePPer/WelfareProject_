@@ -48,7 +48,7 @@ if (!ROLES.includes(role)) {
   process.exit(1);
 }
 const autoCode = employeeId.toLowerCase() === "auto";
-if (!autoCode && !/^Ed{5}$/.test(employeeId)) {
+if (!autoCode && !/^E\d{5}$/.test(employeeId)) {
   console.error("รหัสพนักงานต้องเป็นรูปแบบ E + เลข 5 หลัก (เช่น E00019) หรือใช้ auto");
   process.exit(1);
 }

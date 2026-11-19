@@ -127,6 +127,8 @@ export interface RoleCount {
 /** null = โหลดไม่สำเร็จ – แสดง "—" แทน 0 เพื่อไม่ให้ดูเหมือนข้อมูลจริง */
 /** สถิติการ์ดสรุปบนหน้าแรก Admin – แต่ละส่วนเป็น null เมื่อโหลดไม่สำเร็จ */
 export interface SummaryStats {
+  /** เวลาที่ server สร้างตัวเลขชุดนี้ (ms) ใช้แทน Date.now() ตอน render ให้ server กับเบราว์เซอร์ได้ข้อความเดียวกัน */
+  asOf: number;
   users: {
     active: number;
     /** ลาออก + เสียชีวิต */

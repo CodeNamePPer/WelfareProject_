@@ -8,7 +8,7 @@ import { SummaryCards } from './SummaryCards';
 import { UsersByRolePanel } from './UsersByRolePanel';
 import { useToast } from '../../components/ui/Toast';
 import { updateAlert } from '../notifications/api';
-import { reviewHref } from '../notifications/alertVisuals';
+import { alertHref } from '../notifications/alertVisuals';
 import type {
   AdminAlert,
   AuditEntry,
@@ -46,10 +46,11 @@ export function DashboardPage({
 
   // กดตรวจสอบ = ปิดงานนั้นในฐานข้อมูล แล้วรีเฟรชตัวเลขแจ้งเตือนใน sidebar
   const review = (alert: AdminAlert) => {
-    updateAlert({ action: 'resolve', id: alert.id })
+    // ข้อเสนอสวัสดิการไม่ใช่แถวใน admin_notifications: ปิดงานไม่ได้ แค่บันทึกว่าอ่านแล้ว
+    updateAlert({ action: alert.id.startsWith('prop-') ? 'read' : 'resolve', id: alert.id })
       .then(() => nav.refresh())
       .catch((err: Error) => notify(err.message));
-    nav.navigate(reviewHref[alert.category] ?? '/admin/notifications');
+    nav.navigate(alertHref(alert) ?? '/admin/notifications');
   };
 
   return (

@@ -2,7 +2,7 @@ import "server-only";
 import { supabaseAdmin } from "../supabase";
 import { listAudit } from "../auth/audit";
 import { ROLE_LABELS, type Role } from "../auth/roles";
-import { getAllUsers } from "../auth/users";
+import { getAllUsersWithProfile } from "../auth/users";
 import { toLogEntries } from "../../features/logs/fromAuditLog";
 import { listClaims } from "../claims/service";
 import { ADMIN_STATUSES, toAdminClaim, toBangkokDate } from "../claims/mappers";
@@ -133,15 +133,13 @@ function hrQueueStats(claims: ClaimRecord[]): SummaryStats["hrQueue"] {
   };
 }
 
-export function fetchEmployees(): Promise<Employee[] | null> {
+/** includeInactive: รวมพนักงานที่ลาออก/เสียชีวิต (ใช้แสดงชื่อในประวัติคำขอเก่า) */
+export function fetchEmployees(options: { includeInactive?: boolean } = {}): Promise<Employee[] | null> {
   return safe("employees", async () => {
+    let query = supabaseAdmin.from("employee").select("employee_code, first_name_th, last_name_th, department_id").is("deleted_at", null);
+    if (!options.includeInactive) query = query.eq("employment_status", "active");
     const [{ data, error }, departments] = await Promise.all([
-      supabaseAdmin
-        .from("employee")
-        .select("employee_code, first_name_th, last_name_th, department_id")
-        .eq("employment_status", "active")
-        .is("deleted_at", null)
-        .order("employee_code", { ascending: true }),
+      query.order("employee_code", { ascending: true }),
       // ชื่อแผนกใช้ค้นหาในตัวเลือกพนักงาน – โหลดไม่ได้ก็ยังค้นด้วยชื่อ/รหัสได้
       supabaseAdmin.from("department").select("id, name_th"),
     ]);
@@ -157,9 +155,10 @@ export function fetchEmployees(): Promise<Employee[] | null> {
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  // getAllUsers / listAudit จัดการ error เองแล้ว (log และคืน [])
+  // นับจากตาราง employee ชุดเดียวกับ /admin/users (รวมพนักงานที่ยังไม่มีบัญชีเข้าระบบ) ตัวเลขสองหน้าจึงตรงกัน
+  // getAllUsersWithProfile / listAudit จัดการ error เองแล้ว (log และคืน [])
   const [users, auditRows, hiredThisMonth, loginActivity, employees, claims] = await Promise.all([
-    getAllUsers(),
+    getAllUsersWithProfile(),
     listAudit(AUDIT_FETCH),
     fetchHiredThisMonth(),
     fetchLoginActivity(),
@@ -167,7 +166,7 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     listClaims({ statuses: ADMIN_STATUSES }),
   ]);
 
-  // getAllUsers กลืน error แล้วคืน [] – แต่ผู้เปิดหน้านี้คือ Admin ที่ล็อกอินอยู่ จึงต้องมีผู้ใช้อย่างน้อย 1 คนเสมอ
+  // getAllUsersWithProfile กลืน error แล้วคืน [] – แต่ผู้เปิดหน้านี้คือ Admin ที่ล็อกอินอยู่ จึงต้องมีผู้ใช้อย่างน้อย 1 คนเสมอ
   // รายชื่อว่างจึงหมายถึงโหลดไม่สำเร็จ ไม่ใช่ "ไม่มีผู้ใช้"
   const usersLoaded = users.length > 0;
   const activeUsers = users.filter((u) => u.status === "ACTIVE");
@@ -184,6 +183,7 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
 
   return {
     stats: {
+      asOf: Date.now(),
       users: usersLoaded
         ? {
             active: activeUsers.length,

@@ -6,7 +6,7 @@ import { Bell } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { cx } from '@/lib/cx';
 import { updateAlert, type AlertUpdate } from '@/features/notifications/api';
-import { reviewHref, toneOf, type Tone } from '@/features/notifications/alertVisuals';
+import { alertHref, toneOf, type Tone } from '@/features/notifications/alertVisuals';
 import { Badge, Button, Card, PageHeader } from '@/features/hr/ui';
 import type { AdminAlert } from '@/types';
 
@@ -25,10 +25,7 @@ const GROUPS = [
 ];
 
 /** ปลายทางของแจ้งเตือนแต่ละรายการ (ข้อเสนอสวัสดิการเปิดหน้าข้อเสนอนั้น) */
-function hrefOf(alert: AdminAlert) {
-  if (alert.id.startsWith('prop-')) return `/admin/benefits/proposals/${encodeURIComponent(alert.id.slice(5))}`;
-  return reviewHref[alert.category] ?? null;
-}
+const hrefOf = (alert: AdminAlert) => alertHref(alert);
 
 // แจ้งเตือนของ Admin ในโครงเดียวกับหน้าแจ้งเตือนของ HR (H07) · ข้อมูลและสถานะอ่านแล้วยังเป็นของ Admin
 export function AdminNotices({ initialAlerts }: { initialAlerts: AdminAlert[] }) {

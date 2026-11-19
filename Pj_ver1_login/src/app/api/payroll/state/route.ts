@@ -26,7 +26,18 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   if (!(await financeSession())) return forbidden();
   try {
-    const settings = (await req.json()) as PaySettings;
+    const raw = (await req.json()) as unknown;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new ClaimInputError("ข้อมูลไม่ถูกต้อง");
+    }
+    const obj = raw as Record<string, unknown>;
+    const settings: PaySettings = {
+      round1PayDay: obj.round1PayDay as number,
+      round1MonthOffset: obj.round1MonthOffset as number,
+      round2PayDay: obj.round2PayDay as number,
+      round2MonthOffset: obj.round2MonthOffset as number,
+      ...(obj.cutoffDays !== undefined ? { cutoffDays: obj.cutoffDays as number } : {}),
+    };
     const errors = validatePaySettings(settings);
     const first = errors.round1 ?? errors.round2 ?? errors.cutoff;
     if (first) throw new ClaimInputError(first);

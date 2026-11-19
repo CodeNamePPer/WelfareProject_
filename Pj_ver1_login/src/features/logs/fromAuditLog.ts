@@ -44,7 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
   hireDate: 'วันเริ่มงาน',
   accountLock: 'สถานะการล็อกบัญชี',
 };
-const STATUS_LABELS: Record<string, string> = { ACTIVE: 'ทำงานอยู่', RESIGNED: 'ลาออก' };
+const STATUS_LABELS: Record<string, string> = { ACTIVE: 'ทำงานอยู่', RESIGNED: 'ลาออก', DECEASED: 'เสียชีวิต' };
 
 // ป้ายชื่อตรงกับ saveWelfareItem ใน src/lib/admin/welfare.ts (ค่าใน log แปลงเป็นข้อความอ่านได้แล้ว)
 const WELFARE_FIELD_LABELS: Record<string, string> = {

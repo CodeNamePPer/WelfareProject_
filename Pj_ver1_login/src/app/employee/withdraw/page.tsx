@@ -30,12 +30,17 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
   }
 
   let initial: WithdrawInitial | null = null;
+  let ownerBenefits: EmployeeBenefit[] | null = null;
   if (editing) {
     const claim = editing;
-    if ( claim.employeeCode === session.sub && (claim.status === "draft" || claim.status === "needs_revision")) {
+    if ((claim.employeeCode === session.sub || claim.submittedByCode === session.sub) && (claim.status === "draft" || claim.status === "needs_revision")) {
+      if (claim.employeeCode !== session.sub) {
+        ownerBenefits = await getEmployeeBenefits(claim.employeeCode);
+      }
       const receipt = claim.receipts[0];
       initial = {
         claimNo: claim.claimNo,
+        employeeCode: claim.employeeCode,
         benefitCode: claim.benefitCode,
         values: toFormValues(claim.formType, claim),
         note: claim.note ?? "",
@@ -64,7 +69,7 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
       benefitsByEmployee={benefitsByEmployee}
       initialProxy={params.for === "proxy"}
       expectedPay={{ date: thaiDate(round.payDate), note: `ยื่นวันนี้อยู่ในรอบที่ ${round.roundNo} ถ้า HR และการเงินอนุมัติทัน ไม่ทันจะเลื่อนไปรอบถัดไป` }}
-      benefits={benefits}
+      benefits={ownerBenefits ?? benefits}
       initial={initial}
       initialBenefitCode={params.benefit ?? null}
     />

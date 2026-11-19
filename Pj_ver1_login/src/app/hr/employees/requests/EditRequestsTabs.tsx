@@ -13,11 +13,14 @@ export function EditRequestsTabs({
   requests,
   history,
   viewerCode,
+  canDecide,
 }: {
   /** null = โหลดไม่สำเร็จ */
   requests: EditRequestItem[] | null;
   history: EditRequestHistoryItem[] | null;
   viewerCode: string;
+  /** อนุมัติ/ไม่อนุมัติได้เฉพาะ HR (API ตอบ 403 ให้ Role อื่น) */
+  canDecide: boolean;
 }) {
   const [tab, setTab] = useState<Tab>('pending');
 
@@ -43,7 +46,7 @@ export function EditRequestsTabs({
         ) : (
           <div className="flex flex-col gap-3 bg-[#F8FAFC] p-4">
             {requests.map((request) => (
-              <RequestCard key={request.id} request={request} own={request.employeeCode === viewerCode} />
+              <RequestCard key={request.id} request={request} own={request.employeeCode === viewerCode} canDecide={canDecide} />
             ))}
           </div>
         )}

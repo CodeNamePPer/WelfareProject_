@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import type { Role } from "./roles";
 import { supabaseAdmin } from "../supabase";
 import { toPasswordState, type PasswordState } from "./credential";
-import { checkLock, clearFailures } from "./rate-limit";
+import { accountLockKey, checkLock, clearFailures } from "./rate-limit";
 
 /**
  * บัญชีผู้ใช้อ่านจาก view `v_app_user` (employee + employee_credential + user_role)
@@ -178,9 +178,8 @@ function primaryRole(roles: EmployeeProfileRow["roles"]): Role {
 function toUserWithProfile(row: EmployeeProfileRow): UserWithProfile {
   const manager = row.manager && !row.manager.deleted_at ? row.manager : null;
   const credentialUpdatedAt = row.credential?.updated_at ?? "";
-  const codeLock = checkLock(row.employee_code.toLowerCase());
-  const loginLock = row.credential?.login_name ? checkLock(row.credential.login_name.toLowerCase()) : { locked: false, retryAfterSec: 0 };
-  const retryAfterSec = Math.max(codeLock.locked ? codeLock.retryAfterSec : 0, loginLock.locked ? loginLock.retryAfterSec : 0);
+  const lock = checkLock(accountLockKey(row.employee_code));
+  const retryAfterSec = lock.locked ? lock.retryAfterSec : 0;
   return {
     employeeId: row.employee_code,
     email: row.credential?.login_name ?? "",
@@ -495,8 +494,6 @@ export async function updateUser(
 export async function unlockUserAccount(employeeId: string): Promise<boolean> {
   const user = await getUserWithProfileById(employeeId);
   if (!user) return false;
-  clearFailures(employeeId.toLowerCase());
-  if (user.email) clearFailures(user.email.toLowerCase());
-  if (user.profile.contactEmail) clearFailures(user.profile.contactEmail.toLowerCase());
+  clearFailures(accountLockKey(employeeId));
   return true;
 }

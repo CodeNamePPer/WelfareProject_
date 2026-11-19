@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
 import { parseProposalInput } from "@/lib/hr/proposalInput";
+import { findEmployeeUuidByCode } from "@/lib/auth/users";
 import { ProposalError, getProposal, reviseProposal, withdrawProposal } from "@/lib/hr/proposals";
 
 export const runtime = "nodejs";
@@ -12,7 +13,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
   const { id } = await params;
   const proposal = await getProposal(id);
-  if (!proposal) return NextResponse.json({ error: "ไม่พบข้อเสนอนี้" }, { status: 404 });
+  // ร่างของคนอื่นตอบเหมือนไม่มี (ไม่บอกว่ามีร่างอยู่)
+  if (!proposal || (proposal.status === "draft" && proposal.proposedById !== (await findEmployeeUuidByCode(session.sub)))) {
+    return NextResponse.json({ error: "ไม่พบข้อเสนอนี้" }, { status: 404 });
+  }
   return NextResponse.json({ proposal });
 }
 

@@ -3,6 +3,7 @@ import { bangkokToday, thaiDayMonth } from "@/lib/claims/requester";
 import { getAdvanceItems } from "@/lib/payroll/finance";
 import { HrPage } from "@/features/hr/ui";
 import { RefundsClient, type RefundRow } from "./RefundsClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const metadata: Metadata = { title: "เงินที่ต้องคืน" };
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function RefundsPage() {
           : `${item.claimNo} · ใบเสร็จ ${thb(item.receiptAmount)} รับไป ${thb(item.advanceAmount)}`,
         amount: item.refundAmount ?? 0,
         receivedAt: item.refundReceivedAt ? thaiDayMonth(item.refundReceivedAt) : null,
-        receivedThisYear: Boolean(item.refundReceivedAt?.startsWith(year)),
+        receivedThisYear: Boolean(item.refundReceivedAt && toBangkokDate(item.refundReceivedAt).startsWith(year)),
       };
     });
 

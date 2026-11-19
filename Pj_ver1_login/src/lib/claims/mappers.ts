@@ -23,6 +23,7 @@ export function toPendingRequest(claim: ClaimRecord): PendingRequest {
     id: claim.claimNo,
     itemType: "benefit",
     employeeCode: claim.employeeCode,
+    submittedByCode: claim.submittedByCode,
     fallbackName: claim.employeeName,
     benefit: claim.benefitName,
     used: claim.used,

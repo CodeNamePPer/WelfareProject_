@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import type { Role } from "./roles";
+import { ROLES, type Role } from "./roles";
 
 export const SESSION_COOKIE = "welfare_session";
 export const SESSION_TTL_SECONDS = 60 * 60 * 8; // 8 ชั่วโมง (หนึ่งวันทำงาน)
@@ -34,6 +34,18 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getKey(), { algorithms: ["HS256"] });
+    if (
+      "purpose" in payload ||
+      typeof payload.sub !== "string" ||
+      typeof payload.name !== "string" ||
+      typeof payload.email !== "string" ||
+      typeof payload.role !== "string" ||
+      !ROLES.includes(payload.role as Role) ||
+      typeof payload.pwd !== "number" ||
+      (payload.mcp !== undefined && typeof payload.mcp !== "boolean")
+    ) {
+      return null;
+    }
     return payload as unknown as SessionPayload;
   } catch {
     return null;

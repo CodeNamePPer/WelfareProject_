@@ -3,6 +3,7 @@ import { bangkokToday, thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { daysFrom, getAdvanceItems, type AdvanceItem } from "@/lib/payroll/finance";
 import { HrPage } from "@/features/hr/ui";
 import { AdvancesClient, type AdvanceRow, type AdvanceTab } from "./AdvancesClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const metadata: Metadata = { title: "เบิกล่วงหน้า / ค้างใบเสร็จ" };
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ function tabOf(item: AdvanceItem): AdvanceTab {
   if (item.status === "awaiting_receipt" || item.status === "receipt_returned") return "awaiting";
   if (item.status === "receipt_submitted") return "review";
   const refundOpen = (item.refundAmount ?? 0) > 0 && !item.refundReceivedAt;
-  const extraOpen = item.settlement === "extra_payment" && item.claimStatus !== "paid";
+  const extraOpen = item.settlement === "extra_payment" && (item.extraAmountApproved ?? 0) > 0;
   return refundOpen || extraOpen ? "settle" : "closed";
 }
 
@@ -49,7 +50,7 @@ export default async function AdvancesPage() {
       due,
       dueSoon: tab === "awaiting" && left >= 0 && left <= 7,
       overdue: tab === "awaiting" && left < 0,
-      closedThisYear: tab === "closed" && (item.refundReceivedAt ?? item.reviewedAt ?? item.cancelledAt ?? "").startsWith(year),
+      closedThisYear: tab === "closed" && ((at) => (at ? toBangkokDate(at) : ""))(item.refundReceivedAt ?? item.reviewedAt ?? item.cancelledAt).startsWith(year),
     };
   });
 

@@ -36,9 +36,10 @@ export function AdvanceReceiptPanel({ claimNo, advance }: { claimNo: string; adv
 
   function addFiles(selected: FileList | null) {
     const picked = Array.from(selected ?? []);
-    const bad = picked.find((file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type) || file.size > MAX_ATTACHMENT_BYTES);
-    setError(bad ? `ไฟล์ ${bad.name} ต้องเป็น PDF, JPG หรือ PNG และมีขนาดไม่เกิน 10 MB` : "");
-    setFiles((current) => [...current, ...picked.filter((file) => file !== bad)]);
+    const isBad = (file: File) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type) || file.size > MAX_ATTACHMENT_BYTES;
+    const bad = picked.filter(isBad);
+    setError(bad.length ? `ไฟล์ ${bad.map((file) => file.name).join(", ")} ต้องเป็น PDF, JPG หรือ PNG และมีขนาดไม่เกิน 10 MB` : "");
+    setFiles((current) => [...current, ...picked.filter((file) => !isBad(file))]);
     if (fileInput.current) fileInput.current.value = "";
   }
 

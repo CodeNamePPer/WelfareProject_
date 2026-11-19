@@ -7,6 +7,7 @@ import { HrPage } from "@/features/hr/ui";
 import { getSession } from "@/lib/auth/get-session";
 import { listEditRequestHistory, listPendingEditRequests } from "@/lib/hr/editRequests";
 import { EmployeesClient, type EmployeeRow, type EmployeesTab } from "./EmployeesClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const metadata: Metadata = { title: "จัดการพนักงานและสิทธิ์" };
 
@@ -26,7 +27,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const year = bangkokToday().slice(0, 4);
   const claimCount = new Map<string, number>();
   for (const claim of claims ?? []) {
-    if (NOT_COUNTED.has(claim.status) || !(claim.expenseDate ?? claim.createdAt).startsWith(year)) continue;
+    if (NOT_COUNTED.has(claim.status) || !(claim.expenseDate ?? toBangkokDate(claim.createdAt)).startsWith(year)) continue;
     claimCount.set(claim.employeeCode, (claimCount.get(claim.employeeCode) ?? 0) + 1);
   }
 

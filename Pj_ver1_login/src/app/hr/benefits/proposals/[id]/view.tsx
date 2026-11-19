@@ -13,7 +13,11 @@ export async function MyProposalView({ id, base }: { id: string; base: "/hr" | "
   if (!proposal) notFound();
   const me = session ? await findEmployeeUuidByCode(session.sub) : null;
   const mine = me !== null && proposal.proposedById === me;
-  if (proposal.status === "draft" && mine) redirect(`${base}/benefits/propose?draft=${proposal.id}`);
+  if (proposal.status === "draft") {
+    // ร่างเป็นของผู้เสนอคนเดียว
+    if (!mine) notFound();
+    redirect(`${base}/benefits/propose?draft=${proposal.id}`);
+  }
 
   const status = PROPOSAL_STATUS[proposal.status];
   const crumbs = [{ label: "จัดการสวัสดิการ", href: `${base}/benefits` }, { label: proposal.proposalNo }];
@@ -28,7 +32,7 @@ export async function MyProposalView({ id, base }: { id: string; base: "/hr" | "
           description="หัวหน้า HR ขอข้อมูลเพิ่ม · แก้แล้วส่งกลับ"
           actions={<Badge tone={status.tone}>{status.label}</Badge>}
         />
-        <ReviseClient proposal={{ id: proposal.id, input: proposal.input }} request={proposal.infoRequest} levels={options.levels} returnHref={`${base}/benefits`} />
+        <ReviseClient proposal={{ id: proposal.id, kind: proposal.kind, input: proposal.input }} request={proposal.infoRequest} levels={options.levels} returnHref={`${base}/benefits`} />
       </HrPage>
     );
   }

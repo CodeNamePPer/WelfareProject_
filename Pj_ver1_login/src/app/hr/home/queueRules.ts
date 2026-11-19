@@ -62,8 +62,8 @@ export function findBlockers(request: PendingRequest, employee: HrEmployee | nul
       reason: `ผู้ยื่นมีสถานะ${employee.statusLabel}${since} ไม่ได้เป็นพนักงานของบริษัทแล้ว จึงไม่มีสิทธิ์รับสวัสดิการ`,
     });
   }
-  if (viewerCode && request.employeeCode === viewerCode) {
-    blockers.push({ message: "เป็นคำขอของคุณเอง ต้องให้เจ้าหน้าที่คนอื่นเป็นผู้ตัดสิน", action: null, reason: "" });
+  if (viewerCode && (request.employeeCode === viewerCode || request.submittedByCode === viewerCode)) {
+    blockers.push({ message: "เป็นคำขอของคุณเองหรือที่ยื่นแทน ต้องให้เจ้าหน้าที่คนอื่นเป็นผู้ตัดสิน", action: null, reason: "" });
   }
   if (remaining !== null && remaining < 0) {
     blockers.push({

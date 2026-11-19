@@ -4,12 +4,12 @@ import { getClientIp } from "@/lib/auth/network";
 import { writeAudit, type AuditChanges } from "@/lib/auth/audit";
 import { createAdminAlert } from "@/lib/admin/alerts";
 import { ROLE_LABELS, type Role } from "@/lib/auth/roles";
+import { revokeAllSessions } from "@/lib/auth/credential";
 import {
   findEmployeeCodeByUuid,
   findEmployeeUuidByCode,
   getEmployeeRecord,
   getOrgOptions,
-  getUserById,
   getUserWithProfileById,
   unlockUserAccount,
   updateEmployeeRecord,
@@ -105,11 +105,30 @@ export async function PUT(req: NextRequest) {
     if (section === "employment" && employeeId === session.sub) {
       return NextResponse.json({ error: "เปลี่ยนสถานะการทำงานของตัวเองไม่ได้" }, { status: 403 });
     }
+    if (session.role === "HR" && employeeId === session.sub && section in EMPLOYEE_SECTIONS) {
+      return NextResponse.json({ error: "HR แก้ไขข้อมูลตัวเองโดยตรงไม่ได้ กรุณาส่งคำขอแก้ไขที่หน้าโปรไฟล์ให้ HR คนอื่นตรวจ" }, { status: 403 });
+    }
     if (!reason) {
       return NextResponse.json({ error: "กรุณาระบุเหตุผลการเปลี่ยนแปลง" }, { status: 400 });
     }
     if (section !== "account" && section !== "employment" && section !== "unlock" && !(section in EMPLOYEE_SECTIONS)) {
       return NextResponse.json({ error: "ส่วนข้อมูลไม่ถูกต้อง" }, { status: 400 });
+    }
+
+    const target = await getUserWithProfileById(employeeId);
+    if (!target) {
+      return NextResponse.json({ error: "ไม่พบผู้ใช้งาน" }, { status: 404 });
+    }
+    if (
+      section === "account" &&
+      employeeId === session.sub &&
+      ((typeof values.role === "string" && values.role.toUpperCase() !== target.role) ||
+        (typeof values.status === "string" && values.status.toUpperCase() !== target.status))
+    ) {
+      return NextResponse.json({ error: "เปลี่ยนบทบาทหรือสถานะบัญชีของตัวเองไม่ได้" }, { status: 403 });
+    }
+    if (session.role === "HR" && section === "employment" && target.role === "SUPER_ADMIN") {
+      return NextResponse.json({ error: "HR เปลี่ยนสถานะการทำงานของผู้ดูแลระบบ (Admin) ไม่ได้" }, { status: 403 });
     }
 
     const changes =
@@ -163,7 +182,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก" };
+const STATUS_LABELS: Record<string, string> = { ACTIVE: "ทำงานอยู่", RESIGNED: "ลาออก", DECEASED: "เสียชีวิต" };
 
 /** เปลี่ยนบทบาทหรือสถานะบัญชี = เปลี่ยนสิทธิ์เข้าระบบ จึงแจ้ง admin ทุกคน */
 async function alertAccessChange(actorName: string, employeeId: string, changes: AuditChanges) {
@@ -183,12 +202,13 @@ async function alertAccessChange(actorName: string, employeeId: string, changes:
 
 /** บัญชีเข้าใช้งาน: ชื่อล็อกอิน / บทบาท / สถานะ (employeeId เป็นรหัสพนักงาน — ไม่อนุญาตให้แก้ไข) */
 async function saveAccount(employeeId: string, values: Record<string, unknown>, reason: string): Promise<AuditChanges | null> {
-  const before = await getUserById(employeeId);
+  const before = await getUserWithProfileById(employeeId);
   if (!before) return null;
 
+  const allowedFields = before.hasAccount ? ACCOUNT_FIELDS : (["name", "status"] as const);
   const update: Record<string, string> = {};
   const changes: AuditChanges = {};
-  for (const field of ACCOUNT_FIELDS) {
+  for (const field of allowedFields) {
     const value = values[field];
     if (typeof value === "string" && value !== before[field]) {
       update[field] = value;
@@ -198,6 +218,9 @@ async function saveAccount(employeeId: string, values: Record<string, unknown>, 
 
   if (Object.keys(changes).length > 0) {
     await updateUser(employeeId, update, reason);
+    if ((changes.role || changes.status) && before.hasAccount) {
+      await revokeAllSessions(employeeId).catch(() => null);
+    }
   }
   return changes;
 }

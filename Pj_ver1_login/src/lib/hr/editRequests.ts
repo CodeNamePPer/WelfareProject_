@@ -341,22 +341,32 @@ export async function decideEditRequest(id: string, decision: "approve" | "rejec
   if (decision === "reject" && !note.trim()) throw new EditRequestError("ระบุข้อความถึงพนักงานเมื่อไม่อนุมัติ");
 
   const changes: Record<string, Change> = {};
+  const update: Record<string, unknown> = {};
   if (decision === "approve") {
-    const update: Record<string, unknown> = {};
     for (const [field, change] of Object.entries(request.requested_fields ?? {})) {
       if (!(field in EDITABLE_FIELDS)) throw new EditRequestError(`ช่อง ${field} ขอแก้ไม่ได้`);
       update[field] = field === "children_count" ? Number(change.new) : change.new === "" ? null : change.new;
       changes[field] = { old: change.old, new: change.new };
     }
-    const { error: updateError } = await supabaseAdmin.from("employee").update(update).eq("id", request.employee_id);
-    if (updateError) throw updateError;
   }
-  const { error: decideError } = await supabaseAdmin
+  const { data: claimed, error: decideError } = await supabaseAdmin
     .from("employee_edit_request")
     .update({ status: decision === "approve" ? "approved" : "rejected", decided_by: actorId, decided_at: new Date().toISOString(), decision_note: note.trim() || null })
     .eq("id", id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
   if (decideError) throw decideError;
+  if (!claimed || claimed.length === 0) throw new EditRequestError("คำขอนี้ตัดสินไปแล้ว", 409);
+  if (decision === "approve") {
+    const { error: updateError } = await supabaseAdmin.from("employee").update(update).eq("id", request.employee_id);
+    if (updateError) {
+      await supabaseAdmin
+        .from("employee_edit_request")
+        .update({ status: "pending", decided_by: null, decided_at: null, decision_note: null })
+        .eq("id", id);
+      throw updateError;
+    }
+  }
   const employeeCode = request.employee?.employee_code ?? "";
   if (employeeCode) {
     const labels = Object.keys(request.requested_fields ?? {}).map((field) => EDITABLE_FIELDS[field] ?? field).join(", ");

@@ -37,8 +37,14 @@ export function roundSetting(s: PaySettings, round: RoundNo) {
  */
 export function validatePaySettings(s: PaySettings): { round1?: string; round2?: string; cutoff?: string } {
   const errors: { round1?: string; round2?: string; cutoff?: string } = {};
-  if (s.round1MonthOffset === 0 && s.round1PayDay <= 15) errors.round1 = "รอบที่ 1 ปิดรอบวันที่ 15 ถ้าจ่ายเดือนเดียวกันต้องเลือกวันที่ 16 ขึ้นไป";
-  if (s.round2MonthOffset < 1) errors.round2 = "รอบที่ 2 ปิดรอบสิ้นเดือน ต้องจ่ายเดือนถัดไปขึ้นไป";
+  if (!Number.isInteger(s.round1MonthOffset) || s.round1MonthOffset < 0 || s.round1MonthOffset > MAX_MONTH_OFFSET) {
+    errors.round1 = `เดือนที่จ่ายของรอบที่ 1 ต้องเป็น 0–${MAX_MONTH_OFFSET} เดือน`;
+  } else if (s.round1MonthOffset === 0 && s.round1PayDay <= 15) {
+    errors.round1 = "รอบที่ 1 ปิดรอบวันที่ 15 ถ้าจ่ายเดือนเดียวกันต้องเลือกวันที่ 16 ขึ้นไป";
+  }
+  if (!Number.isInteger(s.round2MonthOffset) || s.round2MonthOffset < 1 || s.round2MonthOffset > MAX_MONTH_OFFSET) {
+    errors.round2 = `รอบที่ 2 ปิดรอบสิ้นเดือน ต้องจ่ายเดือนถัดไปขึ้นไป (1–${MAX_MONTH_OFFSET} เดือน)`;
+  }
   for (const [key, day] of [["round1", s.round1PayDay], ["round2", s.round2PayDay]] as const) {
     if (!Number.isInteger(day) || day < 1 || day > 31) errors[key] = "วันจ่ายต้องเป็นวันที่ 1–31";
   }

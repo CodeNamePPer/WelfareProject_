@@ -4,6 +4,7 @@ import { getFinanceData } from "@/lib/payroll/finance";
 import { thaiDate } from "@/lib/claims/requester";
 import { HrPage } from "@/features/hr/ui";
 import { HistoryClient, type HistoryRound } from "./HistoryClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const metadata: Metadata = { title: "ดูข้อมูลย้อนหลัง" };
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export default async function HistoryPage() {
   const paidNos = new Set(data.claims.filter((item) => item.claim.status === "paid").map((item) => item.claim.claimNo));
   const failures = data.payments
     .filter((payment) => payment.status === "failed")
-    .map((payment) => ({ year: Number(payment.createdAt.slice(0, 4)) + 543, fixed: paidNos.has(payment.claimNo) }));
+    .map((payment) => ({ year: Number(toBangkokDate(payment.createdAt).slice(0, 4)) + 543, fixed: paidNos.has(payment.claimNo) }));
 
   return (
     <HrPage>

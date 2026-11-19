@@ -6,7 +6,7 @@ import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
 import { checkLock, clearFailures, registerFailure } from "@/lib/auth/rate-limit";
 import { getPasswordHash, savePassword } from "@/lib/auth/credential";
-import { checkNewPassword, PASSWORD_MAX } from "@/lib/auth/password-policy";
+import { checkNewPassword, CURRENT_PASSWORD_MAX } from "@/lib/auth/password-policy";
 
 export const runtime = "nodejs";
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   }
   const currentPassword = typeof body.currentPassword === "string" ? body.currentPassword : "";
   const newPassword = typeof body.newPassword === "string" ? body.newPassword : "";
-  if (!currentPassword || !newPassword || currentPassword.length > PASSWORD_MAX) {
+  if (!currentPassword || !newPassword || currentPassword.length > CURRENT_PASSWORD_MAX) {
     return NextResponse.json({ error: "กรุณากรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่" }, { status: 400 });
   }
 

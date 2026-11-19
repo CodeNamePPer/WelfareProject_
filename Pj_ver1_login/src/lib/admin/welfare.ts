@@ -348,6 +348,9 @@ async function createBenefit(code: string, input: WelfareInput): Promise<SaveWel
 
 /** มีวงเงินที่รอมีผลอยู่แล้วให้แก้แถวนั้น ไม่งั้นเพิ่มแถวใหม่ (แถวที่มีผลแล้วแก้ไม่ได้) */
 async function writeLimit(row: BenefitRow, amount: number, startDate: string) {
+  if (!row.next_effective_from && row.current_effective_from === startDate) {
+    throw new WelfareInputError("มีวงเงินที่เริ่มใช้วันดังกล่าวอยู่แล้ว กรุณาเลือกวันที่มีผลเป็นวันถัดไป");
+  }
   const { error } = row.next_effective_from
     ? await supabaseAdmin
         .from("welfare_benefit_limit")

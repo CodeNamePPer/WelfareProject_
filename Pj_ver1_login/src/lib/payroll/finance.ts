@@ -5,6 +5,7 @@ import { getPaySettings, listClaims } from "@/lib/claims/service";
 import { bangkokToday, roundKeyOf, thaiMonthYear } from "@/lib/claims/requester";
 import type { ClaimDbStatus, ClaimRecord } from "@/lib/claims/types";
 import { DEFAULT_PAY_SETTINGS, cutoffDateOf, daysInMonth, resolvePayDate, type PaySettings } from "@/features/payroll/lib/pay-settings";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 // ข้อมูลของหน้าการเงิน (ดีไซน์ F01–F09) อ่านจากตารางเดิมทั้งหมด:
 //   welfare_claim / welfare_pay_round / welfare_claim_payment / welfare_claim_advance / employee_bank_account
@@ -194,7 +195,7 @@ export async function getFinanceData(): Promise<FinanceData | null> {
 
   for (const item of finClaims) {
     const round = item.roundKey ? rounds.get(item.roundKey) : null;
-    item.payDate = item.claim.status === "paid" && item.claim.payment?.paidAt ? item.claim.payment.paidAt.slice(0, 10) : (item.claim.payDateOverride ?? round?.payDate ?? null);
+    item.payDate = item.claim.status === "paid" && item.claim.payment?.paidAt ? toBangkokDate(item.claim.payment.paidAt) : (item.claim.payDateOverride ?? round?.payDate ?? null);
   }
 
   const payments: PaymentRow[] = paymentsRes.data.map((row) => ({
@@ -295,6 +296,7 @@ export async function getAdvanceItems(): Promise<AdvanceItem[] | null> {
     .select(
       "status, advance_amount, advance_paid_at, receipt_due_date, receipt_amount, settlement, extra_amount_approved, refund_amount, refund_received_at, cancelled_at, reviewed_at, claim:claim_id!inner(claim_no, deleted_at)",
     )
+    .not("advance_paid_at", "is", null)
     .order("receipt_due_date", { ascending: true })
     .returns<AdvanceDbRow[]>();
   if (error) {
@@ -309,7 +311,7 @@ export async function getAdvanceItems(): Promise<AdvanceItem[] | null> {
   const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
   return rows.flatMap((row) => {
     const claim = byNo.get(row.claim.claim_no);
-    if (!claim) return [];
+    if (!claim || claim.status !== "paid") return [];
     const employee = byCode.get(claim.employeeCode);
     return [
       {
@@ -334,13 +336,4 @@ export async function getAdvanceItems(): Promise<AdvanceItem[] | null> {
   });
 }
 
-/** อายุงานจากวันเริ่มงาน เช่น "7 ปี" / "8 ปี 7 เดือน" */
-export function tenureOf(hireDate: string, today = new Date()) {
-  const start = new Date(`${hireDate}T00:00:00+07:00`);
-  let months = (today.getFullYear() - start.getFullYear()) * 12 + today.getMonth() - start.getMonth();
-  if (today.getDate() < start.getDate()) months -= 1;
-  if (months < 0) return "—";
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : "", !years && !rest ? "ไม่ถึง 1 เดือน" : ""].filter(Boolean).join(" ");
-}
+export { tenureOf } from "@/lib/tenure";

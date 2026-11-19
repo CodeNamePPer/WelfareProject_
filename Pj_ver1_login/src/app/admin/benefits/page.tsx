@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getHrBenefits } from "@/lib/hr/benefits";
 import { getOpenProposals } from "@/lib/hr/proposals";
+import { getSession } from "@/lib/auth/get-session";
 import { ButtonLink, HrPage } from "@/features/hr/ui";
 import { BenefitsClient } from "@/app/hr/benefits/BenefitsClient";
 import { toBenefitRows } from "@/app/hr/benefits/rows";
@@ -23,7 +24,7 @@ export default async function AdminBenefitsPage({ searchParams }: { searchParams
   if (params.item) redirect(`/admin/benefits/${encodeURIComponent(params.item)}`);
   if (params.proposal) redirect(`/admin/benefits/proposals/${encodeURIComponent(params.proposal)}`);
 
-  const [benefits, proposals] = await Promise.all([getHrBenefits(), getOpenProposals()]);
+  const [benefits, proposals] = await Promise.all([getHrBenefits(), getOpenProposals((await getSession())?.sub)]);
   if (!benefits) return <p className="text-13 text-status-rejected-ink">โหลดรายการสวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   return (

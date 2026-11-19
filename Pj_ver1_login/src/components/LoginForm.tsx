@@ -61,6 +61,8 @@ function loadRecaptcha(): Promise<GRecaptchaV3> {
     );
   }).catch((err) => {
     loading = null; // ให้ลองโหลดใหม่ได้ในการกดครั้งถัดไป
+    // ลบ <script> ที่โหลดพลาดออกด้วย ไม่งั้นครั้งถัดไปจะเจอแท็กเดิมที่ไม่มีวันยิง load/error แล้วรอจนหมดเวลา 10 วินาทีทุกครั้ง
+    if (!window.grecaptcha?.ready) document.getElementById(SCRIPT_ID)?.remove();
     throw err;
   });
   return loading;
@@ -155,7 +157,8 @@ export function LoginForm({
       if (data.account && (account || remember)) rememberAccount(data.account);
 
       // ไม่ได้ระบุหน้าที่จะกลับไป (next = "/") หรือต้องตั้งรหัสผ่านใหม่ก่อน → ไปหน้าแรกของ role นั้นตรงๆ
-      const target = data.home && (next === "/" || data.mustChangePassword) ? data.home : next;
+      const safeClientNext = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/";
+      const target = data.home && (safeClientNext === "/" || data.mustChangePassword) ? data.home : safeClientNext;
       startTransition(() => {
         router.replace(target);
         router.refresh();

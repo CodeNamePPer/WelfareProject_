@@ -6,7 +6,7 @@ import type { Role } from "../auth/roles";
 import { findEmployeeUuidByCode } from "../auth/users";
 import { getSubordinates } from "../employee/subordinates";
 import { proxyReasonOf } from "../../features/hr/queue";
-import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
+import { cutoffDateOf, DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, maxClaimsLabel } from "./forms";
 import { emailHr, isHrEmployee } from "../hr/emailNotify";
 import { afterResponse } from "../email/notify";
@@ -114,6 +114,10 @@ type UsageRow = {
   amount_requested: number | string;
   amount_approved: number | string | null;
   expense_date: string;
+  advance?:
+    | { status: string; settlement: string | null; extra_amount_approved: number | string | null; refund_amount: number | string | null }
+    | { status: string; settlement: string | null; extra_amount_approved: number | string | null; refund_amount: number | string | null }[]
+    | null;
 };
 
 /** รอบวงเงินเดียวกันหรือไม่ ตามกฎเดียวกับ guard_welfare_claim ในฐานข้อมูล */
@@ -122,13 +126,20 @@ function samePeriod(budget: BudgetKind, a: string, b: string) {
   return budget === "monthly" ? a.slice(0, 7) === b.slice(0, 7) : a.slice(0, 4) === b.slice(0, 4);
 }
 
-const usageAmount = (row: UsageRow) => Number(row.amount_approved ?? row.amount_requested);
+const usageAmount = (row: UsageRow) => {
+  const base = Number(row.amount_approved ?? row.amount_requested);
+  const adv = Array.isArray(row.advance) ? (row.advance[0] ?? null) : (row.advance ?? null);
+  if (!adv || adv.status !== "settled") return base;
+  const extra = adv.settlement === "extra_payment" ? Number(adv.extra_amount_approved ?? 0) : 0;
+  const refund = adv.settlement === "refund" ? Number(adv.refund_amount ?? 0) : 0;
+  return Math.max(0, base + extra - refund);
+};
 
 async function fetchUsage(employeeIds: string[]): Promise<UsageRow[]> {
   if (employeeIds.length === 0) return [];
   const { data, error } = await supabaseAdmin
     .from("welfare_claim")
-    .select("id, employee_id, benefit_id, status, amount_requested, amount_approved, expense_date")
+    .select("id, employee_id, benefit_id, status, amount_requested, amount_approved, expense_date, advance:welfare_claim_advance(status, settlement, extra_amount_approved, refund_amount)")
     .in("employee_id", employeeIds)
     .in("status", COUNTED)
     .is("deleted_at", null)
@@ -341,6 +352,13 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
       if (!current || rank(row) > rank(current) || (rank(row) === rank(current) && row.effective_from > current.effective_from)) best.set(row.benefit_id, row);
     }
     const limitOf = new Map([...best].map(([id, row]) => [id, row.amount]));
+    // วงเงินตามระดับ/กลาง (ไม่รวมวงเงินรายคน) สำหรับคอลัมน์ "ตามระดับ" ของ HR
+    const baseBest = new Map<string, { amount: number | string; effective_from: string; employee_id: string | null; job_level_id: string | null }>();
+    for (const row of limits.data ?? []) {
+      if (row.employee_id) continue;
+      const current = baseBest.get(row.benefit_id);
+      if (!current || rank(row) > rank(current) || (rank(row) === rank(current) && row.effective_from > current.effective_from)) baseBest.set(row.benefit_id, row);
+    }
     const memberOf = [employee.department_id, employee.department?.parent_department_id].filter(Boolean);
 
     const images = await signBenefitImages((benefits.data ?? []).map((benefit) => benefit.image_path));
@@ -371,6 +389,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         allowAdvance: Boolean(benefit.allow_advance),
         advanceReceiptDays: benefit.advance_receipt_days ?? DEFAULT_ADVANCE_RECEIPT_DAYS,
         limit,
+        baseLimit: baseBest.has(benefit.id) ? Number(baseBest.get(benefit.id)!.amount) : limit,
         used,
         pending,
         remaining: Math.max(limit - used - pending, 0),
@@ -413,7 +432,17 @@ function assertFiles(files: File[]) {
   }
 }
 
-async function uploadAttachments(claimId: string, uploaderId: string, files: File[]): Promise<string[]> {
+type AttachmentDocKind = "receipt" | "medical_certificate" | "insurance_claim" | "certificate" | "other";
+
+function inferDocKind(fileName: string, fallback: AttachmentDocKind = "receipt"): AttachmentDocKind {
+  if (/(ใบรับรองแพทย์|medical|med[-_ ]?cert)/i.test(fileName)) return "medical_certificate";
+  if (/(สินไหม|insurance|claim[-_ ]?form)/i.test(fileName)) return "insurance_claim";
+  if (/(ประกาศนียบัตร|certificate)/i.test(fileName)) return "certificate";
+  if (/(ใบเสร็จ|receipt|invoice|slip|สลิป|บิล)/i.test(fileName)) return "receipt";
+  return fallback;
+}
+
+async function uploadAttachments(claimId: string, uploaderId: string, files: File[], fallbackKind: AttachmentDocKind = "receipt"): Promise<string[]> {
   const ids: string[] = [];
   for (const file of files) {
     const storagePath = `${claimId}/${safeFileName(file.name)}`;
@@ -421,7 +450,7 @@ async function uploadAttachments(claimId: string, uploaderId: string, files: Fil
     if (uploadError) throw uploadError;
     const { data, error } = await supabaseAdmin
       .from("welfare_claim_attachment")
-      .insert({ claim_id: claimId, file_name: file.name, storage_path: storagePath, mime_type: file.type, size_bytes: file.size, uploaded_by: uploaderId })
+      .insert({ claim_id: claimId, file_name: file.name, storage_path: storagePath, mime_type: file.type, size_bytes: file.size, uploaded_by: uploaderId, doc_kind: inferDocKind(file.name, fallbackKind) })
       .select("id")
       .single();
     if (error) throw error;
@@ -434,17 +463,28 @@ async function uploadAttachments(claimId: string, uploaderId: string, files: Fil
 export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promise<{ claimNo: string; status: ClaimDbStatus }> {
   assertFiles(input.files);
 
-  if (input.employeeCode !== actor.sub) {
+  const existing = input.claimNo ? await getClaim(input.claimNo) : null;
+  if (input.claimNo) {
+    if (!existing || (existing.employeeCode !== actor.sub && existing.submittedByCode !== actor.sub)) throw new ClaimInputError("ไม่พบคำขอนี้");
+    if (existing.status !== "draft" && existing.status !== "needs_revision") throw new ClaimInputError("คำขอนี้แก้ไขไม่ได้แล้ว");
+    if (existing.isAdvance && !(input.advance === true)) throw new ClaimInputError("คำขอนี้ยื่นเป็นเบิกล่วงหน้าแล้ว เปลี่ยนประเภทระหว่างแก้ไขไม่ได้");
+    if (existing.status === "needs_revision" && !(input.amount > 0 && input.expenseDate)) {
+      throw new ClaimInputError("คำขอที่ส่งกลับมาแก้ไขต้องระบุยอดเบิกและวันที่เกิดค่าใช้จ่าย", existing.claimNo);
+    }
+  }
+
+  const targetEmployeeCode = existing ? existing.employeeCode : input.employeeCode;
+  if (!existing && targetEmployeeCode !== actor.sub) {
     const reports = await getSubordinates(actor.sub);
-    if (!reports?.some((report) => report.id === input.employeeCode)) {
+    if (!reports?.some((report) => report.id === targetEmployeeCode)) {
       throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้า และเฉพาะลูกน้องหรือพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
     }
   }
 
   const [ownerId, submitterId, benefits, benefitRow] = await Promise.all([
-    findEmployeeUuidByCode(input.employeeCode),
+    findEmployeeUuidByCode(targetEmployeeCode),
     findEmployeeUuidByCode(actor.sub),
-    getEmployeeBenefits(input.employeeCode),
+    getEmployeeBenefits(targetEmployeeCode),
     supabaseAdmin.from("welfare_benefit").select("id, allow_advance, advance_receipt_days").eq("code", input.benefitCode).is("deleted_at", null).maybeSingle(),
   ]);
   const advance = input.advance === true;
@@ -459,7 +499,10 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   // คำขอล่วงหน้าใช้วันที่คาดว่าจะใช้จ่าย จึงเป็นวันในอนาคตได้ (ไม่เกิน 1 ปี)
   if (input.expenseDate && !advance && input.expenseDate > bangkokDate()) throw new ClaimInputError("วันที่เกิดค่าใช้จ่ายต้องไม่อยู่ในอนาคต");
   if (input.expenseDate && advance && input.expenseDate > addDays(bangkokDate(), 365)) throw new ClaimInputError("วันที่คาดว่าจะใช้จ่ายต้องไม่เกิน 1 ปีจากวันนี้");
+  if (input.receiptDate && (!/^\d{4}-\d{2}-\d{2}$/.test(input.receiptDate) || Number.isNaN(Date.parse(input.receiptDate)))) throw new ClaimInputError("วันที่ในใบเสร็จไม่ถูกต้อง");
+  if (input.receiptDate && input.receiptDate > bangkokDate()) throw new ClaimInputError("วันที่ในใบเสร็จต้องไม่อยู่ในอนาคต");
 
+  const isProxyClaim = existing ? existing.employeeCode !== existing.submittedByCode : targetEmployeeCode !== actor.sub;
   const values = {
     is_advance: advance,
     benefit_id: benefitRow.data.id,
@@ -468,17 +511,13 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     provider_name: input.providerName || null,
     note: input.note || null,
     // ฐานข้อมูลบังคับให้คำขอที่ยื่นแทนมีเหตุผลก่อนส่ง (welfare_claim_proxy_reason_check) ฟอร์มส่งมาไว้ต้นหมายเหตุ
-    proxy_reason: input.employeeCode !== actor.sub ? proxyReasonOf(input.note || null) : null,
+    proxy_reason: isProxyClaim ? (proxyReasonOf(input.note || null) ?? existing?.proxyReason ?? "หัวหน้ายื่นแทน") : null,
     details: input.details,
   };
 
   let claim: { id: string; claim_no: string; status: ClaimDbStatus };
-  if (input.claimNo) {
-    const existing = await getClaim(input.claimNo);
-    if (!existing || (existing.employeeCode !== actor.sub && existing.submittedByCode !== actor.sub)) throw new ClaimInputError("ไม่พบคำขอนี้");
-    if (existing.status !== "draft" && existing.status !== "needs_revision") throw new ClaimInputError("คำขอนี้แก้ไขไม่ได้แล้ว");
-    if (existing.advance && !advance) throw new ClaimInputError("คำขอนี้ยื่นเป็นเบิกล่วงหน้าแล้ว เปลี่ยนประเภทระหว่างแก้ไขไม่ได้");
-    const { error } = await supabaseAdmin.from("welfare_claim").update(values).eq("id", existing.id);
+  if (existing) {
+    const { error } = await supabaseAdmin.from("welfare_claim").update({ ...values, amount_approved: null }).eq("id", existing.id);
     if (error) throw error;
     claim = { id: existing.id, claim_no: existing.claimNo, status: existing.status };
     const { error: clearError } = await supabaseAdmin.from("welfare_claim_receipt").delete().eq("claim_id", existing.id);
@@ -493,7 +532,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     claim = data as typeof claim;
   }
 
-  const attachmentIds = await uploadAttachments(claim.id, submitterId, input.files);
+  const attachmentIds = await uploadAttachments(claim.id, submitterId, input.files, advance ? "other" : "receipt");
 
   if (input.receiptNo || input.receiptDate) {
     const { error } = await supabaseAdmin.from("welfare_claim_receipt").insert({
@@ -545,15 +584,15 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     throw err;
   }
   const resubmitted = claim.status === "needs_revision";
-  const ownerIsHr = await isHrEmployee(input.employeeCode).catch(() => false);
+  const ownerIsHr = await isHrEmployee(targetEmployeeCode).catch(() => false);
   const message = {
     subject: `${resubmitted ? "คำขอที่แก้ไขแล้วรอตรวจ" : "คำขอใหม่รอตรวจ"} ${claim.claim_no}`,
     lines: [`${claim.claim_no} · ยอด ${input.amount.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท${advance ? " · เบิกล่วงหน้า" : ""}`, resubmitted ? "ผู้ขอแก้ไขตามที่ส่งกลับแล้ว" : "รอ HR ตรวจสอบ"],
     path: `/hr/home/requests/${encodeURIComponent(claim.claim_no)}`,
   };
   // คำขอของ HR ตรวจได้เฉพาะหัวหน้า HR / HR คนอื่น จึงไม่ส่งถึงเจ้าของและผู้ยื่น
-  emailHr(resubmitted ? "claim_resubmitted" : "claim_new", message, { exclude: [input.employeeCode, actor.sub] });
-  if (ownerIsHr) emailHr("hr_claim_pending", message, { only: "hr_head", exclude: [input.employeeCode, actor.sub] });
+  emailHr(resubmitted ? "claim_resubmitted" : "claim_new", message, { exclude: [targetEmployeeCode, actor.sub] });
+  if (ownerIsHr) emailHr("hr_claim_pending", message, { only: "hr_head", exclude: [targetEmployeeCode, actor.sub] });
   notifyClaim(claim.claim_no, resubmitted ? "resubmitted" : "submitted", actor.sub);
   return { claimNo: claim.claim_no, status: "pending_hr" };
 }
@@ -573,15 +612,37 @@ function roundOf(submittedAt: string) {
 }
 
 async function ensurePayRound(submittedAt: string): Promise<string> {
-  const { year, month, roundNo } = roundOf(submittedAt);
+  let { year, month, roundNo } = roundOf(submittedAt);
   const settings = await getPaySettings();
-  const { error } = await supabaseAdmin
-    .from("welfare_pay_round")
-    .upsert({ year, month, round_no: roundNo, pay_date: resolvePayDate(year, month, roundNo, settings) }, { onConflict: "year,month,round_no", ignoreDuplicates: true });
-  if (error) throw error;
-  const { data, error: selectError } = await supabaseAdmin.from("welfare_pay_round").select("id").eq("year", year).eq("month", month).eq("round_no", roundNo).single();
-  if (selectError) throw selectError;
-  return data.id;
+  const today = bangkokDate();
+  for (let guard = 0; guard < 36; guard += 1) {
+    const { error } = await supabaseAdmin
+      .from("welfare_pay_round")
+      .upsert(
+        { year, month, round_no: roundNo, pay_date: resolvePayDate(year, month, roundNo, settings) },
+        { onConflict: "year,month,round_no", ignoreDuplicates: true },
+      );
+    if (error) throw error;
+    const { data, error: selectError } = await supabaseAdmin
+      .from("welfare_pay_round")
+      .select("id, pay_date, status")
+      .eq("year", year)
+      .eq("month", month)
+      .eq("round_no", roundNo)
+      .single<{ id: string; pay_date: string; status: string }>();
+    if (selectError) throw selectError;
+    if (data.status === "open" && today <= cutoffDateOf(data.pay_date, settings)) {
+      return data.id;
+    }
+    if (roundNo === 1) {
+      roundNo = 2;
+    } else {
+      roundNo = 1;
+      month = month === 12 ? 1 : month + 1;
+      if (month === 1) year += 1;
+    }
+  }
+  throw new ClaimInputError("ไม่พบรอบจ่ายที่เปิดอยู่ กรุณาตรวจสอบการตั้งค่ารอบจ่าย");
 }
 
 export async function getPayrollState() {
@@ -598,9 +659,11 @@ export async function savePaySettings(settings: PaySettings) {
   const previous = await getPaySettings();
   const { error } = await supabaseAdmin.from("system_setting").update({ value: settings }).eq("key", "pay_schedule");
   if (error) throw error;
+  const today = bangkokDate();
   const { data, error: roundsError } = await supabaseAdmin.from("welfare_pay_round").select("id, year, month, round_no, pay_date").eq("status", "open");
   if (roundsError) throw roundsError;
   for (const round of data ?? []) {
+    if (cutoffDateOf(round.pay_date, previous) < today) continue;
     // รอบที่การเงินเลื่อนวันจ่ายไว้ (วันจ่ายไม่ตรงกับค่าตั้งเดิม) คงวันที่เลื่อนไว้ (ดีไซน์ F07)
     if (round.pay_date !== resolvePayDate(round.year, round.month, round.round_no as 1 | 2, previous)) continue;
     const { error: updateError } = await supabaseAdmin
@@ -702,9 +765,15 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
   if (!rule.roles.includes(actor.role)) throw new ClaimInputError("ไม่มีสิทธิ์ดำเนินการ");
   if (!rule.from.includes(claim.status)) throw new ClaimInputError("สถานะคำขอเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่");
   if (rule.needsNote && !note) throw new ClaimInputError(rule.needsNote);
-  // HR ตัดสินคำขอของตัวเอง (หรือที่ตัวเองยื่นแทนคนอื่น) ไม่ได้ ต้องให้ HR คนอื่นหรือหัวหน้า HR ตัดสิน
-  if (rule.roles.includes("HR") && (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub)) {
-    throw new ClaimInputError("ตัดสินคำขอของตัวเองไม่ได้ ต้องให้ HR คนอื่นหรือหัวหน้า HR ตรวจ");
+  // ตัดสินคำขอของตัวเอง (หรือที่ตัวเองยื่นแทนคนอื่น) ไม่ได้ และคำขอของ HR ต้องให้หัวหน้า HR ตรวจ
+  if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) {
+    throw new ClaimInputError("ตัดสินคำขอของตัวเองหรือที่ตัวเองยื่นแทนไม่ได้");
+  }
+  if (rule.roles.includes("HR") && (await isHrEmployee(claim.employeeCode))) {
+    const { isHrHead } = await import("../hr/hrHead");
+    if (!(await isHrHead({ sub: actor.sub, role: actor.role }))) {
+      throw new ClaimInputError("คำขอของพนักงาน HR ต้องให้หัวหน้า HR เป็นผู้ตรวจสอบ");
+    }
   }
 
   let amountApproved: number | null = null;
@@ -739,6 +808,8 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
 }
 
 export async function getAttachmentUrl(attachmentId: string, actor: ClaimActor): Promise<string | null> {
+  // id ผิดรูปแบบ: Postgres ตอบ 22P02 (กลายเป็น 500) จึงตอบว่าไม่พบตั้งแต่ตรงนี้
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(attachmentId)) return null;
   const { data, error } = await supabaseAdmin
     .from("welfare_claim_attachment")
     .select("storage_path, is_restricted, doc_kind, claim:claim_id(claim_no)")
@@ -750,7 +821,11 @@ export async function getAttachmentUrl(attachmentId: string, actor: ClaimActor):
   if (!data) return null;
   const claim = await getClaim(data.claim.claim_no);
   if (!claim || !canViewClaim(claim, actor)) return null;
-  const isRestricted = Boolean(data.is_restricted || data.doc_kind === "medical_certificate");
+  const isRestricted = Boolean(
+    data.is_restricted ||
+      data.doc_kind === "medical_certificate" ||
+      /(ใบรับรองแพทย์|medical|med[-_ ]?cert)/i.test(data.storage_path),
+  );
   if (isRestricted && actor.role !== "HR" && claim.employeeCode !== actor.sub && claim.submittedByCode !== actor.sub) {
     return null;
   }
@@ -806,18 +881,27 @@ export async function submitAdvanceReceipt(
 
   const uploaderId = await findEmployeeUuidByCode(actor.sub);
   if (!uploaderId) throw new ClaimInputError("ไม่พบข้อมูลพนักงาน");
-  const ids = await uploadAttachments(claim.id, uploaderId, input.files);
-  await supabaseAdmin.from("welfare_claim_attachment").update({ doc_kind: "receipt" }).in("id", ids);
 
-  const { error: receiptError } = await supabaseAdmin.from("welfare_claim_receipt").insert({
-    claim_id: claim.id,
-    receipt_no: input.receiptNo.trim(),
-    receipt_date: input.receiptDate,
-    issuer_name: input.issuerName.trim(),
-    amount: input.amount,
-    attachment_id: ids[0] ?? null,
-  });
-  if (receiptError) throw receiptError;
+  const receiptNo = input.receiptNo.trim();
+  const issuerName = input.issuerName.trim();
+  const { data: dupRows, error: dupError } = await supabaseAdmin
+    .from("welfare_claim_receipt")
+    .select("receipt_no, issuer_name, claim:claim_id!inner(id, status, deleted_at)")
+    .neq("claim_id", claim.id)
+    .ilike("receipt_no", receiptNo)
+    .is("claim.deleted_at", null)
+    .returns<{ receipt_no: string | null; issuer_name: string | null; claim: { id: string; status: ClaimDbStatus; deleted_at: string | null } }[]>();
+  if (dupError) throw dupError;
+  const norm = (s: string | null) => (s ?? "").trim().toLowerCase();
+  const hasDup = (dupRows ?? []).some(
+    (r) =>
+      !["draft", "rejected", "cancelled"].includes(r.claim.status) &&
+      norm(r.receipt_no) === norm(receiptNo) &&
+      norm(r.issuer_name) === norm(issuerName),
+  );
+  if (hasDup) {
+    throw new ClaimInputError(`ใบเสร็จเลขที่ ${receiptNo} ถูกใช้ยื่นเบิกแล้ว`, claimNo);
+  }
 
   const { data: updated, error } = await supabaseAdmin
     .from("welfare_claim_advance")
@@ -827,6 +911,32 @@ export async function submitAdvanceReceipt(
     .select("id");
   if (error) throw error;
   if (!updated || updated.length === 0) throw new ClaimInputError("คำขอนี้ถูกบันทึกไปแล้ว กรุณาโหลดหน้าใหม่", claimNo);
+
+  try {
+    const ids = await uploadAttachments(claim.id, uploaderId, input.files, "receipt");
+    const { error: clearReceiptError } = await supabaseAdmin.from("welfare_claim_receipt").delete().eq("claim_id", claim.id);
+    if (clearReceiptError) throw clearReceiptError;
+
+    const { error: receiptError } = await supabaseAdmin.from("welfare_claim_receipt").insert({
+      claim_id: claim.id,
+      receipt_no: receiptNo,
+      receipt_date: input.receiptDate,
+      issuer_name: issuerName,
+      amount: input.amount,
+      attachment_id: ids[0] ?? null,
+    });
+    if (receiptError) throw receiptError;
+  } catch (err) {
+    await supabaseAdmin
+      .from("welfare_claim_advance")
+      .update({
+        status: advance.status,
+        receipt_amount: advance.receiptAmount,
+        ...(advance.status === "awaiting_receipt" ? { receipt_submitted_at: null } : {}),
+      })
+      .eq("claim_id", claim.id);
+    throw err;
+  }
 
   const { error: eventError } = await supabaseAdmin.from("welfare_claim_event").insert({
     claim_id: claim.id,

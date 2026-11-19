@@ -40,6 +40,8 @@ export async function readCurrentPhoto(code: string): Promise<{ body: Blob | Buf
     .from("employee")
     .select("photo_url")
     .eq("employee_code", code)
+    // กุญแจรูปอายุ 365 วัน: พนักงานที่ลาออก/เสียชีวิตแล้วต้องเปิดรูปผ่านกุญแจเดิมไม่ได้
+    .eq("employment_status", "active")
     .is("deleted_at", null)
     .maybeSingle<{ photo_url: string | null }>();
   if (error || !data?.photo_url) return null;

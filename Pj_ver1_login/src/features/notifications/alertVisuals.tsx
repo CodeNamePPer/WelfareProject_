@@ -40,6 +40,12 @@ export const reviewHref: Partial<Record<AlertCategory, string>> = {
   welfare: '/admin/benefits',
 };
 
+/** ปลายทางของแจ้งเตือนหนึ่งรายการ: ข้อเสนอสวัสดิการ (prop-<id>) เปิดหน้าข้อเสนอนั้นโดยตรง */
+export function alertHref(alert: { id: string; category: AlertCategory }): string | null {
+  if (alert.id.startsWith('prop-')) return `/admin/benefits/proposals/${encodeURIComponent(alert.id.slice(5))}`;
+  return reviewHref[alert.category] ?? null;
+}
+
 /** ไอคอนประเภทแจ้งเตือน – วางลอยบนพื้นแผ่น ไม่มีกล่องสีรองพื้น สีของเส้นไอคอนบอกระดับความสำคัญ */
 export function CategoryIcon({ alert, size = 'md' }: { alert: ToneInput; size?: 'md' | 'sm' }) {
   const tone = toneOf(alert);

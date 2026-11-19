@@ -5,7 +5,9 @@ export const RECAPTCHA_LOGIN_ACTION = "login";
 
 /** reCAPTCHA v3 ให้คะแนน 0.0 (บอท) – 1.0 (คน) ต่ำกว่าเกณฑ์นี้ถือว่าไม่ผ่าน */
 function minScore(): number {
-  const n = Number(process.env.RECAPTCHA_MIN_SCORE);
+  const raw = process.env.RECAPTCHA_MIN_SCORE?.trim();
+  if (!raw) return 0.5;
+  const n = Number(raw);
   return Number.isFinite(n) && n >= 0 && n <= 1 ? n : 0.5;
 }
 

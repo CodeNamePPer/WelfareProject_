@@ -1,5 +1,6 @@
 function escapeCell(value: string | number): string {
-  const text = String(value);
+  // กัน CSV formula injection: ข้อความที่ขึ้นต้นด้วย = + - @ tab หรือ CR ถูก Excel ตีความเป็นสูตร
+  const text = typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

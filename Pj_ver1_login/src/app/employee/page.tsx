@@ -49,8 +49,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const thaiYear = Number(year) + 543;
   // นับตามปีของวันที่เกิดค่าใช้จ่าย กฎเดียวกับวงเงินในฐานข้อมูล
   const thisYear = claims.filter((claim) => claim.expenseDate?.slice(0, 4) === year);
-  const used = thisYear.filter((claim) => APPROVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
-  const reserved = thisYear.filter((claim) => RESERVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
+  // วงเงินรวมไม่นับสวัสดิการต่อครั้ง (yearlyLimit = 0) จึงต้องไม่หักยอดของสวัสดิการต่อครั้งด้วย
+  const capped = thisYear.filter((claim) => claim.budgetType !== "per_claim");
+  const used = capped.filter((claim) => APPROVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
+  const reserved = capped.filter((claim) => RESERVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
   const total = benefits.reduce((sum, benefit) => sum + yearlyLimit(benefit), 0);
   const available = Math.max(total - used - reserved, 0);
   const claimCount = thisYear.filter((claim) => APPROVED.includes(claim.status) || RESERVED.includes(claim.status)).length;

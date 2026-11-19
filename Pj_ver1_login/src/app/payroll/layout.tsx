@@ -35,6 +35,10 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
   if (!session) {
     redirect("/login");
   }
+  // ตรวจซ้ำใน layout เหมือน /admin และ /hr (proxy ตรวจตาม ROUTE_ROLES แล้ว แต่ไม่พึ่งชั้นเดียว)
+  if (session.role !== "FINANCE" && session.role !== "SUPER_ADMIN") {
+    redirect("/access-denied?reason=role");
+  }
   // ไม่มีงานตั้งเวลาในฐานข้อมูล จึงยกเลิกเงินล่วงหน้าที่เกินกำหนดแนบใบเสร็จตอนเปิดหน้า (เว้นช่วงในตัวฟังก์ชัน)
   await cancelOverdueAdvances();
   const admin = session.role === "SUPER_ADMIN";

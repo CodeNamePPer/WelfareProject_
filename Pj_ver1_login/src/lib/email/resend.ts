@@ -30,6 +30,8 @@ const RESERVED_DOMAIN = /\.(test|example|invalid|localhost)$|(^|\.)example\.(com
 
 // ส่งทีละฉบับห่างกันอย่างน้อย SEND_GAP_MS · Resend แผนฟรีจำกัด 2 คำขอต่อวินาที และลองใหม่เมื่อโดน 429
 const SEND_GAP_MS = 600;
+/** เวลารอคำตอบจาก Resend ต่อครั้ง */
+const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 4;
 let queue: Promise<unknown> = Promise.resolve();
 let lastSentAt = 0;
@@ -80,6 +82,8 @@ async function sendViaResend(message: OutgoingMessage): Promise<SendResult> {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body,
+        // คำขอค้างต้องไม่ทำให้คิวอีเมลรอไปตลอด
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
       const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
       if (res.status === 429 && attempt < MAX_ATTEMPTS) {

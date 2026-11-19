@@ -9,7 +9,8 @@ import { BenefitDetailView } from "@/features/welfare/BenefitDetailView";
 
 // base: /hr หรือ /admin
 export async function BenefitDetailScreen({ code, base }: { code: string; base: "/hr" | "/admin" }) {
-  const [benefits, proposals, session] = await Promise.all([getHrBenefits(), getAllProposals(), getSession()]);
+  const session = await getSession();
+  const [benefits, proposals] = await Promise.all([getHrBenefits(), getAllProposals(session?.sub)]);
   const isHead = await isHrHead(session);
 
   if (benefits === null) {
