@@ -6,6 +6,7 @@ import AdminUsersClient from "./AdminUsersClient";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "ตั้งค่าผู้ใช้งานระบบ" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
   const session = await getSession();
