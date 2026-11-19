@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getSession } from "@/lib/auth/get-session";
 import { getAllUsersWithProfile, getOrgOptions, getUserWithProfileById } from "@/lib/auth/users";
 import { ButtonLink, HrPage, PageHeader } from "@/features/hr/ui";
 import { EditEmployeeClient } from "./EditEmployeeClient";
@@ -16,6 +17,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function EditEmployeePage({ params }: { params: Params }) {
   const { id } = await params;
   const code = decodeURIComponent(id);
+  const session = await getSession();
+  if (session?.role === "HR" && session.sub === code) {
+    redirect("/hr/profile");
+  }
 
   const [user, orgOptions, allUsers] = await Promise.all([
     getUserWithProfileById(code),

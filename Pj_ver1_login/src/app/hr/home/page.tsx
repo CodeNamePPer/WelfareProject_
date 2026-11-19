@@ -33,8 +33,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
   const extra = await getQueueFields(claims.map((claim) => claim.id)).catch(() => new Map<string, { proxyReason: string | null; insurancePaid: number | null }>());
   const viewer = session?.sub ?? null;
   // หัวหน้า HR: คำขอของ HR คนอื่นรวมอยู่ในคิวนี้ (เดิมอยู่เมนู "คำขอเบิกของ HR") ติดป้ายให้เห็นว่าต้องให้หัวหน้า HR ตรวจ
-  const head = session ? await isHrHead(session) : false;
-  const hrStaff = head ? await getHrStaffCodes() : null;
+  const [head, hrStaff] = await Promise.all([session ? isHrHead(session) : Promise.resolve(false), getHrStaffCodes()]);
   const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
 
   /** ครั้งที่ใช้ไปของสวัสดิการเดียวกันในปีงบเดียวกัน (รวมคำขอนี้) */
@@ -48,8 +47,9 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const fields = extra.get(claim.id);
     const proxy = claim.submittedByCode !== claim.employeeCode;
     const reason = proxy ? (fields?.proxyReason ?? proxyReasonOf(claim.note)) : null;
-    const own = claim.employeeCode === viewer;
+    const own = claim.employeeCode === viewer || claim.submittedByCode === viewer;
     const hrClaim = !own && tab === "pending" && (hrStaff?.has(claim.employeeCode) ?? false);
+    const blockedHrClaim = hrClaim && !head;
     const revision = [...claim.events].reverse().find((event) => event.kind === "revision_requested" || event.kind === "returned");
     const max = maxClaims.get(claim.benefitCode) ?? null;
     const times = usedTimes(claim.employeeCode, claim.benefitCode, claim.expenseDate?.slice(0, 4));
@@ -79,10 +79,10 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
         department: person?.department ?? claim.department ?? "ไม่ระบุแผนก",
         proxyBy: proxy ? claim.submittedByName : null,
         benefitName: claim.benefitName,
-        meta: [claim.claimNo, claimKindOf({ insurancePaid: fields?.insurancePaid }).short, claim.submittedAt ? `ยื่น ${thaiDayMonth(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
+        meta: [claim.claimNo, claimKindOf({ insurancePaid: fields?.insurancePaid, advance: claim.isAdvance }).short, claim.submittedAt ? `ยื่น ${thaiDayMonth(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
         hint,
         amount: claim.amountApproved ?? claim.amountRequested,
-        action: own ? "own" : tab === "pending" ? "review" : tab === "revision" ? "waiting" : "view",
+        action: own || blockedHrClaim ? "own" : tab === "pending" ? "review" : tab === "revision" ? "waiting" : "view",
         submittedAt: claim.submittedAt,
       },
     ];

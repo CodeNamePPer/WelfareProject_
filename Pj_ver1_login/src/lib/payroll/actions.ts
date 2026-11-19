@@ -133,18 +133,16 @@ export async function rescheduleRound(key: string, date: string, reason: string,
   if (!note) throw new ClaimInputError("กรุณาระบุเหตุผลที่เลื่อนวันจ่าย");
 
   const round = await ensureRound(parsed.year, parsed.month, parsed.roundNo);
-  if (round.status === "paid") throw new ClaimInputError("รอบนี้จ่ายแล้ว เลื่อนวันจ่ายไม่ได้");
+  if (round.status !== "open") throw new ClaimInputError("รอบนี้จ่ายหรือปิดแล้ว เลื่อนวันจ่ายไม่ได้");
   if (round.pay_date === date) throw new ClaimInputError("วันจ่ายใหม่ต้องไม่ตรงกับวันจ่ายเดิม");
-  const { error } = await supabaseAdmin.from("welfare_pay_round").update({ pay_date: date }).eq("id", round.id);
-  if (error) throw error;
 
   // คำขอในรอบ: ผูกรอบนี้แล้ว หรือยังรอการเงินและยื่นในช่วงของรอบนี้
   const pad = (n: number) => String(n).padStart(2, "0");
   const start = `${parsed.year}-${pad(parsed.month)}-${parsed.roundNo === 1 ? "01" : "16"}T00:00:00+07:00`;
   const next = nextRoundOf(parsed.year, parsed.month, parsed.roundNo);
   const end = `${next.year}-${pad(next.month)}-${next.roundNo === 1 ? "01" : "16"}T00:00:00+07:00`;
-  const [bound, unbound] = await Promise.all([
-    supabaseAdmin.from("welfare_claim").select("id, claim_no, employee_id").eq("pay_round_id", round.id).in("status", ["pending_finance", "awaiting_payment"]).is("deleted_at", null),
+  const [boundAll, unbound] = await Promise.all([
+    supabaseAdmin.from("welfare_claim").select("id, claim_no, employee_id, status").eq("pay_round_id", round.id).is("deleted_at", null),
     supabaseAdmin
       .from("welfare_claim")
       .select("id, claim_no, employee_id")
@@ -154,9 +152,17 @@ export async function rescheduleRound(key: string, date: string, reason: string,
       .lt("submitted_at", end)
       .is("deleted_at", null),
   ]);
-  if (bound.error) throw bound.error;
+  if (boundAll.error) throw boundAll.error;
   if (unbound.error) throw unbound.error;
-  const claims = [...(bound.data ?? []), ...(unbound.data ?? [])];
+  const boundRows = boundAll.data ?? [];
+  const activeBound = boundRows.filter((c) => c.status === "pending_finance" || c.status === "awaiting_payment");
+  if (boundRows.length > 0 && boundRows.every((c) => c.status === "paid") && (unbound.data ?? []).length === 0) {
+    throw new ClaimInputError("รอบนี้จ่ายแล้ว เลื่อนวันจ่ายไม่ได้");
+  }
+  const { error } = await supabaseAdmin.from("welfare_pay_round").update({ pay_date: date }).eq("id", round.id);
+  if (error) throw error;
+
+  const claims = [...activeBound, ...(unbound.data ?? [])];
   for (const claim of claims) {
     const { error: rpcError } = await supabaseAdmin.rpc("welfare_claim_set_pay_date", {
       p_claim_id: claim.id,

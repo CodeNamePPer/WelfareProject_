@@ -4,7 +4,7 @@ import { useNavTransition } from '@/lib/useNavTransition';
 import { useState } from 'react';
 import { cx } from '@/lib/cx';
 import { useToast } from '@/components/ui/Toast';
-import type { ProposalInput } from '@/lib/hr/proposals';
+import type { ProposalInput, ProposalKind } from '@/lib/hr/proposals';
 import { Avatar, Button, Card, Input, ReadOnlyInput, fieldClass, labelClass } from '@/features/hr/ui';
 
 type Level = { id: string; code: string; name: string };
@@ -13,6 +13,8 @@ const toNumber = (text: string) => (text.trim() === '' ? Number.NaN : Number(tex
 const thaiDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
 // ช่องที่หัวหน้า HR มักขอให้แก้ (ดีไซน์ H14 กรอบสีส้ม)
 const fixClass = '!border-2 !border-[#EA580C]';
+const todayBangkok = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' });
+const ALL_LEVELS = '__all__';
 
 /** H14 แก้ข้อเสนอหลังหัวหน้า HR ขอข้อมูลเพิ่ม: ชื่อและหมวดล็อก แก้วงเงิน รายละเอียด จำนวนครั้ง แล้วส่งกลับ */
 export function ReviseClient({
@@ -22,7 +24,7 @@ export function ReviseClient({
   onSuccess,
   returnHref = '/hr/benefits',
 }: {
-  proposal: { id: string; input: ProposalInput };
+  proposal: { id: string; kind: ProposalKind; input: ProposalInput };
   request: { by: string; photoUrl: string | null; at: string; note: string } | null;
   levels: Level[];
   onSuccess?: () => void;
@@ -31,9 +33,16 @@ export function ReviseClient({
   const nav = useNavTransition();
   const { notify } = useToast();
   const start = proposal.input;
+  const isClose = proposal.kind === 'close';
+  // วงเงิน "ทุกระดับ" (levelId null) ต้องอยู่ต่อหลังแก้ ไม่งั้นข้อเสนอที่ใช้วงเงินกลางจะหายไป
+  const hasAllLevels = start.limits.some((limit) => limit.levelId === null);
+  const fields = [...(hasAllLevels ? [{ id: ALL_LEVELS, code: 'ทุกระดับ' }] : []), ...levels];
   const [amounts, setAmounts] = useState<Record<string, string>>(() =>
-    Object.fromEntries(levels.map((level) => [level.id, String(start.limits.find((limit) => limit.levelId === level.id)?.amount ?? '')])),
+    Object.fromEntries(fields.map((field) => [field.id, String(start.limits.find((limit) => (limit.levelId ?? ALL_LEVELS) === field.id)?.amount ?? '')])),
   );
+  // วันที่มีผลเดิมอาจเลยมาแล้วระหว่างรอแก้ จึงเลื่อนเป็นวันนี้ให้ก่อน
+  const [effectiveFrom, setEffectiveFrom] = useState(() => (start.effectiveFrom && start.effectiveFrom >= todayBangkok() ? start.effectiveFrom : todayBangkok()));
+  const [reason, setReason] = useState(start.reason);
   const [detail, setDetail] = useState(start.detail);
   const [maxClaims, setMaxClaims] = useState(start.maxClaims ? String(start.maxClaims) : '');
   const [message, setMessage] = useState('');
@@ -42,9 +51,16 @@ export function ReviseClient({
 
   async function send(action: 'submit' | 'withdraw') {
     if (busy) return;
-    const limits = levels.map((level) => ({ levelId: level.id, amount: toNumber(amounts[level.id] ?? '') })).filter((limit) => !Number.isNaN(limit.amount));
+    const limits = fields
+      .map((field) => ({ levelId: field.id === ALL_LEVELS ? null : field.id, amount: toNumber(amounts[field.id] ?? '') }))
+      .filter((limit) => !Number.isNaN(limit.amount));
     if (action === 'submit') {
-      if (!limits.some((limit) => limit.amount > 0)) return setError('กรอกวงเงินอย่างน้อย 1 ระดับ');
+      if (isClose) {
+        if (!reason.trim()) return setError('ระบุเหตุผลที่เสนอปิดสวัสดิการ');
+      } else {
+        if (!limits.some((limit) => limit.amount > 0)) return setError('กรอกวงเงินอย่างน้อย 1 ระดับ');
+        if (!effectiveFrom || effectiveFrom < todayBangkok()) return setError('วันที่มีผลต้องเป็นวันนี้หรือหลังจากนี้');
+      }
       if (!message.trim()) return setError('เขียนข้อความถึงหัวหน้า HR ว่าแก้อะไรไป');
     }
     setBusy(action);
@@ -57,7 +73,12 @@ export function ReviseClient({
         body: JSON.stringify(
           action === 'withdraw'
             ? { action: 'withdraw', message }
-            : { action: 'revise', submit: true, message, input: { ...start, detail, limits, maxClaims: maxClaims.trim() ? Number(maxClaims) : null } },
+            : {
+                action: 'revise',
+                submit: true,
+                message,
+                input: isClose ? { ...start, reason } : { ...start, detail, limits, effectiveFrom, maxClaims: maxClaims.trim() ? Number(maxClaims) : null },
+              },
         ),
       });
       const body = await response.json().catch(() => ({}));
@@ -94,12 +115,21 @@ export function ReviseClient({
         <p className="text-12 text-muted">ช่องสีเทาแก้ไขไม่ได้ ช่องกรอบสีส้มคือจุดที่หัวหน้า HR ขอให้แก้</p>
         <div className="grid gap-3.5 sm:grid-cols-2">
           <ReadOnlyInput label="ชื่อสวัสดิการ" value={start.name} />
-          <ReadOnlyInput label="หมวด" value={start.category} />
+          <ReadOnlyInput label="หมวด" value={start.category || '—'} />
         </div>
+        {isClose ? (
+          <div>
+            <label htmlFor="revise-reason" className={cx(labelClass, '!text-[#9A3412]')}>
+              เหตุผลที่เสนอปิดสวัสดิการ · ต้องแก้
+            </label>
+            <textarea id="revise-reason" rows={3} value={reason} onChange={(event) => setReason(event.target.value)} className={cx(fieldClass, fixClass, 'h-auto py-2.5')} />
+          </div>
+        ) : (
+          <>
         <div>
           <p className={cx(labelClass, '!text-[#9A3412]')}>วงเงินตามระดับ (บาท) · ต้องแก้</p>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-            {levels.map((level) => (
+            {fields.map((level) => (
               <div key={level.id}>
                 <label htmlFor={`revise-${level.id}`} className={labelClass}>
                   {level.code}
@@ -122,6 +152,17 @@ export function ReviseClient({
           <textarea id="revise-detail" rows={2} value={detail} onChange={(event) => setDetail(event.target.value)} className={cx(fieldClass, fixClass, 'h-auto py-2.5')} />
         </div>
         <Input label="จำนวนครั้งต่อปี" inputMode="numeric" value={maxClaims} onChange={(event) => setMaxClaims(event.target.value)} hint="เว้นว่าง = ไม่จำกัด" className="sm:max-w-[240px]" />
+            <Input
+              label="วันที่มีผล"
+              type="date"
+              min={todayBangkok()}
+              value={effectiveFrom}
+              onChange={(event) => setEffectiveFrom(event.target.value)}
+              hint="วันที่เดิมเลยมาแล้วต้องเลือกใหม่"
+              className="sm:max-w-[240px]"
+            />
+          </>
+        )}
         <Input label="ข้อความถึงหัวหน้า HR" value={message} onChange={(event) => setMessage(event.target.value)} />
         {error ? (
           <p role="alert" className="text-13 text-[#991B1B]">

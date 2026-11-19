@@ -1,6 +1,12 @@
+import { fileURLToPath } from "node:url";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // ระบุ root เอง: มี package-lock.json อีกไฟล์ที่โฟลเดอร์แม่ ทำให้ Turbopack เดา workspace root ผิด
+  turbopack: {
+    root: fileURLToPath(new URL(".", import.meta.url)),
+  },
   experimental: {
     agentUpgrade: "security",
   },

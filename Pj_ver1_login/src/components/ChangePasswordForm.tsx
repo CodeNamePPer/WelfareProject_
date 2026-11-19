@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Check, Circle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { checkNewPassword, PASSWORD_MAX, PASSWORD_RULES, passwordRuleStatus } from "@/lib/auth/password-policy";
+import { checkNewPassword, CURRENT_PASSWORD_MAX, PASSWORD_MAX, PASSWORD_RULES, passwordRuleStatus } from "@/lib/auth/password-policy";
 
 type Props = {
   employeeId: string;
@@ -77,7 +77,7 @@ export function ChangePasswordForm({ employeeId, loginName, redirectTo, submitLa
           autoComplete="current-password"
           value={current}
           onChange={(e) => setCurrent(e.target.value)}
-          maxLength={PASSWORD_MAX}
+          maxLength={CURRENT_PASSWORD_MAX}
           className={inputClass}
           required
         />

@@ -8,6 +8,8 @@ import { getEmployeeBenefits } from "@/lib/claims/service";
 import { thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { HrPage, type BadgeTone } from "@/features/hr/ui";
 import { ReceiptReviewClient, type ReceiptReviewData } from "./ReceiptReviewClient";
+import { tenureOf } from "@/lib/tenure";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const dynamic = "force-dynamic";
 
@@ -29,16 +31,6 @@ const STATUS: Record<AdvanceStatus, { label: string; tone: BadgeTone }> = {
   cancelled_overdue: { label: "ยกเลิก เกินกำหนดแนบใบเสร็จ", tone: "rejected" },
 };
 
-/** อายุงานจากวันเริ่มงาน เช่น "8 ปี 7 เดือน" */
-function tenureOf(hireDate: string, today = new Date()) {
-  const start = new Date(`${hireDate}T00:00:00+07:00`);
-  let months = (today.getFullYear() - start.getFullYear()) * 12 + today.getMonth() - start.getMonth();
-  if (today.getDate() < start.getDate()) months -= 1;
-  if (months < 0) return "—";
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : "", !years && !rest ? "ไม่ถึง 1 เดือน" : ""].filter(Boolean).join(" ");
-}
 
 // H13 ตรวจใบเสร็จเบิกล่วงหน้า: อ่านจาก welfare_claim_advance (ไม่พบรายการ = 404)
 export default async function ReceiptReviewPage({ params }: { params: Params }) {
@@ -59,7 +51,7 @@ export default async function ReceiptReviewPage({ params }: { params: Params }) 
   const claimsAll = benefits ? benefits.reduce((sum, item) => sum + item.claimsThisYear, 0) : null;
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
   const due = thaiDayMonth(advance.receiptDueDate);
-  const own = claim.employeeCode === session?.sub;
+  const own = claim.employeeCode === session?.sub || claim.submittedByCode === session?.sub;
   const isHr = session?.role === "HR";
 
   const rows: ReceiptReviewData["rows"] = [
@@ -89,7 +81,7 @@ export default async function ReceiptReviewPage({ params }: { params: Params }) 
     subtitle: [
       claim.benefitName,
       advance.receiptSubmittedAt
-        ? `แนบใบเสร็จ ${thaiDate(advance.receiptSubmittedAt)} (${advance.receiptSubmittedAt.slice(0, 10) <= advance.receiptDueDate ? "ก่อน" : "หลัง"}ครบกำหนด ${due})`
+        ? `แนบใบเสร็จ ${thaiDate(advance.receiptSubmittedAt)} (${toBangkokDate(advance.receiptSubmittedAt) <= advance.receiptDueDate ? "ก่อน" : "หลัง"}ครบกำหนด ${due})`
         : `ครบกำหนดแนบใบเสร็จ ${thaiDate(advance.receiptDueDate)}`,
     ].join(" · "),
     status: STATUS[advance.status],

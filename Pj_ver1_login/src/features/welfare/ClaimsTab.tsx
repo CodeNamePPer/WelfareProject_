@@ -59,6 +59,7 @@ const RELATION_LABEL: Record<string, string> = {
   self: 'พนักงานเอง',
   spouse: 'คู่สมรส',
   child: 'บุตร',
+  parent: 'บิดามารดา',
 };
 
 const has = (claim: Claim, kind: ClaimEventKind) => claim.timeline.some((event) => event.kind === kind);
@@ -101,7 +102,7 @@ export function ClaimsTab({ claims, employees, onOpen }: { claims: Claim[]; empl
 
   const exportCsv = () =>
     downloadCsv(
-      `welfare-claims-${new Date().toISOString().slice(0, 10)}.csv`,
+      `welfare-claims-${new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Bangkok' })}.csv`,
       CSV_COLUMNS,
       visible.map((claim) => {
         const last = lastAction(claim);

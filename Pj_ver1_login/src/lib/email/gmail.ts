@@ -131,8 +131,19 @@ class SmtpConnection {
 
   static open(): Promise<SmtpConnection> {
     return new Promise((resolve, reject) => {
-      const socket = tls.connect({ host: HOST, port: PORT, servername: HOST }, () => resolve(new SmtpConnection(socket)));
-      socket.once("error", reject);
+      const socket = tls.connect({ host: HOST, port: PORT, servername: HOST }, () => {
+        clearTimeout(timer);
+        resolve(new SmtpConnection(socket));
+      });
+      // ต่อไม่ติด/TLS ค้างต้องไม่ทำให้คิวอีเมลรอไปตลอด (setTimeout ของ socket เริ่มนับหลังต่อสำเร็จแล้วเท่านั้น)
+      const timer = setTimeout(() => {
+        socket.destroy();
+        reject(new Error("SMTP connect timeout"));
+      }, TIMEOUT_MS);
+      socket.once("error", (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
     });
   }
 

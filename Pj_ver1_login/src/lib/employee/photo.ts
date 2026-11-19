@@ -11,6 +11,16 @@ const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 /** {employee uuid}/{uuid}.{ext} */
 const PHOTO_PATH = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
+/** ตรวจลายเซ็นไฟล์จริง (magic bytes) – photo.type มาจากผู้ใช้ จึงปลอมเป็นรูปได้ */
+function sniffImageType(head: Uint8Array): string | null {
+  const starts = (...bytes: number[]) => bytes.every((byte, i) => head[i] === byte);
+  if (starts(0xff, 0xd8, 0xff)) return "image/jpeg";
+  if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+  // RIFF....WEBP
+  if (starts(0x52, 0x49, 0x46, 0x46) && head[8] === 0x57 && head[9] === 0x45 && head[10] === 0x42 && head[11] === 0x50) return "image/webp";
+  return null;
+}
+
 export class PhotoError extends Error {
   constructor(
     message: string,
@@ -25,6 +35,9 @@ export async function uploadOwnPhoto(code: string, photo: File): Promise<string>
   const ext = PHOTO_TYPES[photo.type];
   if (!ext) throw new PhotoError("รูปต้องเป็น JPG, PNG หรือ WebP");
   if (photo.size > PHOTO_MAX_BYTES) throw new PhotoError("รูปมีขนาดเกิน 5 MB");
+  if (sniffImageType(new Uint8Array(await photo.slice(0, 12).arrayBuffer())) !== photo.type) {
+    throw new PhotoError("ไฟล์นี้ไม่ใช่รูป JPG, PNG หรือ WebP ที่ถูกต้อง");
+  }
 
   const { data: me, error } = await supabaseAdmin
     .from("employee")

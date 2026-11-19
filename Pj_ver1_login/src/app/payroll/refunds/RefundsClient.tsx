@@ -96,7 +96,7 @@ export function RefundsClient({ rows }: { rows: RefundRow[] }) {
         </div>
       </Card>
 
-      <p className="text-12 text-muted">รายการที่ยกเลิกเพราะเกินกำหนด: ระบบคืนวงเงินและจำนวนครั้งให้พนักงานแล้ว เหลือเพียงรับเงินคืน</p>
+      <p className="text-12 text-muted">รายการที่ยกเลิกเพราะเกินกำหนด: ไม่คืนวงเงินและจำนวนครั้งให้พนักงาน เหลือเพียงรับเงินคืน</p>
 
       <FinDialog open={confirming !== null} title={confirming ? `บันทึกรับคืน ${confirming.claimNo}` : ''} onClose={() => setConfirming(null)}>
         {confirming ? (

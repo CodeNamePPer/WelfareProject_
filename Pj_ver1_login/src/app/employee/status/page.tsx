@@ -27,6 +27,7 @@ function advanceOf(claim: ClaimRecord): AdvanceInfo | null {
   const due = thaiDate(`${advance.receiptDueDate}T00:00:00+07:00`);
   const open = advance.status === "awaiting_receipt" || advance.status === "receipt_returned";
   const paid = advance.advancePaidAt !== null;
+  if (!paid && (claim.status === "rejected" || claim.status === "cancelled")) return null;
   const facts = [
     { label: "ยอดล่วงหน้า", value: baht(advance.advanceAmount) },
     { label: "วันที่ได้รับเงิน", value: paid ? thaiDate(advance.advancePaidAt!) : "รอการเงินโอน" },
@@ -36,7 +37,12 @@ function advanceOf(claim: ClaimRecord): AdvanceInfo | null {
     ...(advance.refundAmount ? [{ label: "ต้องคืนบริษัท", value: baht(advance.refundAmount) }] : []),
   ];
   return {
-    statusLabel: paid || !open ? (ADVANCE_STATUS_LABEL[advance.status] ?? advance.status) : "อนุมัติแล้ว · รอการเงินโอนเงินล่วงหน้า",
+    statusLabel:
+      paid || !open
+        ? (ADVANCE_STATUS_LABEL[advance.status] ?? advance.status)
+        : claim.status === "awaiting_payment"
+          ? "อนุมัติแล้ว · รอการเงินโอนเงินล่วงหน้า"
+          : CLAIM_STATUS_LABEL[claim.status],
     facts,
     returnNote: advance.status === "receipt_returned" ? (lastEventOf(claim, "receipt_returned")?.note ?? null) : null,
     canSubmit: open && paid && advance.receiptDueDate >= today,

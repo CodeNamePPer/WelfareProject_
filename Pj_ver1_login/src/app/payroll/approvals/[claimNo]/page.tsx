@@ -84,7 +84,13 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
     adjustNote: adjusted ? `HR ปรับยอด${hr?.note ? `: ${hr.note}` : ` จาก ฿${plain(claim.amountRequested)} เป็น ฿${plain(approved)}`}` : null,
     // การเงินเห็นเฉพาะใบเสร็จ เอกสารสุขภาพ (is_restricted / ใบรับรองแพทย์) ไม่ส่งมาที่หน้านี้
     receipts: claim.attachments
-      .filter((file) => !file.isRestricted && (file.docKind ?? "receipt") === "receipt")
+      .filter(
+        (file) =>
+          !file.isRestricted &&
+          file.docKind !== "medical_certificate" &&
+          !/(ใบรับรองแพทย์|medical|med[-_ ]?cert)/i.test(file.fileName) &&
+          ((file.docKind ?? "receipt") === "receipt" || file.docKind === "other"),
+      )
       .map((file) => ({ id: file.id, name: file.fileName, isImage: IMAGE.test(file.mimeType), src: `/api/claims/attachments/${file.id}` })),
     receiptLines: claim.receipts.map((receipt) => ({
       label: [receipt.issuerName, receipt.receiptNo ? `เลขที่ ${receipt.receiptNo}` : null, receipt.receiptDate ? thaiDate(receipt.receiptDate) : null].filter(Boolean).join(" · ") || "ใบเสร็จ",

@@ -17,7 +17,7 @@ export default async function EmployeeEditRequestsPage() {
         title="คำขอแก้ไขข้อมูลพนักงาน"
         description="พนักงานขอแก้ข้อมูลส่วนตัว HR ตรวจก่อนบันทึกจริง"
       />
-      <EditRequestsTabs requests={requests} history={history} viewerCode={session?.sub ?? ""} />
+      <EditRequestsTabs requests={requests} history={history} viewerCode={session?.sub ?? ""} canDecide={session?.role === "HR"} />
     </HrPage>
   );
 }

@@ -52,7 +52,7 @@ export class LimitInputError extends Error {
 export async function saveEmployeeLimit(input: { employeeCode: string; benefitCode: string; amount: number; effectiveFrom: string; reason: string }) {
   const today = bangkokToday();
   if (!Number.isFinite(input.amount) || input.amount < 0) throw new LimitInputError("วงเงินต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป", "amount");
-  if (Math.round(input.amount * 100) !== input.amount * 100) throw new LimitInputError("วงเงินมีทศนิยมได้ไม่เกิน 2 ตำแหน่ง", "amount");
+  if (Math.abs(Math.round(input.amount * 100) - input.amount * 100) > 1e-6) throw new LimitInputError("วงเงินมีทศนิยมได้ไม่เกิน 2 ตำแหน่ง", "amount");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.effectiveFrom)) throw new LimitInputError("เลือกวันที่มีผล", "effectiveFrom");
   // ย้อนหลังไม่ได้ เพราะคำขอที่ยื่นไปแล้วอ้างวงเงินเดิมอยู่
   if (input.effectiveFrom < today) throw new LimitInputError("วันที่มีผลต้องเป็นวันนี้หรือหลังจากนี้", "effectiveFrom");

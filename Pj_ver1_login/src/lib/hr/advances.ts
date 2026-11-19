@@ -126,7 +126,9 @@ export async function settleAdvance(claimNo: string, input: { action: AdvanceAct
   const found = await getClaimAdvance(claimNo);
   if (!found) throw new AdvanceInputError("ไม่พบรายการเบิกล่วงหน้าของคำขอนี้", 404);
   const { claim, advance } = found;
-  if (claim.employeeCode === actor.sub) throw new AdvanceInputError("ตรวจใบเสร็จของคำขอตัวเองไม่ได้ ต้องให้ HR คนอื่นตรวจ", 403);
+  if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) {
+    throw new AdvanceInputError("ตรวจใบเสร็จของคำขอตัวเองหรือที่ตัวเองยื่นแทนไม่ได้ ต้องให้ HR คนอื่นตรวจ", 403);
+  }
 
   const { data: reviewer } = await supabaseAdmin.from("employee").select("id").eq("employee_code", actor.sub).is("deleted_at", null).maybeSingle();
   if (!reviewer) throw new AdvanceInputError("ไม่พบผู้ตรวจในระบบ", 403);

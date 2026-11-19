@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 
 // H03 จัดการสวัสดิการ: HR แก้ตรงไม่ได้ ต้องเสนอผ่านหัวหน้า HR · หัวหน้า HR สร้าง แก้ไข ปิดได้ทันที
 export default async function BenefitsPage() {
-  const [benefits, proposals, session] = await Promise.all([getHrBenefits(), getOpenProposals(), getSession()]);
+  const session = await getSession();
+  const [benefits, proposals] = await Promise.all([getHrBenefits(), getOpenProposals(session?.sub)]);
   const isHead = await isHrHead(session);
   if (!benefits) return <p className="text-13 text-status-rejected-ink">โหลดรายการสวัสดิการไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 

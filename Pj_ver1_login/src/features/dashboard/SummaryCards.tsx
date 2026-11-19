@@ -92,9 +92,8 @@ function SegmentBar({ label, segments }: { label: string; segments: { value: num
 const WEEKDAY = new Intl.DateTimeFormat('th-TH', { weekday: 'short', timeZone: 'Asia/Bangkok' });
 
 /** 7 tiny bars, oldest first; the last bar (today) is drawn in full colour. */
-function Sparkbars({ values, label, tone = 'primary' }: { values: number[]; label: string; tone?: Tone }) {
+function Sparkbars({ values, label, tone = 'primary', now }: { values: number[]; label: string; tone?: Tone; now: number }) {
   const max = Math.max(...values, 1);
-  const now = Date.now();
   return (
     <span role="img" aria-label={label} className="flex h-[32px] shrink-0 items-end gap-[3px]">
       {values.map((v, i) => {
@@ -119,8 +118,8 @@ function Sparkbars({ values, label, tone = 'primary' }: { values: number[]; labe
 }
 
 /** ISO -> "5 นาทีก่อน" / "3 ชม.ก่อน" / "2 วันก่อน" – short enough for one card line */
-function timeAgo(iso: string): string {
-  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+function timeAgo(iso: string, now: number): string {
+  const minutes = Math.round((now - new Date(iso).getTime()) / 60000);
   if (minutes < 60) return `${Math.max(minutes, 1)} นาทีก่อน`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} ชม.ก่อน`;
@@ -208,7 +207,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         <span className="flex items-end justify-between gap-[8px]">
           <Headline value={logins?.today ?? null} unit="คน" />
           {logins ? (
-            <Sparkbars values={logins.daily} label={`ผู้เข้าใช้งาน 7 วันล่าสุด: ${logins.daily.join(', ')} คน`} />
+            <Sparkbars now={stats.asOf} values={logins.daily} label={`ผู้เข้าใช้งาน 7 วันล่าสุด: ${logins.daily.join(', ')} คน`} />
           ) : null}
         </span>
         {logins === null ? (
@@ -226,7 +225,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
         <span className="flex items-end justify-between gap-[8px]">
           <Headline value={errorTotal} unit="ครั้ง" className={(errorTotal ?? 0) > 0 ? 'text-danger' : undefined} />
           {loginErrors ? (
-            <Sparkbars
+            <Sparkbars now={stats.asOf}
               values={loginErrors.daily}
               tone="danger"
               label={`ล็อกอินผิดพลาด 7 วันล่าสุด: ${loginErrors.daily.join(', ')} ครั้ง`}
@@ -241,7 +240,7 @@ export function SummaryCards({ stats }: { stats: SummaryStats }) {
           <span className="flex flex-col gap-[2px]">
             <MetaLine parts={[`รหัสผิด ${loginErrors.failed}`, `ถูกบล็อก ${loginErrors.blocked}`]} />
             {loginErrors.lastAt ? (
-              <span className="text-12 text-muted">ล่าสุด {timeAgo(loginErrors.lastAt)}</span>
+              <span className="text-12 text-muted">ล่าสุด {timeAgo(loginErrors.lastAt, stats.asOf)}</span>
             ) : null}
           </span>
         )}

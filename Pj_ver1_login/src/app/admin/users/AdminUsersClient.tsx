@@ -27,6 +27,7 @@ import { useDetailParam } from "@/lib/useDetailParam";
 import type { EmployeeProfile, OrgOption, OrgOptions } from "@/lib/auth/users";
 import { deliverableEmail, type EmailDelivery, type ResetFallback } from "@/lib/email/address";
 import { employmentStatusLabel } from "@/lib/employmentStatus";
+import { tenureOf } from "@/lib/tenure";
 
 export type User = {
   employeeId: string; // Primary Key
@@ -73,18 +74,6 @@ function RoleTag({ user }: { user: Pick<User, "role" | "hasAccount"> }) {
   return <Badge tone={user.role === "SUPER_ADMIN" ? "review" : "neutral"}>{roleLabel(user.role)}</Badge>;
 }
 
-/** อายุงาน เช่น "8 ปี 7 เดือน" นับถึงวันนี้หรือวันที่พ้นสภาพ (ชุดเดียวกับ HR /hr/employees/[id]) */
-function tenureOf(hireIso: string | null, endIso: string | null) {
-  if (!hireIso) return "—";
-  const start = new Date(`${hireIso}T00:00:00+07:00`);
-  const end = endIso ? new Date(`${endIso}T00:00:00+07:00`) : new Date();
-  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-  if (end.getDate() < start.getDate()) months -= 1;
-  if (months < 1) return "ไม่ถึง 1 เดือน";
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : ""].filter(Boolean).join(" ");
-}
 
 const joinParts = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ") || null;
 const addressLabel = (p: EmployeeProfile) =>
@@ -518,6 +507,7 @@ export function UserPanel({
   const [editing, setEditing] = useState<SectionId | null>(defaultEditing);
   const [notice, setNotice] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState<string | null>(null);
 
   const isLocked = Boolean(user.lockedUntil && new Date(user.lockedUntil).getTime() > Date.now());
 
@@ -537,8 +527,13 @@ export function UserPanel({
       const result = await res.json().catch(() => ({}));
       if (res.ok && result.user) {
         onSaved(result.user);
+        setUnlockError(null);
         setNotice("ปลดล็อกบัญชีผู้ใช้งานเรียบร้อยแล้ว");
+      } else {
+        setUnlockError(result.error || "ปลดล็อกบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       }
+    } catch {
+      setUnlockError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
       setUnlocking(false);
     }
@@ -594,6 +589,11 @@ export function UserPanel({
                   <Button size="sm" disabled={unlocking} onClick={() => void handleUnlock()}>
                     {unlocking ? "กำลังปลดล็อก..." : "ปลดล็อกบัญชี"}
                   </Button>
+                  {unlockError ? (
+                    <span role="alert" className="basis-full text-right text-12 text-[#991B1B]">
+                      {unlockError}
+                    </span>
+                  ) : null}
                 </span>
               ) : (
                 "ปกติ"
@@ -896,6 +896,7 @@ function ResetPasswordSection({
       <div className="flex min-h-8 items-center justify-between gap-3">
         <h2 className="text-15 font-semibold text-ink">จัดการรหัสผ่านและบัญชี</h2>
         <Button
+          ref={triggerRef}
           size="sm"
           variant={issuing ? "primary" : "reject"}
           onClick={() => setOpen(true)}

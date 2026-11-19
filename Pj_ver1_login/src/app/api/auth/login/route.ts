@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { findUserByIdentifier, markLogin, verifyPassword } from "@/lib/auth/users";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth/session";
 import { verifyRecaptcha } from "@/lib/auth/recaptcha";
-import { checkLock, clearFailures, LOCK_ATTEMPTS, LOCK_MINUTES, registerFailure } from "@/lib/auth/rate-limit";
+import { accountLockKey, checkLock, clearFailures, LOCK_ATTEMPTS, LOCK_MINUTES, registerFailure } from "@/lib/auth/rate-limit";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
 import { createAdminAlert } from "@/lib/admin/alerts";
@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
   }
 
   // 1) บัญชีถูกล็อกชั่วคราวจากการใส่รหัสผิดซ้ำ
-  const lockKey = identifier.toLowerCase();
+  // นับตามบัญชีจริง ไม่ใช่ข้อความที่พิมพ์ – ไม่งั้นสลับอีเมลกับรหัสพนักงานได้สิทธิ์ลองเพิ่มเป็น 2 เท่า
+  const user = await findUserByIdentifier(identifier);
+  const lockKey = user ? accountLockKey(user.employeeId) : `identifier:${identifier.toLowerCase()}`;
   const lock = checkLock(lockKey);
   if (lock.locked) {
     await writeAudit({ action: "LOGIN_BLOCKED_LOCKED", userId: null, identifier, ip });
@@ -49,7 +51,6 @@ export async function POST(req: NextRequest) {
   }
 
   // 3) ตรวจรหัสผ่าน
-  const user = await findUserByIdentifier(identifier);
   const passwordOk = await verifyPassword(user, password);
 
   if (!user || !passwordOk) {

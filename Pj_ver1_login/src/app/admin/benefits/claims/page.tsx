@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "คำขอเบิกทั้ง
 export const dynamic = "force-dynamic";
 
 export default async function AdminClaimsPage() {
-  const [claims, employees] = await Promise.all([listClaims({ statuses: ADMIN_STATUSES }), fetchEmployees()]);
+  const [claims, employees] = await Promise.all([listClaims({ statuses: ADMIN_STATUSES }), fetchEmployees({ includeInactive: true })]);
   if (!claims) return <p className="text-13 text-status-rejected">โหลดคำขอเบิกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
   return <AdminClaimsClient claims={claims.map(toAdminClaim)} employees={employees ?? []} />;
 }

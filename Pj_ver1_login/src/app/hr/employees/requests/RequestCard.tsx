@@ -9,7 +9,7 @@ import { Avatar, Badge, Button, Card, Input } from '@/features/hr/ui';
 const thaiDate = (iso: string) => new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' });
 
 /** การ์ดคำขอแก้ไขข้อมูล 1 รายการ (ดีไซน์ H12) */
-export function RequestCard({ request, own }: { request: EditRequestItem; own: boolean }) {
+export function RequestCard({ request, own, canDecide = true }: { request: EditRequestItem; own: boolean; canDecide?: boolean }) {
   const nav = useNavTransition();
   const { notify } = useToast();
   const [note, setNote] = useState('');
@@ -84,6 +84,8 @@ export function RequestCard({ request, own }: { request: EditRequestItem; own: b
       ) : null}
       {own ? (
         <p className="text-13 text-muted">คำขอแก้ไขข้อมูลของคุณเอง ต้องให้ HR คนอื่นตรวจ</p>
+      ) : !canDecide ? (
+        <p className="text-13 text-muted">เปิดดูได้อย่างเดียว การตรวจคำขอแก้ไขข้อมูลเป็นงานของ HR</p>
       ) : (
         <>
           <Input label="ข้อความถึงพนักงาน (บังคับเมื่อไม่อนุมัติ)" value={note} onChange={(event) => setNote(event.target.value)} />

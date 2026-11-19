@@ -15,6 +15,7 @@ import { claimKindOf, proxyReasonOf, roundCutoff, tabOf } from "@/features/hr/qu
 import { HrPage } from "@/features/hr/ui";
 import { findBlockers } from "../../queueRules";
 import { ReviewClient, type ReviewData } from "./ReviewClient";
+import { tenureOf } from "@/lib/tenure";
 
 export const dynamic = "force-dynamic";
 
@@ -49,16 +50,6 @@ function labelsOf(formType: string | null) {
   return { provider: "ผู้ให้บริการ", date: "วันที่เกิดค่าใช้จ่าย" };
 }
 
-/** อายุงานจากวันเริ่มงาน เช่น "8 ปี 7 เดือน" */
-function tenureOf(hireDate: string, today = new Date()) {
-  const start = new Date(`${hireDate}T00:00:00+07:00`);
-  let months = (today.getFullYear() - start.getFullYear()) * 12 + today.getMonth() - start.getMonth();
-  if (today.getDate() < start.getDate()) months -= 1;
-  if (months < 0) return "—";
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : "", !years && !rest ? "ไม่ถึง 1 เดือน" : ""].filter(Boolean).join(" ");
-}
 
 // H02 ตรวจคำขอ (ตามดีไซน์): HR ตัดสินคำขอที่หน้านี้เท่านั้น
 export default async function ReviewPage({ params }: { params: Params }) {
@@ -98,9 +89,11 @@ export default async function ReviewPage({ params }: { params: Params }) {
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
 
   // HH4: หัวหน้า HR ตรวจคำขอของ HR คนอื่น (ไม่ใช่ของตัวเอง) ที่ยังรอตรวจ
-  const checkHrClaim = tab === "pending" && session !== null && claim.employeeCode !== session.sub;
+  const checkHrClaim = tab === "pending" && session !== null && claim.employeeCode !== session.sub && claim.submittedByCode !== session.sub;
   const [head, hrStaff] = checkHrClaim ? await Promise.all([isHrHead(session), getHrStaffCodes()]) : [false, null];
-  const hrClaim = head && (hrStaff?.has(claim.employeeCode) ?? false);
+  const isHrStaffClaim = hrStaff?.has(claim.employeeCode) ?? false;
+  const hrClaim = head && isHrStaffClaim;
+  const blockedByHrHead = !head && isHrStaffClaim;
 
   const insurancePaid = fields?.insurancePaid ?? null;
   const insured = insurancePaid !== null && insurancePaid > 0;
@@ -148,7 +141,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
     tab,
     subtitle: hrClaim
       ? `${claim.benefitName} · คำขอของ HR ต้องให้หัวหน้า HR ตรวจ`
-      : [claim.benefitName, claimKindOf({ insurancePaid }).long, claim.submittedAt ? `ยื่น ${thaiDate(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
+      : [claim.benefitName, claimKindOf({ insurancePaid, advance: claim.isAdvance }).long, claim.submittedAt ? `ยื่น ${thaiDate(claim.submittedAt)}` : null].filter(Boolean).join(" · "),
     hrClaim,
     person: {
       name,
@@ -195,8 +188,8 @@ export default async function ReviewPage({ params }: { params: Params }) {
     financeNote: request.financeReturnNote ?? null,
     payNote: `อนุมัติภายใน ${thaiDayMonth(cutoff)} ผู้ขอได้รับเงินรอบ ${thaiDate(payDate)} · บันทึกใน Log`,
     decided: decided ? { actor: decided.actorName ?? "HR", at: thaiDate(decided.at), note: decided.note } : null,
-    canDecide: tab === "pending" && session?.role === "HR" && !blockers.some((item) => item.action === null),
-    readOnlyReason: tab !== "pending" ? null : session?.role !== "HR" ? "เปิดดูได้อย่างเดียว การตัดสินคำขอเป็นงานของ HR" : blockers.find((item) => item.action === null)?.message ?? null,
+    canDecide: tab === "pending" && session?.role === "HR" && !blockedByHrHead && !blockers.some((item) => item.action === null),
+    readOnlyReason: tab !== "pending" ? null : session?.role !== "HR" ? "เปิดดูได้อย่างเดียว การตัดสินคำขอเป็นงานของ HR" : blockedByHrHead ? "คำขอของ HR ต้องให้หัวหน้า HR เป็นผู้ตรวจ" : blockers.find((item) => item.action === null)?.message ?? null,
   };
 
   return (

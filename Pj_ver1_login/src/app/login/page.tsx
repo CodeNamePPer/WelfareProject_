@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "เข้าสู่ระบบ" };
 
 function safeNext(next: string | undefined): string {
-  if (next && next.startsWith("/") && !next.startsWith("//")) return next;
+  if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) return next;
   return "/";
 }
 
@@ -58,7 +58,7 @@ export default async function LoginPage({
         <BrandArt className="pointer-events-none absolute -right-20 -top-16 w-[calc(300rem/14)] lg:-right-24 lg:w-[calc(520rem/14)]" />
         <div className="relative flex items-center gap-3 text-15 font-semibold text-[#e8ecf4]">
           <LogoMark className="h-[calc(32rem/14)] w-[calc(32rem/14)] text-white" />
-          ระบบพนักงานและสวัสดิการ
+          ระบบข้อมูลพนักงานและสวัสดิการ
         </div>
         <p className="relative mt-8 max-w-[13ch] text-balance text-[calc(30rem/14)] font-semibold leading-[1.22] tracking-[-0.015em] lg:mt-auto lg:text-[clamp(calc(36rem/14),3.6vw,calc(56rem/14))]">
           เบิกและติดตาม<span className="text-stamp">สวัสดิการ</span>ของคุณในที่เดียว

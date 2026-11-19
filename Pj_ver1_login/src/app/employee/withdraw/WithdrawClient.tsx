@@ -5,13 +5,14 @@ import { useEffect, useRef, useState } from 'react';
 import { FileText, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
-import { baht } from '@/lib/claims/requester';
+import { baht, bangkokToday } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
 import { AdvanceTag, BenefitPicker, blockedReason, countText } from '@/features/requester/BenefitPicker';
 import { PageHead, Sheet, inputClass, labelClass, pill } from '@/features/requester/ui';
 
 export type WithdrawInitial = {
     claimNo: string;
+    employeeCode?: string;
     benefitCode: string;
     values: Record<string, string>;
     note: string;
@@ -106,7 +107,17 @@ export default function WithdrawClient({
     const amount = Number(values.amount) || 0;
     const revising = Boolean(initial?.revisionNote);
     // คำขอที่ส่งกลับมาแก้ไขกันวงเงินไว้อยู่แล้ว (ฐานข้อมูลไม่นับตัวเองซ้ำ) จึงคืนยอดเดิมก่อนเทียบ ไม่งั้นแก้แล้วส่งใหม่ไม่ได้
-    const available = (benefit?.remaining ?? 0) + (revising ? Number(initial?.values.amount) || 0 : 0);
+    // คืนเฉพาะเมื่อยอดเดิมถูกนับใน remaining จริง: สวัสดิการเดียวกัน ไม่ใช่ต่อครั้ง และวันที่เกิดค่าใช้จ่ายอยู่ในรอบวงเงินปัจจุบัน
+    const originalDate = initial ? toClaimPayload(benefit?.formType, initial.values).expenseDate : '';
+    const today = bangkokToday();
+    const originalCounted =
+        revising &&
+        Boolean(benefit) &&
+        benefit!.code === initial?.benefitCode &&
+        benefit!.budgetType !== 'per_claim' &&
+        Boolean(originalDate) &&
+        (benefit!.budgetType === 'monthly' ? originalDate.slice(0, 7) === today.slice(0, 7) : originalDate.slice(0, 4) === today.slice(0, 4));
+    const available = (benefit?.remaining ?? 0) + (originalCounted ? Number(initial?.values.amount) || 0 : 0);
     const overLimit = Boolean(benefit) && amount > available;
     // คำขอที่ส่งกลับมาแก้ไขถูกนับอยู่แล้ว จึงไม่กันซ้ำที่หน้าจอ ฐานข้อมูลตรวจอีกชั้นตอนส่ง
     const outOfClaims = Boolean(benefit) && benefit!.maxClaims !== null && benefit!.claimsThisYear >= benefit!.maxClaims! && !initial;
@@ -137,9 +148,10 @@ export default function WithdrawClient({
 
     function addFiles(selected: FileList | null) {
         const picked = Array.from(selected ?? []);
-        const bad = picked.find((file) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type) || file.size > MAX_ATTACHMENT_BYTES);
-        setError(bad ? `ไฟล์ ${bad.name} ต้องเป็น PDF, JPG หรือ PNG และมีขนาดไม่เกิน 10 MB` : '');
-        setFiles((current) => [...current, ...picked.filter((file) => file !== bad)]);
+        const isBad = (file: File) => !ALLOWED_ATTACHMENT_TYPES.includes(file.type) || file.size > MAX_ATTACHMENT_BYTES;
+        const bad = picked.filter(isBad);
+        setError(bad.length ? `ไฟล์ ${bad.map((file) => file.name).join(', ')} ต้องเป็น PDF, JPG หรือ PNG และมีขนาดไม่เกิน 10 MB` : '');
+        setFiles((current) => [...current, ...picked.filter((file) => !isBad(file))]);
         if (fileInput.current) fileInput.current.value = '';
     }
 
@@ -155,6 +167,10 @@ export default function WithdrawClient({
     async function send(submit: boolean) {
         if (!benefit || busy) return;
         const payload = toClaimPayload(benefit.formType, values);
+        if (revising && !submit && (amount <= 0 || !payload.expenseDate)) {
+            setError('คำขอที่ส่งกลับมาแก้ไขต้องระบุยอดเบิกและวันที่เกิดค่าใช้จ่าย');
+            return;
+        }
         // ตารางคำขอยังไม่มีช่องเหตุผลการยื่นแทน จึงเก็บไว้ต้นหมายเหตุให้ HR เห็น
         const fullNote = proxy ? [`ยื่นแทนเพราะ ${reason}: ${reasonNote.trim()}`, note.trim()].filter(Boolean).join(' · ') : note;
         setBusy(true);
@@ -169,7 +185,7 @@ export default function WithdrawClient({
                 JSON.stringify({
                     ...payload,
                     claimNo,
-                    ...(proxy ? { employeeCode: person.code } : {}),
+                    ...(proxy ? { employeeCode: person.code } : initial?.employeeCode ? { employeeCode: initial.employeeCode } : {}),
                     benefitCode: benefit.code,
                     note: fullNote,
                     receiptNo: advance ? '' : receiptNo,

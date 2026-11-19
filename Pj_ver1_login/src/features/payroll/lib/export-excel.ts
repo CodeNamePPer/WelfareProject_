@@ -10,9 +10,17 @@ export interface ExportColumn<T> {
 export type ExportFormat = "csv" | "xlsx";
 export type ExportCell = string | number;
 
+/**
+ * กัน CSV formula injection: ข้อความที่ขึ้นต้นด้วย = + - @ tab หรือ CR จะถูก Excel ตีความเป็นสูตร
+ * จึงเติม ' นำหน้า (เฉพาะค่าที่เป็นข้อความ ตัวเลขติดลบยังเป็นตัวเลข)
+ */
+export function neutralizeFormula(v: ExportCell): ExportCell {
+  return typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+}
+
 /** ใส่เครื่องหมายคำพูดครอบค่าที่มี , " หรือขึ้นบรรทัดใหม่ ตามกติกา CSV */
 function escapeCell(v: ExportCell): string {
-  const s = String(v);
+  const s = String(neutralizeFormula(v));
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

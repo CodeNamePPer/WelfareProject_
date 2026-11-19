@@ -137,6 +137,8 @@ export type EmployeeBenefit = {
   /** ต้องแนบใบเสร็จภายในกี่วันหลังได้รับเงินล่วงหน้า */
   advanceReceiptDays: number;
   limit: number;
+  /** วงเงินตามระดับ/วงเงินกลาง ไม่รวมวงเงินรายคน */
+  baseLimit: number;
   used: number;
   pending: number;
   remaining: number;
@@ -161,6 +163,7 @@ export type PendingRequest = {
   id: string;
   itemType: "benefit" | "edit";
   employeeCode: string;
+  submittedByCode?: string;
   /** ชื่อสำรองเมื่อหาพนักงานรหัสนี้ในฐานข้อมูลไม่เจอ */
   fallbackName: string;
   benefit: string;

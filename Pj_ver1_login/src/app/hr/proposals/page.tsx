@@ -6,6 +6,7 @@ import { listProposals, signedImageUrl } from "@/lib/hr/proposals";
 import { supabaseAdmin } from "@/lib/supabase";
 import { HrPage } from "@/features/hr/ui";
 import { ProposalQueueClient, type QueueProposal } from "./ProposalQueueClient";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const metadata: Metadata = { title: "อนุมัติสวัสดิการใหม่" };
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function ProposalQueuePage() {
     { label: "ขอข้อมูลเพิ่ม", value: String(rows.filter((row) => row.status === "needs_info").length), note: "รอผู้เสนอแก้" },
     {
       label: "อนุมัติแล้วปีนี้",
-      value: String(rows.filter((row) => row.status === "approved" && (row.submittedAt ?? "").startsWith(year)).length),
+      value: String(rows.filter((row) => row.status === "approved" && (row.submittedAt ? toBangkokDate(row.submittedAt) : "").startsWith(year)).length),
       note: `สวัสดิการที่เปิดใช้ ${activeBenefits ?? 0}`,
     },
   ];

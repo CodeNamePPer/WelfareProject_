@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/get-session";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
 import { createAdminAlert } from "@/lib/admin/alerts";
-import { clearFailures } from "@/lib/auth/rate-limit";
+import { accountLockKey, clearFailures } from "@/lib/auth/rate-limit";
 import { savePassword } from "@/lib/auth/credential";
 import { getUserWithProfileById } from "@/lib/auth/users";
 import { deliverTempPassword, generateTempPassword } from "@/lib/auth/tempPassword";
@@ -76,9 +76,8 @@ export async function POST(req: NextRequest) {
     const tempPassword = generateTempPassword();
     await savePassword(employeeId, await bcrypt.hash(tempPassword, 10), true);
 
-    // ปลดล็อกการล็อกอินผิดซ้ำของบัญชีนี้ด้วย (key = ค่าที่พิมพ์ในช่องล็อกอิน)
-    clearFailures(target.email.toLowerCase());
-    clearFailures(employeeId.toLowerCase());
+    // ปลดล็อกการล็อกอินผิดซ้ำของบัญชีนี้ด้วย
+    clearFailures(accountLockKey(employeeId));
 
     // ส่งรหัสทางอีเมลติดต่อของพนักงาน ถ้าส่งไม่ได้ (ไม่มีอีเมล / ยังไม่ตั้งค่าการส่งอีเมล / ส่งพลาด) ให้แสดงบนจอแทน
     const contactEmail = deliverableEmail(target.profile.contactEmail);

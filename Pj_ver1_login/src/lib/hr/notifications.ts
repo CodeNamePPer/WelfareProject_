@@ -71,11 +71,12 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
         : Promise.resolve({ data: [] as ProposalRow[], error: null }),
     ]);
     if (!claims) throw new Error("claims not loaded");
-    const readKeys = await getReadKeys(viewerCode);
+    const [readKeys, mutedTopics] = await Promise.all([getReadKeys(viewerCode), getMutedTopics(viewerCode)]);
     if (mine.error) throw mine.error;
     if (waiting.error) throw waiting.error;
 
-    const notices: Omit<HrNotice, "read">[] = [];
+    // topic = เรื่องในแท็บ "การแจ้งเตือน" ของโปรไฟล์ (null = ไม่มีให้ปิด แสดงเสมอ)
+    const notices: (Omit<HrNotice, "read"> & { topic: string | null })[] = [];
     for (const claim of claims) {
       // คำขอของตัวเองตรวจเองไม่ได้ จึงไม่แจ้ง
       if (claim.employeeCode === viewerCode) continue;
@@ -89,9 +90,11 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
           body: [claim.claimNo, returned?.note].filter(Boolean).join(" "),
           href,
           tone: "indigo",
+          topic: null,
         });
       } else {
-        const lastAt = claim.events.at(-1)?.at ?? claim.submittedAt ?? claim.createdAt;
+        const last = claim.events.at(-1);
+        const lastAt = last?.at ?? claim.submittedAt ?? claim.createdAt;
         const proxy = claim.submittedByCode !== claim.employeeCode ? ` (ยื่นแทนโดย ${claim.submittedByName})` : "";
         notices.push({
           id: `claim-new-${claim.id}-${lastAt}`,
@@ -100,6 +103,7 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
           body: `${claim.claimNo} ${claim.benefitName} ${claim.employeeName}${proxy}`,
           href,
           tone: "amber",
+          topic: last?.kind === "resubmitted" ? "claim_resubmitted" : "claim_new",
         });
       }
     }
@@ -115,19 +119,23 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
         body: `${request.employeeName} ขอเปลี่ยน${labels.join("และ")}`,
         href: "/hr/employees?tab=edits",
         tone: "green",
+        topic: "employee_edit_request",
       });
     }
     for (const row of mine.data ?? []) {
       if (row.status === "pending") continue;
-      notices.push({ id: `proposal-${row.status}-${row.id}-${row.decided_at ?? ""}`, at: row.decided_at ?? row.submitted_at ?? since, title: DECIDED[row.status].title, body: proposalLabel(row), href: `/hr/benefits/proposals/${row.id}`, tone: DECIDED[row.status].tone });
+      notices.push({ id: `proposal-${row.status}-${row.id}-${row.decided_at ?? ""}`, at: row.decided_at ?? row.submitted_at ?? since, title: DECIDED[row.status].title, body: proposalLabel(row), href: `/hr/benefits/proposals/${row.id}`, tone: DECIDED[row.status].tone, topic: "proposal_decided" });
     }
     for (const row of waiting.data ?? []) {
       // ผู้เสนออนุมัติข้อเสนอของตัวเองไม่ได้
       if (row.proposer?.employee_code === viewerCode) continue;
       const by = row.proposer ? ` จาก ${row.proposer.first_name_th} ${row.proposer.last_name_th === "-" ? "" : row.proposer.last_name_th}`.trimEnd() : "";
-      notices.push({ id: `proposal-pending-${row.id}-${row.submitted_at ?? ""}`, at: row.submitted_at ?? since, title: "ข้อเสนอสวัสดิการใหม่รออนุมัติ", body: `${proposalLabel(row)}${by}`, href: `/hr/proposals/${row.id}`, tone: "amber" });
+      notices.push({ id: `proposal-pending-${row.id}-${row.submitted_at ?? ""}`, at: row.submitted_at ?? since, title: "ข้อเสนอสวัสดิการใหม่รออนุมัติ", body: `${proposalLabel(row)}${by}`, href: `/hr/proposals/${row.id}`, tone: "amber", topic: "proposal_pending" });
     }
-    return notices.map((notice) => ({ ...notice, read: readKeys.has(notice.id) })).sort((a, b) => b.at.localeCompare(a.at));
+    return notices
+      .filter((notice) => notice.topic === null || !mutedTopics.has(notice.topic))
+      .map(({ topic: _topic, ...notice }) => ({ ...notice, read: readKeys.has(notice.id) }))
+      .sort((a, b) => b.at.localeCompare(a.at));
   } catch (err) {
     console.error("[hr notifications] load failed", err);
     return null;
@@ -137,6 +145,18 @@ export const getHrNotifications = cache(async (viewerCode: string, role: string)
 /** ตัวเลขบนเมนูแจ้งเตือน โหลดไม่ได้คืน 0 */
 export async function countHrNotifications(viewerCode: string, role: string): Promise<number> {
   return (await getHrNotifications(viewerCode, role))?.filter((notice) => !notice.read).length ?? 0;
+}
+
+/** เรื่องที่ผู้ใช้ปิด "แจ้งในระบบ" ไว้ (ไม่มีแถว = เปิด) */
+async function getMutedTopics(viewerCode: string): Promise<Set<string>> {
+  const employeeId = await findEmployeeUuidByCode(viewerCode);
+  if (!employeeId) return new Set();
+  const { data, error } = await supabaseAdmin.from("hr_notification_preference").select("topic").eq("employee_id", employeeId).eq("in_app", false);
+  if (error) {
+    console.error("[hr notifications] preferences failed", error);
+    return new Set();
+  }
+  return new Set((data ?? []).map((row) => row.topic as string));
 }
 
 /** key ของแจ้งเตือนที่ผู้ใช้อ่านแล้ว */

@@ -36,3 +36,6 @@ export const LOCK_MINUTES = LOCK_MS / 60_000;
 export function clearFailures(key: string): void {
   store.delete(key);
 }
+
+/** key การล็อกของบัญชี (ล็อกอินด้วยอีเมลหรือรหัสพนักงานก็นับรวมกัน) */
+export const accountLockKey = (employeeCode: string) => `employee:${employeeCode}`;

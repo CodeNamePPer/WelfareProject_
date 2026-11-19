@@ -64,6 +64,12 @@ const inTab = (request: WelfareRequest, tab: StatusFilter) => tab === "all" || T
 export default function StatusClient({ initialRequests }: { initialRequests: WelfareRequest[] }) {
   const nav = useNavTransition();
   const [requests, setRequests] = useState(initialRequests);
+  // หลังส่งใบเสร็จเบิกล่วงหน้า/ยกเลิก หน้า refresh แล้วได้ initialRequests ชุดใหม่ ต้องรับค่าใหม่ ไม่งั้นฟอร์มค้างจนกว่าจะ reload
+  const [syncedFrom, setSyncedFrom] = useState(initialRequests);
+  if (syncedFrom !== initialRequests) {
+    setSyncedFrom(initialRequests);
+    setRequests(initialRequests);
+  }
   const [selectedId, setSelectedId] = useState(initialRequests[0]?.id ?? "");
   const [cancelError, setCancelError] = useState("");
   const [cancelling, setCancelling] = useState(false);

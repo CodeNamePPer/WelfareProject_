@@ -34,9 +34,9 @@ async function isSessionCurrent(session: SessionPayload): Promise<boolean> {
       cached = { changedAt: state?.changedAt ?? null, expires: now + STATE_TTL_MS };
       stateCache.set(session.sub, cached);
     } catch (err) {
-      // ฐานข้อมูลล่ม: ไม่ตัด session ทุกคนออก (หน้าอื่นจะ error เองอยู่แล้ว) และไม่ cache ผล
-      console.error("[middleware] password state check failed", err);
-      return true;
+      // ฐานข้อมูลล่ม: ถ้ามี cache ที่ตรงกับ token เดิมให้อนุโลมชั่วคราว แต่ถ้าไม่มีห้าม fail-open
+      console.error("[proxy] password state check failed", err);
+      return cached !== undefined && cached.changedAt !== null && cached.changedAt === session.pwd;
     }
   }
   return cached.changedAt !== null && cached.changedAt === session.pwd;
@@ -50,7 +50,7 @@ function expired(req: NextRequest, pathname: string) {
   return res;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // 1) ต้องอยู่ในเครือข่ายที่ทำงานเท่านั้น (เมื่อเปิด ENFORCE_OFFICE_NETWORK)
@@ -65,14 +65,24 @@ export async function middleware(req: NextRequest) {
   }
 
   // 2) ตรวจ session
+  const isApi = pathname.startsWith("/api/");
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifySessionToken(token) : null;
 
   if (session && !(await isSessionCurrent(session))) {
+    // หน้า/route สาธารณะ (เช่น POST /api/auth/login, รูปบนตัวเลือกบัญชี) ต้องใช้ต่อได้ แค่ล้าง cookie ที่ถูกเพิกถอน
+    if (isApi && (isPublic(pathname) || pathname === "/api/auth/logout")) {
+      const res = NextResponse.next();
+      res.cookies.delete(SESSION_COOKIE);
+      return res;
+    }
     return expired(req, pathname);
   }
 
   if (!session && !isPublic(pathname) && pathname !== "/api/auth/logout") {
+    if (isApi) {
+      return NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
+    }
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.search = pathname === "/" ? "" : `?next=${encodeURIComponent(pathname + req.nextUrl.search)}`;
@@ -86,16 +96,16 @@ export async function middleware(req: NextRequest) {
     }
     return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, req.url));
   }
-  if (session && !session.mcp && pathname === CHANGE_PASSWORD_PATH) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
 
-  if (session && pathname === "/login") {
+  if (session && pathname === "/login" && req.method === "GET") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
   // 4) ตรวจสิทธิ์ตาม Role
   if (session && !canAccess(pathname, session.role)) {
+    if (isApi) {
+      return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 403 });
+    }
     return NextResponse.redirect(new URL("/access-denied?reason=role", req.url));
   }
 

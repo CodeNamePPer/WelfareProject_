@@ -13,7 +13,14 @@ export async function POST(req: NextRequest) {
     const form = await req.formData();
     const raw = form.get("payload");
     if (typeof raw !== "string") throw new ClaimInputError("ข้อมูลไม่ถูกต้อง");
-    const payload = JSON.parse(raw) as Record<string, unknown>;
+    let payload: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("not an object");
+      payload = parsed as Record<string, unknown>;
+    } catch {
+      throw new ClaimInputError("ข้อมูลไม่ถูกต้อง");
+    }
     const text = (key: string) => (typeof payload[key] === "string" ? (payload[key] as string).trim() : "");
     const details = typeof payload.details === "object" && payload.details !== null ? (payload.details as Record<string, string>) : {};
     const files = form.getAll("files").filter((item): item is File => item instanceof File && item.size > 0);

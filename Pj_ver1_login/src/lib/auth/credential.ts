@@ -13,11 +13,13 @@ export interface PasswordState {
 type CredentialRow = { password_changed_at: string; sessions_revoked_at?: string | null; must_change_password: boolean; password_hash?: string };
 
 async function loadCredential(employeeCode: string, withHash: boolean): Promise<CredentialRow | null> {
-  const columns = `password_changed_at, sessions_revoked_at, must_change_password${withHash ? ", password_hash" : ""}, employee!inner(employee_code)`;
+  const columns = `password_changed_at, sessions_revoked_at, must_change_password${withHash ? ", password_hash" : ""}, employee!inner(employee_code, employment_status, deleted_at)`;
   const { data, error } = await supabaseAdmin
     .from("employee_credential")
     .select(columns)
     .eq("employee.employee_code", employeeCode)
+    .eq("employee.employment_status", "active")
+    .is("employee.deleted_at", null)
     .maybeSingle();
   if (error) throw error;
   return (data as unknown as CredentialRow | null) ?? null;
@@ -71,15 +73,17 @@ export async function savePassword(employeeCode: string, passwordHash: string, m
   if (!emp) throw new Error("ไม่พบผู้ใช้งาน");
 
   const changedAt = new Date();
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("employee_credential")
     .update({
       password_hash: passwordHash,
       must_change_password: mustChange,
       password_changed_at: changedAt.toISOString(),
     })
-    .eq("employee_id", emp.id);
+    .eq("employee_id", emp.id)
+    .select("password_changed_at, sessions_revoked_at, must_change_password")
+    .single();
   if (error) throw error;
 
-  return { changedAt: changedAt.getTime(), mustChange };
+  return toPasswordState(data as CredentialRow);
 }

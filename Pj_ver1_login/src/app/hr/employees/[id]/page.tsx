@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getHrEmployee } from "@/lib/hr/employees";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { getEmployeeLimits } from "@/lib/hr/employeeLimits";
+import { tabOf } from "@/features/hr/queue";
 import { getHrHeadCode } from "@/lib/hr/hrHead";
 import { getSession } from "@/lib/auth/get-session";
 import { getEmployeeBenefits, listClaims } from "@/lib/claims/service";
@@ -12,6 +13,8 @@ import { COUNTED } from "@/features/hr/queue";
 import { ButtonLink, Card, EmptyState, HrPage, PageHeader, RequesterFull, StatusBadge } from "@/features/hr/ui";
 import { cx } from "@/lib/cx";
 import { LimitTable, type LimitRow } from "./LimitTable";
+import { tenureOf } from "@/lib/tenure";
+import { toBangkokDate } from "@/lib/claims/mappers";
 
 export const dynamic = "force-dynamic";
 
@@ -26,17 +29,6 @@ const money = (value: number) => `฿${value.toLocaleString("th-TH", { maximumFr
 // คอลัมน์ตามดีไซน์ H09
 const HISTORY_COLS = "grid-cols-[150px_minmax(0,2fr)_110px_150px]";
 
-/** อายุงาน เช่น "8 ปี 7 เดือน" นับถึงวันนี้หรือวันที่พ้นสภาพ */
-function tenureOf(hireIso: string, endIso: string | null) {
-  const start = new Date(`${hireIso}T00:00:00+07:00`);
-  const end = endIso ? new Date(`${endIso}T00:00:00+07:00`) : new Date();
-  let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-  if (end.getDate() < start.getDate()) months -= 1;
-  if (months < 1) return "ไม่ถึง 1 เดือน";
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  return [years ? `${years} ปี` : "", rest ? `${rest} เดือน` : ""].filter(Boolean).join(" ");
-}
 
 // H09 โปรไฟล์พนักงาน + สิทธิ์และวงเงินรายคน + ประวัติการเบิกปีนี้
 export default async function EmployeeProfilePage({ params }: { params: Params }) {
@@ -60,7 +52,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
   const year = today.slice(0, 4);
   const thaiYear = Number(year) + 543;
   const thisYear = (claims ?? [])
-    .filter((claim) => claim.status !== "draft" && (claim.expenseDate ?? claim.submittedAt ?? claim.createdAt).startsWith(year))
+    .filter((claim) => claim.status !== "draft" && (claim.expenseDate ?? toBangkokDate(claim.submittedAt ?? claim.createdAt)).startsWith(year))
     .sort((a, b) => b.claimNo.localeCompare(a.claimNo));
   const counted = thisYear.filter((claim) => COUNTED.includes(claim.status)).length;
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
@@ -72,7 +64,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
     return {
       code: item.code,
       name: item.name,
-      base: item.limit,
+      base: item.baseLimit,
       own,
       custom: custom?.current != null,
       next: custom?.next ? `${money(custom.next.amount)} ตั้งแต่ ${thaiDate(`${custom.next.effectiveFrom}T00:00:00+07:00`)}` : null,
@@ -150,20 +142,32 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
             ) : (
               <div className="overflow-x-auto">
                 <div className="min-w-[560px]">
-                  {thisYear.map((claim) => (
-                    <Link
-                      key={claim.claimNo}
-                      href={`/hr/home/requests/${encodeURIComponent(claim.claimNo)}`}
-                      className={cx("grid items-center gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline hover:bg-surface", HISTORY_COLS)}
-                    >
-                      <span className="text-13">{claim.claimNo}</span>
-                      <span className="text-13">{claim.benefitName}</span>
-                      <span className="text-right font-semibold">{money(claim.amountApproved ?? claim.amountRequested)}</span>
-                      <span>
-                        <StatusBadge status={claim.status} />
-                      </span>
-                    </Link>
-                  ))}
+                  {thisYear.map((claim) => {
+                    const cells = (
+                      <>
+                        <span className="text-13">{claim.claimNo}</span>
+                        <span className="text-13">{claim.benefitName}</span>
+                        <span className="text-right font-semibold">{money(claim.amountApproved ?? claim.amountRequested)}</span>
+                        <span>
+                          <StatusBadge status={claim.status} />
+                        </span>
+                      </>
+                    );
+                    // หน้าตรวจคำขอไม่มีแท็บของคำขอที่ผู้ขอยกเลิก จึงแสดงเป็นแถวเฉย ๆ ไม่ให้กดแล้วเจอ 404
+                    return tabOf(claim.status) ? (
+                      <Link
+                        key={claim.claimNo}
+                        href={`/hr/home/requests/${encodeURIComponent(claim.claimNo)}`}
+                        className={cx("grid items-center gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink no-underline hover:bg-surface", HISTORY_COLS)}
+                      >
+                        {cells}
+                      </Link>
+                    ) : (
+                      <div key={claim.claimNo} className={cx("grid items-center gap-3 border-t border-[#F1F5F9] px-5 py-3 text-ink-soft", HISTORY_COLS)}>
+                        {cells}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/get-session";
 import { getClientIp } from "@/lib/auth/network";
 import { writeAudit } from "@/lib/auth/audit";
-import { markAlertsRead, markAlertUnread, markAllAlertsRead, resolveAlert } from "@/lib/admin/alerts";
+import { markAlertsRead, markAlertUnread, markAllAlertsRead, markProposalAlertsRead, resolveAlert } from "@/lib/admin/alerts";
 
 export const runtime = "nodejs";
 
@@ -31,7 +31,16 @@ export async function PATCH(req: NextRequest) {
   if (!ACTIONS.includes(action)) {
     return NextResponse.json({ error: "คำสั่งไม่ถูกต้อง" }, { status: 400 });
   }
+  // แจ้งเตือนข้อเสนอสวัสดิการสร้างจากตารางข้อเสนอ (ไม่มีแถวใน admin_notifications): บันทึกอ่านแล้วตาม key แยก
   if (typeof body.id === "string" && body.id.startsWith("prop-")) {
+    if (action === "read" || action === "resolve") {
+      try {
+        await markProposalAlertsRead(session.sub, [body.id.slice(5)]);
+      } catch (err) {
+        console.error("Error updating proposal notification:", err);
+        return NextResponse.json({ error: "บันทึกสถานะการแจ้งเตือนไม่สำเร็จ" }, { status: 500 });
+      }
+    }
     return NextResponse.json({ ok: true });
   }
   const id = Number(body.id);
@@ -41,7 +50,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     if (action === "read_all") {
-      await markAllAlertsRead(session.sub);
+      await Promise.all([markAllAlertsRead(session.sub), markProposalAlertsRead(session.sub, "all")]);
     } else if (action === "read") {
       await markAlertsRead(session.sub, [id]);
     } else if (action === "unread") {
