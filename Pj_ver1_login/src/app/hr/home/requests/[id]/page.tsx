@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployee } from "@/lib/hr/employees";
-import { isHrHead } from "@/lib/hr/hrHead";
+import { getHrHeadCode } from "@/lib/hr/hrHead";
 import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getBenefitMaxClaims, getClaimReviewFields, type DocKind } from "@/lib/hr/claimReview";
@@ -88,10 +88,12 @@ export default async function ReviewPage({ params }: { params: Params }) {
   // เพดานรวมชุดเดียวกับหน้ารายชื่อพนักงาน (H05) เพื่อให้ตัวเลข "เบิกปีนี้" ตรงกันทุกหน้า
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
 
-  // HH4: หัวหน้า HR ตรวจคำขอของ HR คนอื่น (ไม่ใช่ของตัวเอง) ที่ยังรอตรวจ
+  // HH4: หัวหน้า HR ตรวจคำขอของ HR คนอื่น (ส่วนคำขอของหัวหน้า HR เอง หรือที่หัวหน้า HR ยื่นแทน ให้ HR คนอื่นตรวจได้)
   const checkHrClaim = tab === "pending" && session !== null && claim.employeeCode !== session.sub && claim.submittedByCode !== session.sub;
-  const [head, hrStaff] = checkHrClaim ? await Promise.all([isHrHead(session), getHrStaffCodes()]) : [false, null];
-  const isHrStaffClaim = hrStaff?.has(claim.employeeCode) ?? false;
+  const [headCode, hrStaff] = checkHrClaim ? await Promise.all([getHrHeadCode(), getHrStaffCodes()]) : [null, null];
+  const head = Boolean(session?.role === "HR" && headCode && session.sub === headCode);
+  const isHrHeadClaim = headCode !== null && (claim.employeeCode === headCode || claim.submittedByCode === headCode);
+  const isHrStaffClaim = (hrStaff?.has(claim.employeeCode) ?? false) && !isHrHeadClaim;
   const hrClaim = head && isHrStaffClaim;
   const blockedByHrHead = !head && isHrStaffClaim;
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployees } from "@/lib/hr/employees";
-import { isHrHead } from "@/lib/hr/hrHead";
+import { getHrHeadCode } from "@/lib/hr/hrHead";
 import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getBenefitMaxClaims, getQueueFields } from "@/lib/hr/claimReview";
 import { getPaySettings, listClaims } from "@/lib/claims/service";
@@ -32,8 +32,9 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
 
   const extra = await getQueueFields(claims.map((claim) => claim.id)).catch(() => new Map<string, { proxyReason: string | null; insurancePaid: number | null }>());
   const viewer = session?.sub ?? null;
-  // หัวหน้า HR: คำขอของ HR คนอื่นรวมอยู่ในคิวนี้ (เดิมอยู่เมนู "คำขอเบิกของ HR") ติดป้ายให้เห็นว่าต้องให้หัวหน้า HR ตรวจ
-  const [head, hrStaff] = await Promise.all([session ? isHrHead(session) : Promise.resolve(false), getHrStaffCodes()]);
+  // หัวหน้า HR: คำขอของ HR คนอื่นรวมอยู่ในคิวนี้ (ส่วนคำขอของหัวหน้า HR เองให้ HR คนอื่นตรวจได้)
+  const [headCode, hrStaff] = await Promise.all([getHrHeadCode(), getHrStaffCodes()]);
+  const head = Boolean(session?.role === "HR" && headCode && session.sub === headCode);
   const byCode = new Map((employees ?? []).map((employee) => [employee.code, employee]));
 
   /** ครั้งที่ใช้ไปของสวัสดิการเดียวกันในปีงบเดียวกัน (รวมคำขอนี้) */
@@ -48,7 +49,8 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const proxy = claim.submittedByCode !== claim.employeeCode;
     const reason = proxy ? (fields?.proxyReason ?? proxyReasonOf(claim.note)) : null;
     const own = claim.employeeCode === viewer || claim.submittedByCode === viewer;
-    const hrClaim = !own && tab === "pending" && (hrStaff?.has(claim.employeeCode) ?? false);
+    const isHrHeadClaim = headCode !== null && (claim.employeeCode === headCode || claim.submittedByCode === headCode);
+    const hrClaim = !own && tab === "pending" && (hrStaff?.has(claim.employeeCode) ?? false) && !isHrHeadClaim;
     const blockedHrClaim = hrClaim && !head;
     const revision = [...claim.events].reverse().find((event) => event.kind === "revision_requested" || event.kind === "returned");
     const max = maxClaims.get(claim.benefitCode) ?? null;
@@ -56,7 +58,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
     const left = claim.limit > 0 ? Math.max(claim.limit - claim.used - claim.amountRequested, 0) : null;
     const usage = [max !== null ? `ใช้ ${times}/${max} ครั้ง` : `ใช้ ${times} ครั้ง`, left !== null ? `เหลือ ${baht(left)} หลังเบิก` : null].filter(Boolean).join(" · ");
     const hint: QueueRow["hint"] = own
-      ? { text: "คำขอของ HR ตรวจโดยหัวหน้า HR", tone: "muted" }
+      ? { text: head ? "คำขอของคุณเอง ต้องให้ HR คนอื่นตรวจ" : "คำขอของ HR ตรวจโดยหัวหน้า HR", tone: "muted" }
       : hrClaim
         ? { text: claim.status === "finance_returned" ? `คำขอของ HR · การเงินส่งกลับ${revision?.note ? `: ${revision.note}` : ""}` : "คำขอของ HR ต้องให้หัวหน้า HR ตรวจ", tone: "amber" }
       : claim.status === "needs_revision"
@@ -70,7 +72,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
       {
         claimNo: claim.claimNo,
         status: claim.status,
-        statusLabel: own && tab === "pending" ? "ส่งหัวหน้า HR ตรวจ" : hrClaim ? "รอหัวหน้า HR ตรวจ" : claim.status === "needs_revision" ? "ส่งกลับให้แก้ไข" : CLAIM_STATUS_LABEL[claim.status],
+        statusLabel: own && tab === "pending" ? (head ? "รอ HR ตรวจ" : "ส่งหัวหน้า HR ตรวจ") : hrClaim ? "รอหัวหน้า HR ตรวจ" : claim.status === "needs_revision" ? "ส่งกลับให้แก้ไข" : CLAIM_STATUS_LABEL[claim.status],
         tab,
         employeeCode: claim.employeeCode,
         employeeName: person?.name ?? claim.employeeName,
@@ -97,7 +99,7 @@ export default async function HrQueuePage({ searchParams }: { searchParams: Prom
   const stats: QueueStat[] = [
     { label: "รอตรวจ", value: String(toReview.length), note: oldest ? `เก่าสุดรอ ${daysSince(oldest)} วัน` : "ไม่มีคำขอค้าง", warn: true },
     { label: "ส่งกลับให้แก้ไข", value: String(rows.filter((row) => row.tab === "revision").length), note: "รอผู้ขอ" },
-    { label: "ส่งหัวหน้า HR ตรวจ", value: String(own.length), note: "คำขอของคุณเอง ส่งหัวหน้า HR" },
+    { label: head ? "ส่ง HR ตรวจ" : "ส่งหัวหน้า HR ตรวจ", value: String(own.length), note: head ? "คำขอของคุณเอง รอ HR คนอื่นตรวจ" : "คำขอของคุณเอง ส่งหัวหน้า HR" },
     { label: `ตัดรอบ ${thaiDayMonth(payDate)}`, value: daysToPay === 0 ? "วันนี้" : `ใน ${daysToPay} วัน`, note: "ตรวจก่อนเพื่อให้ทันรอบ" },
   ];
   const departments = [...new Set(rows.filter((row) => row.tab === "pending").map((row) => row.department))];

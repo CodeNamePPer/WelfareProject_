@@ -41,6 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   positionId: 'ตำแหน่ง',
   jobLevelId: 'ระดับ',
   managerCode: 'หัวหน้า',
+  subordinateCodes: 'พนักงานในสังกัด',
   hireDate: 'วันเริ่มงาน',
   accountLock: 'สถานะการล็อกบัญชี',
 };

@@ -173,7 +173,6 @@ export function LoginExperience({ next, notice }: { next: string; notice?: React
             >
               {managing ? "เสร็จสิ้น" : "จัดการบัญชีในเครื่องนี้"}
             </button>
-            <span className="text-13 text-ink-mute">ระบบไม่บันทึกรหัสผ่าน</span>
           </div>
         </>
       )}
