@@ -167,9 +167,11 @@ const ROLE_SUFFIX: Record<string, string> = { HR: "HR", FINANCE: "การเ�
 
 export function toAdminClaim(claim: ClaimRecord): Claim {
   const status: Claim["status"] =
-    claim.status === "rejected" || claim.status === "cancelled"
+    claim.status === "rejected"
       ? "rejected"
-      : claim.status === "awaiting_payment" || claim.status === "paid"
+      : claim.status === "cancelled"
+        ? "cancelled"
+        : claim.status === "awaiting_payment" || claim.status === "paid"
         ? "approved"
         : "pending";
   const timeline = claim.events.flatMap((event): ClaimEvent[] => {

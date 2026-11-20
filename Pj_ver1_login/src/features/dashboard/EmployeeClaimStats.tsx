@@ -20,6 +20,8 @@ interface Totals {
   pending: { amount: number; count: number };
   approved: { amount: number; count: number; reduced: number };
   rejected: { amount: number; count: number };
+  /** ผู้เบิกยกเลิกเอง – ไม่นับในยอดรวม แสดงแค่จำนวน */
+  cancelled: { amount: number; count: number };
 }
 
 function summarize(list: Claim[]): Totals {
@@ -28,8 +30,14 @@ function summarize(list: Claim[]): Totals {
     pending: { amount: 0, count: 0 },
     approved: { amount: 0, count: 0, reduced: 0 },
     rejected: { amount: 0, count: 0 },
+    cancelled: { amount: 0, count: 0 },
   };
   for (const claim of list) {
+    if (claim.status === 'cancelled') {
+      totals.cancelled.amount += claim.amount;
+      totals.cancelled.count += 1;
+      continue;
+    }
     totals.all.amount += claim.amount;
     totals.all.count += 1;
     if (claim.status === 'approved') {
@@ -59,7 +67,7 @@ interface BenefitUsage {
 function usageForYear(claims: Claim[], employeeId: string, year: string): BenefitUsage[] {
   const byBenefit = new Map<string, BenefitUsage>();
   for (const claim of claims) {
-    if (claim.employeeId !== employeeId || claim.date.slice(0, 4) !== year || claim.status === 'rejected') continue;
+    if (claim.employeeId !== employeeId || claim.date.slice(0, 4) !== year || claim.status === 'rejected' || claim.status === 'cancelled') continue;
     const row = byBenefit.get(claim.benefit) ?? { benefit: claim.benefit, limit: claim.annualLimit, used: 0, pending: 0 };
     if (claim.status === 'approved') row.used += claim.approvedAmount ?? 0;
     else row.pending += claim.amount;
@@ -226,7 +234,12 @@ export function EmployeeClaimStats({ employees, periods, claims }: EmployeeClaim
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-px border-y border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="ยอดขอเบิกทั้งหมด" amount={totals.all.amount} caption={`${totals.all.count} รายการในช่วงนี้`} />
+          <StatCard label="ยอดขอเบิกทั้งหมด" amount={totals.all.amount} caption={
+              totals.cancelled.count > 0
+                ? `${totals.all.count} รายการในช่วงนี้, ไม่รวมที่ยกเลิก ${totals.cancelled.count}`
+                : `${totals.all.count} รายการในช่วงนี้`
+            }
+          />
           <StatCard label="รอตรวจสอบ" amount={totals.pending.amount} caption={`${totals.pending.count} รายการ`} />
           <StatCard
             label="อนุมัติแล้ว"

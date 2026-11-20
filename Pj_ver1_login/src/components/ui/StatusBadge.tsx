@@ -17,6 +17,11 @@ const config: Record<ClaimStatus, { label: string; badge: string; dot: string }>
     badge: 'bg-status-rejected-soft text-status-rejected-ink',
     dot: 'bg-status-rejected',
   },
+  cancelled: {
+    label: 'ยกเลิก',
+    badge: 'bg-mist text-ink-soft',
+    dot: 'bg-status-draft',
+  },
 };
 
 export function StatusBadge({ status, label }: { status: ClaimStatus; /** Exact status text; defaults to the group label. */ label?: string }) {

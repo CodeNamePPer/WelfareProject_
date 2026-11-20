@@ -1,4 +1,5 @@
-export type ClaimStatus = 'pending' | 'approved' | 'rejected';
+/** cancelled = ผู้เบิกยกเลิกเอง แยกจาก rejected (HR/การเงินไม่อนุมัติ) */
+export type ClaimStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface Employee {
   id: string;

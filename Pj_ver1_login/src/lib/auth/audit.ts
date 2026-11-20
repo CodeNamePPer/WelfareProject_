@@ -64,13 +64,33 @@ export async function writeAudit(e: Omit<AuditEntry, "at" | "id">): Promise<void
   }
 }
 
-export async function listAudit(limit = 500): Promise<AuditEntry[]> {
+/** Supabase คืนได้ครั้งละไม่เกิน 1000 แถว (max-rows) */
+const PAGE_SIZE = 1000;
+
+/** ดึงทุกหน้าจนหมด – ใช้ตอนส่งออกประวัติทั้งหมด (ต้องเรียงด้วยคีย์ที่ไม่ซ้ำ หน้าจะได้ไม่ซ้อน/ตกหล่น) */
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<{ data: T[] | null; error: unknown }> {
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error || !data) return { data: null, error };
+    all.push(...data);
+    if (data.length < PAGE_SIZE) return { data: all, error: null };
+  }
+}
+
+/** limit = "all" ดึงประวัติทั้งหมด (ใช้ตอนส่งออก) */
+export async function listAudit(limit: number | "all" = 500): Promise<AuditEntry[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("audit_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(limit);
+    const query = () =>
+      supabaseAdmin
+        .from("audit_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+    const { data, error } =
+      limit === "all" ? await fetchAllPages((from, to) => query().range(from, to)) : await query().limit(limit);
 
     if (!error && data) {
       return data.map((row) => ({
@@ -130,16 +150,21 @@ const PROPOSAL_ACTOR_ROLE_LABEL: Record<string, string> = {
   HR_HEAD: "หัวหน้า HR",
 };
 
-export async function listProposalAuditEntries(limit = 200): Promise<import("../../types").AuditEntry[]> {
+/** limit = "all" ดึงทั้งหมด (ใช้ตอนส่งออก) */
+export async function listProposalAuditEntries(limit: number | "all" = 200): Promise<import("../../types").AuditEntry[]> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("welfare_benefit_proposal_event")
-      .select(
-        "id, kind, actor_role, note, created_at, proposal:proposal_id(id, proposal_no, kind, name_th, benefit:benefit_id(code, name_th)), actor:actor_employee_id(employee_code, first_name_th, last_name_th)",
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit)
-      .returns<ProposalEventRow[]>();
+    const query = () =>
+      supabaseAdmin
+        .from("welfare_benefit_proposal_event")
+        .select(
+          "id, kind, actor_role, note, created_at, proposal:proposal_id(id, proposal_no, kind, name_th, benefit:benefit_id(code, name_th)), actor:actor_employee_id(employee_code, first_name_th, last_name_th)",
+        )
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+    const { data, error } =
+      limit === "all"
+        ? await fetchAllPages((from, to) => query().range(from, to).returns<ProposalEventRow[]>())
+        : await query().limit(limit).returns<ProposalEventRow[]>();
     if (error || !data) return [];
 
     return data.flatMap((row): import("../../types").AuditEntry[] => {

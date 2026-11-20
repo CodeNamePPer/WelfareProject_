@@ -119,9 +119,10 @@ function fetchLoginActivity(): Promise<Pick<SummaryStats, "logins" | "loginError
   });
 }
 
-/** คิวคำขอเบิก: งานที่ค้างที่ HR แยกจากงานที่รอการเงิน */
+/** คิวคำขอเบิก: งานที่ค้างที่ HR แยกจากงานที่รอการเงิน
+ *  needs_revision ไม่นับ เพราะส่งกลับไปรอพนักงานแก้ ไม่ได้ค้างที่ HR */
 function hrQueueStats(claims: ClaimRecord[]): SummaryStats["hrQueue"] {
-  const atHr = claims.filter((c) => ["pending_hr", "needs_revision", "finance_returned"].includes(c.status));
+  const atHr = claims.filter((c) => c.status === "pending_hr" || c.status === "finance_returned");
   const today = new Date(`${bangkokDate()}T00:00:00Z`).getTime();
   const ages = atHr.map((c) => Math.round((today - new Date(`${toBangkokDate(c.submittedAt ?? c.createdAt)}T00:00:00Z`).getTime()) / DAY_MS));
   return {

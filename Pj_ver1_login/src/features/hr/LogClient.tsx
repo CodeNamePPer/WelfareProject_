@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { downloadCsv } from '@/lib/csv';
+import { csvDateTime, downloadCsv } from '@/lib/csv';
 import { cx } from '@/lib/cx';
 import type { HrLogCategory, HrLogEntry } from '@/lib/hr/logs';
 import { Button, Card, EmptyState, PageHeader, Tabs } from '@/features/hr/ui';
@@ -37,6 +37,7 @@ export function LogClient({
   title = 'ประวัติการแก้ไข',
   description,
   csvName = 'hr-log.csv',
+  exportUrl,
 }: {
   entries: LogRow[];
   tabs?: LogTabDef[];
@@ -44,18 +45,39 @@ export function LogClient({
   title?: string;
   description?: string;
   csvName?: string;
+  /** หน้าแสดงแค่รายการล่าสุด – ถ้ามี Export จะดึงประวัติทั้งหมด ({ rows: LogRow[] }) จาก URL นี้ */
+  exportUrl?: string;
 }) {
   const [tab, setTab] = useState<string>(initialTab);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const shown = entries.filter((entry) => tab === 'all' || entry.category === tab);
   const tabLabel = tabs.find((item) => item.id === tab)?.label ?? '';
-  const withActor = entries.some((entry) => entry.by);
 
-  const exportCsv = () =>
+  const writeCsv = (rows: LogRow[]) => {
+    const withActor = rows.some((entry) => entry.by);
     downloadCsv(
       csvName,
       ['เวลา', 'การกระทำ', ...(withActor ? ['ผู้ดำเนินการ'] : []), 'รายการ', 'ก่อน → หลัง'],
-      shown.map((entry) => [timeOf(entry.at), entry.action, ...(withActor ? [entry.by ?? ''] : []), entry.item, entry.detail]),
+      rows.map((entry) => [csvDateTime(entry.at), entry.action, ...(withActor ? [entry.by ?? ''] : []), entry.item, entry.detail]),
     );
+  };
+
+  const exportCsv = async () => {
+    if (!exportUrl) return writeCsv(shown);
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await fetch(exportUrl, { cache: 'no-store' });
+      const body = (await res.json().catch(() => null)) as { rows?: LogRow[]; error?: string } | null;
+      if (!res.ok || !body?.rows) throw new Error(body?.error ?? 'ส่งออกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      writeCsv(body.rows.filter((entry) => tab === 'all' || entry.category === tab));
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'ส่งออกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <>
@@ -63,9 +85,16 @@ export function LogClient({
         title={title}
         description={description}
         actions={
-          <Button variant="quiet" className="!px-4" onClick={exportCsv} disabled={shown.length === 0}>
-            Export
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button variant="quiet" className="!px-4" onClick={exportCsv} disabled={shown.length === 0 || exporting}>
+              {exporting ? 'กำลังส่งออก…' : 'Export'}
+            </Button>
+            {exportError ? (
+              <p role="alert" className="text-12 text-danger">
+                {exportError}
+              </p>
+            ) : null}
+          </div>
         }
       />
       <Card>

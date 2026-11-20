@@ -30,7 +30,7 @@ const CSV_COLUMNS = [
   'วันที่ดำเนินการล่าสุด',
   'เหตุผลปฏิเสธ',
 ];
-const STATUS_FILTERS: ClaimStatus[] = ['approved', 'pending', 'rejected'];
+const STATUS_FILTERS: ClaimStatus[] = ['approved', 'pending', 'rejected', 'cancelled'];
 
 type Filter = 'all' | ClaimStatus;
 
@@ -66,6 +66,7 @@ const has = (claim: Claim, kind: ClaimEventKind) => claim.timeline.some((event) 
 
 /** ขั้นตอนปัจจุบัน – คำนวณจาก timeline เพื่อไม่ให้ขัดกับประวัติ */
 function stageOf(claim: Claim): string {
+  if (claim.status === 'cancelled') return 'ผู้เบิกยกเลิกคำขอ';
   if (claim.status === 'rejected') return has(claim, 'hr-approved') ? 'ไม่ผ่านขั้นการเงิน' : 'ไม่ผ่านขั้น HR';
   if (claim.status === 'pending') return has(claim, 'hr-approved') ? 'รอการเงินอนุมัติ' : 'รอ HR ตรวจสอบ';
   return has(claim, 'paid') ? 'จ่ายเงินแล้ว' : 'อนุมัติแล้ว รอจ่ายเงิน';

@@ -22,7 +22,7 @@ import {
   Tabs,
   fieldClass,
 } from "@/features/hr/ui";
-import { downloadCsv } from "@/lib/csv";
+import { csvDateTime, csvText, downloadCsv } from "@/lib/csv";
 import { cx } from "@/lib/cx";
 import { formatShortThaiDate, formatThaiDate } from "@/lib/format";
 import { useDetailParam } from "@/lib/useDetailParam";
@@ -155,7 +155,7 @@ export default function AdminUsersClient({
           p.nickname ?? "",
           u.email,
           p.contactEmail ?? "",
-          p.phone ?? "",
+          csvText(p.phone),
           p.departmentName ?? "",
           p.positionName ?? "",
           p.jobLevelName ?? "",
@@ -163,7 +163,7 @@ export default function AdminUsersClient({
           p.hireDate ?? "",
           u.hasAccount ? roleLabel(u.role) : NO_ACCOUNT,
           statusLabel(u.status),
-          u.lastLoginAt ?? "",
+          csvDateTime(u.lastLoginAt),
         ];
       }),
     );
