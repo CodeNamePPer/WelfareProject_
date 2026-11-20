@@ -79,7 +79,7 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
       available: remainingAll !== null ? `฿${plain(remainingAll)}` : null,
       proxyBy: claim.submittedByCode !== claim.employeeCode ? claim.submittedByName : null,
     },
-    account: account ? accountLabel(account) : null,
+    account: account && accountLabel(account) !== "ไม่มีบัญชีรับเงิน" ? accountLabel(account) : null,
     amounts: { requested: money(claim.amountRequested), approved: money(approved), transfer: money(approved) },
     adjustNote: adjusted ? `HR ปรับยอด${hr?.note ? `: ${hr.note}` : ` จาก ฿${plain(claim.amountRequested)} เป็น ฿${plain(approved)}`}` : null,
     // การเงินเห็นเฉพาะใบเสร็จ เอกสารสุขภาพ (is_restricted / ใบรับรองแพทย์) ไม่ส่งมาที่หน้านี้
@@ -102,6 +102,7 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
         : claim.status === "paid" && paid
           ? `โอนแล้ว ${thaiDate(paid.at)}${claim.payment?.transferRef ? ` · เลขอ้างอิง ${claim.payment.transferRef}` : ""}`
           : null,
+    advance: Boolean(claim.advance),
   };
 
   return (

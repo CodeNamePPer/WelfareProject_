@@ -19,7 +19,7 @@ async function post(url: string, body: unknown): Promise<{ error: string | null;
 export const financeAction = (body: Record<string, unknown>) => post('/api/payroll/actions', body);
 
 /** อนุมัติจ่าย / ส่งกลับ HR ผ่าน API คำขอกลาง */
-export const claimAction = (claimNo: string, body: { action: 'finance_approve' | 'finance_return'; note?: string }) =>
+export const claimAction = (claimNo: string, body: { action: 'finance_approve' | 'finance_return'; note?: string } | { action: 'pay'; transferRef: string }) =>
   post(`/api/claims/${encodeURIComponent(claimNo)}/actions`, body);
 
 /** หน้าต่างยืนยันแบบดีไซน์ F07: กว้าง 520px มุม 8px เงา หัวข้อ 18px */

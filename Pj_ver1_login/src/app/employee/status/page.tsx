@@ -100,7 +100,7 @@ function stepsOf(claim: ClaimRecord): ApprovalStep[] {
       current: hrCurrent,
     },
     { title: "ฝ่ายการเงินตรวจสอบ", description: finance?.actorName ?? "ฝ่ายการเงิน", date: finance ? thaiDateTime(finance.at) : "ตรวจสอบยอดก่อนจ่าย", state: state(Boolean(finance), claim.status === "pending_finance"), complete: Boolean(finance), current: claim.status === "pending_finance" },
-    { title: "จ่ายเงินและปิดคำขอ", description: "ฝ่ายการเงิน", date: paid ? thaiDateTime(paid.at) : "โอนเงินเข้าบัญชีตามรอบการจ่าย", state: state(Boolean(paid), claim.status === "awaiting_payment"), complete: Boolean(paid), current: claim.status === "awaiting_payment" },
+    { title: claim.advance ? "โอนเงินล่วงหน้า" : "จ่ายเงินและปิดคำขอ", description: "ฝ่ายการเงิน", date: paid ? thaiDateTime(paid.at) : "โอนเงินเข้าบัญชีตามรอบการจ่าย", state: state(Boolean(paid), claim.status === "awaiting_payment"), complete: Boolean(paid), current: claim.status === "awaiting_payment" },
   ];
   if (rejected) {
     steps.push({ title: "ไม่อนุมัติ", description: rejected.actorName ?? "", date: rejected.note ?? "", state: "สิ้นสุด", complete: true, current: false });
