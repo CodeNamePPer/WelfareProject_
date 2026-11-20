@@ -5,6 +5,8 @@ import { getHrEmployees } from "@/lib/hr/employees";
 import { getBenefitMaxClaims } from "@/lib/hr/claimReview";
 import { getClaimAdvance, summarizeAdvance, type AdvanceStatus } from "@/lib/hr/advances";
 import { getEmployeeBenefits } from "@/lib/claims/service";
+import { availableTotal } from "@/lib/claims/totalCap";
+import { getEmployeeTotalCap } from "@/lib/hr/employeeTotalLimit";
 import { thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { HrPage, type BadgeTone } from "@/features/hr/ui";
 import { ReceiptReviewClient, type ReceiptReviewData } from "./ReceiptReviewClient";
@@ -39,15 +41,16 @@ export default async function ReceiptReviewPage({ params }: { params: Params }) 
   if (!found) notFound();
   const { claim, advance } = found;
 
-  const [session, employees, benefits, maxClaims] = await Promise.all([
+  const [session, employees, benefits, maxClaims, totalCap] = await Promise.all([
     getSession(),
     getHrEmployees(),
     getEmployeeBenefits(claim.employeeCode).catch(() => null),
     getBenefitMaxClaims().catch(() => null),
+    getEmployeeTotalCap(claim.employeeCode),
   ]);
   const employee = employees?.find((item) => item.code === claim.employeeCode) ?? null;
   const summary = summarizeAdvance(claim, advance);
-  const remainingAll = benefits ? benefits.reduce((sum, item) => sum + Math.max(item.remaining, 0), 0) : null;
+  const remainingAll = benefits ? availableTotal(benefits, totalCap) : null;
   const claimsAll = benefits ? benefits.reduce((sum, item) => sum + item.claimsThisYear, 0) : null;
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;
   const due = thaiDayMonth(advance.receiptDueDate);

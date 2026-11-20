@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
 import { getEmployeeBenefits, getPaySettings, listClaims } from "@/lib/claims/service";
 import { getMyProfile } from "@/lib/employee/profile";
+import { getEmployeeTotalCap } from "@/lib/hr/employeeTotalLimit";
 import { listMyEditRequests } from "@/lib/hr/editRequests";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { APPROVAL_FLOW } from "@/lib/claims/forms";
@@ -40,12 +41,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
 
   const { tab } = await searchParams;
   const initialTab = isHomeTab(tab) ? tab : "benefits";
-  const [profile, benefits, claims, paySettings, editRequests] = await Promise.all([
+  const [profile, benefits, claims, paySettings, editRequests, totalCap] = await Promise.all([
     getMyProfile(session.sub),
     getEmployeeBenefits(session.sub),
     listClaims({ employeeCode: session.sub }),
     getPaySettings().catch(() => undefined),
     listMyEditRequests(session.sub, 1),
+    getEmployeeTotalCap(session.sub),
   ]);
   if (!profile || !benefits || !claims) {
     return <p className="text-13 text-status-rejected">โหลดข้อมูลสวัสดิการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง</p>;
@@ -57,12 +59,15 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   // นับตามปีของวันที่เกิดค่าใช้จ่าย กฎเดียวกับวงเงินในฐานข้อมูล
   const thisYear = claims.filter((claim) => claim.expenseDate?.slice(0, 4) === year);
   // วงเงินรวมไม่นับสวัสดิการต่อครั้งที่ไม่จำกัดครั้ง (yearlyLimit = 0) จึงต้องไม่หักยอดของมันด้วย
+  // ถ้า HR ตั้งวงเงินรวมต่อปีไว้ ใช้เพดานนั้นแทน และนับยอดทุกสวัสดิการตามกฎของ guard_welfare_claim
+  const cap = totalCap?.cap ?? null;
   const uncappedCodes = new Set(benefits.filter(uncapped).map((benefit) => benefit.code));
-  const capped = thisYear.filter((claim) => !uncappedCodes.has(claim.benefitCode));
+  const capped = cap === null ? thisYear.filter((claim) => !uncappedCodes.has(claim.benefitCode)) : thisYear;
   const used = capped.filter((claim) => APPROVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
   const reserved = capped.filter((claim) => RESERVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
-  const total = benefits.reduce((sum, benefit) => sum + yearlyLimit(benefit), 0);
-  const available = Math.max(total - used - reserved, 0);
+  const benefitsTotal = benefits.reduce((sum, benefit) => sum + yearlyLimit(benefit), 0);
+  const total = cap === null ? benefitsTotal : cap;
+  const available = cap === null ? Math.max(total - used - reserved, 0) : Math.min(totalCap?.remaining ?? 0, Math.max(cap - used - reserved, 0));
   const claimCount = thisYear.filter((claim) => APPROVED.includes(claim.status) || RESERVED.includes(claim.status)).length;
 
   const paidThisYear = thisYear.filter((claim) => claim.status === "paid").reduce((sum, claim) => sum + countedAmount(claim), 0);
@@ -101,7 +106,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
               <div>
                 <p className="text-12 text-muted">วงเงินที่ใช้ได้ ปี {thaiYear}</p>
                 <p className="text-[26px] leading-tight font-semibold tabular-nums">
-                  {baht(available)} <span className="text-14 font-normal text-muted">จากวงเงินทั้งหมด {baht(total)}</span>
+                  {baht(available)} <span className="text-14 font-normal text-muted">{cap === null ? "จากวงเงินทั้งหมด" : "จากวงเงินรวมต่อปี"} {baht(total)}</span>
                 </p>
               </div>
               <p className="text-right text-12 text-muted">

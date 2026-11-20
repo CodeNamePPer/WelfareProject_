@@ -12,6 +12,7 @@ import { emailHr, isHrEmployee } from "../hr/emailNotify";
 import { afterResponse } from "../email/notify";
 import { sendClaimNotices } from "./notify";
 import { signBenefitImages } from "../benefitImages";
+import { totalLimitAt } from "../hr/employeeTotalLimit";
 import type { BudgetKind, ClaimAction, ClaimDbStatus, ClaimEventKind, ClaimRecord, EmployeeBenefit } from "./types";
 
 export class ClaimInputError extends Error {
@@ -330,7 +331,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
     // วงเงินลำดับเดียวกับ guard_welfare_claim: รายคน > ตามระดับตำแหน่ง > วงเงินกลาง (ไม่งั้นหน้าจอให้ยื่นแต่ฐานข้อมูลปฏิเสธ)
     const scope = [`employee_id.eq.${employee.id}`, "and(employee_id.is.null,job_level_id.is.null)"];
     if (employee.job_level_id) scope.push(`and(employee_id.is.null,job_level_id.eq.${employee.job_level_id})`);
-    const [benefits, limits, restrictions, usage] = await Promise.all([
+    const [benefits, limits, restrictions, usage, totalCap] = await Promise.all([
       supabaseAdmin.from("welfare_benefit").select("id, code, name_th, description, budget_type, category, form_type, max_claims, max_claims_note, eligibility_note, required_documents, allow_advance, advance_receipt_days, image_path").eq("is_active", true).is("deleted_at", null).order("code").returns<BenefitRow[]>(),
       supabaseAdmin
         .from("welfare_benefit_limit")
@@ -340,6 +341,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         .returns<{ benefit_id: string; amount: number | string; effective_from: string; employee_id: string | null; job_level_id: string | null }[]>(),
       supabaseAdmin.from("welfare_benefit_department").select("benefit_id, department_id").returns<{ benefit_id: string; department_id: string }[]>(),
       fetchUsage([employee.id]),
+      totalLimitAt(employee.id, today),
     ]);
     if (benefits.error) throw benefits.error;
     if (limits.error) throw limits.error;
@@ -360,6 +362,9 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
       if (!current || rank(row) > rank(current) || (rank(row) === rank(current) && row.effective_from > current.effective_from)) baseBest.set(row.benefit_id, row);
     }
     const memberOf = [employee.department_id, employee.department?.parent_department_id].filter(Boolean);
+    // เพดานรวมต่อปี (ทุกสวัสดิการ ตามปีของวันที่เกิดค่าใช้จ่าย) ตามกฎเดียวกับ guard_welfare_claim
+    const yearUsed = usage.filter((u) => u.expense_date.slice(0, 4) === today.slice(0, 4)).reduce((sum, u) => sum + usageAmount(u), 0);
+    const totalRemaining = totalCap === null ? null : Math.max(totalCap - yearUsed, 0);
 
     const images = await signBenefitImages((benefits.data ?? []).map((benefit) => benefit.image_path));
     return (benefits.data ?? []).flatMap((benefit): EmployeeBenefit[] => {
@@ -375,7 +380,8 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
       const current = perClaim ? (latest ? [latest] : []) : usage.filter((u) => u.benefit_id === benefit.id && samePeriod(benefit.budget_type, u.expense_date, today));
       const used = current.filter((u) => APPROVED.includes(u.status)).reduce((sum, u) => sum + usageAmount(u), 0);
       const pending = current.filter((u) => !APPROVED.includes(u.status)).reduce((sum, u) => sum + usageAmount(u), 0);
-      const remaining = perClaim ? limit : Math.max(limit - used - pending, 0);
+      const ownRemaining = perClaim ? limit : Math.max(limit - used - pending, 0);
+      const remaining = totalRemaining === null ? ownRemaining : Math.min(ownRemaining, totalRemaining);
       const claimsLeft = benefit.max_claims === null ? null : Math.max(benefit.max_claims - thisYear.length, 0);
       const available = claimsLeft === 0 ? 0 : remaining;
       return [{
