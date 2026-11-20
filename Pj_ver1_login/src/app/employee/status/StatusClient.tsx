@@ -267,10 +267,11 @@ export default function StatusClient({ initialRequests }: { initialRequests: Wel
               </button>
             ) : null}
           </PageHead>
-
+            <br />
           <Sheet className="px-6 py-5">
             <div className="overflow-x-auto">
               <ol aria-label="ความคืบหน้า" className="flex min-w-[560px] items-start">
+
                 {selectedRequest.steps.slice(0, 4).map((step, index) => (
                   <li key={step.title} className="flex flex-1 items-start last:flex-none">
                     <div className="flex min-w-[120px] flex-col items-center gap-1 text-center">
