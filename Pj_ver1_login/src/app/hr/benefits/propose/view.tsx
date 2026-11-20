@@ -54,6 +54,7 @@ export async function ProposeScreen({ params, base }: { params: { draft?: string
         advanceReceiptDays: target.advanceReceiptDays ?? null,
         documents: target.documents,
         reason: "",
+        formType: target.formType,
       },
       imageUrl: await signedImageUrl(target.imagePath ?? null),
     };

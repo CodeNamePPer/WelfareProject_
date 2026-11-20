@@ -145,3 +145,24 @@ export const getMyProfile = cache(async (code: string): Promise<MyProfile | null
     return null;
   }
 });
+
+/** ที่อยู่ในระบบของพนักงานหลายคน ใช้เป็นตัวเลือก "ตรงกับที่อยู่ในระบบ" ในฟอร์มยื่นเบิก (คนที่ไม่มีที่อยู่จะไม่อยู่ในผลลัพธ์) */
+export async function getEmployeeAddresses(codes: (string | undefined)[]): Promise<Record<string, string>> {
+  const unique = [...new Set(codes)].filter((code): code is string => Boolean(code));
+  if (!unique.length) return {};
+  const { data, error } = await supabaseAdmin
+    .from("employee")
+    .select("employee_code, address_line, subdistrict, district, province, postal_code")
+    .in("employee_code", unique)
+    .is("deleted_at", null);
+  if (error) {
+    console.error("[employee] load addresses failed", error);
+    return {};
+  }
+  const result: Record<string, string> = {};
+  for (const row of data ?? []) {
+    const address = joinParts([row.address_line, row.subdistrict, row.district, row.province, row.postal_code], " ");
+    if (address) result[row.employee_code] = address;
+  }
+  return result;
+}

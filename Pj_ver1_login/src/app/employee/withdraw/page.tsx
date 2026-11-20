@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
-import { getMyProfile } from "@/lib/employee/profile";
+import { getEmployeeAddresses, getMyProfile } from "@/lib/employee/profile";
 import { getSubordinates } from "@/lib/employee/subordinates";
 import type { EmployeeBenefit } from "@/lib/claims/types";
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
@@ -33,7 +33,9 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
   let ownerBenefits: EmployeeBenefit[] | null = null;
   if (editing) {
     const claim = editing;
-    if ((claim.employeeCode === session.sub || claim.submittedByCode === session.sub) && (claim.status === "draft" || claim.status === "needs_revision")) {
+    // ร่างที่ยื่นแทนไว้ แก้ต่อได้เฉพาะเมื่อยังเป็นหัวหน้าแผนกของเจ้าของคำขอ (กฎเดียวกับ saveClaim)
+    const canEditProxy = claim.submittedByCode === session.sub && Boolean(subordinates?.some((employee) => employee.id === claim.employeeCode));
+    if ((claim.employeeCode === session.sub || canEditProxy) && (claim.status === "draft" || claim.status === "needs_revision")) {
       if (claim.employeeCode !== session.sub) {
         ownerBenefits = await getEmployeeBenefits(claim.employeeCode);
       }
@@ -57,16 +59,19 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
     }
   }
 
-  // หัวหน้ายื่นแทนลูกน้องโดยตรงได้ (เดิมอยู่หน้า /employee/HeadEm) ยกเว้นตอนแก้ไขคำขอของตัวเอง
+  // หัวหน้าแผนกยื่นแทนพนักงานในแผนกได้ (เดิมอยู่หน้า /employee/HeadEm) ยกเว้นตอนแก้ไขคำขอที่มีอยู่
   const team = initial ? [] : (subordinates ?? []);
   const teamBenefits = await Promise.all(team.map((employee) => getEmployeeBenefits(employee.id)));
   const benefitsByEmployee: Record<string, EmployeeBenefit[]> = Object.fromEntries(team.map((employee, index) => [employee.id, teamBenefits[index] ?? []]));
+  // ที่อยู่ในระบบของผู้รับสิทธิ์ทุกคนที่เลือกได้ในหน้านี้ ใช้กับแบบฟอร์มที่ถามที่อยู่ (เช่น ภัยพิบัติ)
+  const addresses = await getEmployeeAddresses([session.sub, ...team.map((employee) => employee.id), ...(initial ? [initial.employeeCode] : [])]);
 
   return (
     <WithdrawClient
       applicant={{ code: profile.code, fullName: profile.name, department: profile.department ?? "—", position: profile.position ?? "—", manager: profile.managerName ?? "—" }}
       subordinates={team.map((employee) => ({ code: employee.id, fullName: employee.name, department: employee.department, position: employee.position, manager: profile.name }))}
       benefitsByEmployee={benefitsByEmployee}
+      addresses={addresses}
       initialProxy={params.for === "proxy"}
       expectedPay={{ date: thaiDate(round.payDate), note: `ยื่นวันนี้อยู่ในรอบที่ ${round.roundNo} ถ้า HR และการเงินอนุมัติทัน ไม่ทันจะเลื่อนไปรอบถัดไป` }}
       benefits={ownerBenefits ?? benefits}

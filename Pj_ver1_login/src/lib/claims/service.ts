@@ -7,7 +7,7 @@ import { findEmployeeUuidByCode } from "../auth/users";
 import { getSubordinates } from "../employee/subordinates";
 import { proxyReasonOf } from "../../features/hr/queue";
 import { cutoffDateOf, DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
-import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, maxClaimsLabel } from "./forms";
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, fixedAmount, isFieldActive, maxClaimsLabel, needsReceipt, toFormValues } from "./forms";
 import { emailHr, isHrEmployee } from "../hr/emailNotify";
 import { afterResponse } from "../email/notify";
 import { sendClaimNotices } from "./notify";
@@ -483,10 +483,11 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   }
 
   const targetEmployeeCode = existing ? existing.employeeCode : input.employeeCode;
-  if (!existing && targetEmployeeCode !== actor.sub) {
+  // ตรวจทั้งตอนสร้างและตอนแก้/ส่งร่างยื่นแทนเดิม กันคนที่ไม่ใช่หัวหน้าแผนก (หรือพ้นตำแหน่งแล้ว) ส่งต่อ
+  if (targetEmployeeCode !== actor.sub) {
     const reports = await getSubordinates(actor.sub);
     if (!reports?.some((report) => report.id === targetEmployeeCode)) {
-      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้า และเฉพาะลูกน้องหรือพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
+      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้าแผนก และเฉพาะพนักงานในแผนกของตัวเองที่ยังทำงานอยู่", existing?.claimNo);
     }
   }
 
@@ -494,7 +495,7 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     findEmployeeUuidByCode(targetEmployeeCode),
     findEmployeeUuidByCode(actor.sub),
     getEmployeeBenefits(targetEmployeeCode),
-    supabaseAdmin.from("welfare_benefit").select("id, allow_advance, advance_receipt_days").eq("code", input.benefitCode).is("deleted_at", null).maybeSingle(),
+    supabaseAdmin.from("welfare_benefit").select("id, allow_advance, advance_receipt_days, form_type").eq("code", input.benefitCode).is("deleted_at", null).maybeSingle(),
   ]);
   const advance = input.advance === true;
   if (benefitRow.error) throw benefitRow.error;
@@ -502,6 +503,13 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   if (!benefitRow.data || !benefits?.some((benefit) => benefit.code === input.benefitCode)) {
     throw new ClaimInputError("พนักงานคนนี้ไม่มีสิทธิ์ในสวัสดิการที่เลือก");
   }
+
+  // แบบฟอร์มที่ระบบกำหนดยอดจากตัวเลือก (เช่น ระดับผลกระทบภัยพิบัติ) ไม่เชื่อยอดที่ส่งมาจากหน้าจอ
+  const formType: string | null = benefitRow.data.form_type ?? null;
+  const formValues = toFormValues(formType, { amountRequested: input.amount, expenseDate: input.expenseDate, providerName: input.providerName, details: input.details ?? {} });
+  const fixed = fixedAmount(formType, formValues);
+  if (fixed !== null) input = { ...input, amount: fixed };
+  const receiptRequired = needsReceipt(formType);
 
   if (input.expenseDate && !/^\d{4}-\d{2}-\d{2}$/.test(input.expenseDate)) throw new ClaimInputError("วันที่เกิดค่าใช้จ่ายไม่ถูกต้อง");
   if (advance && !benefitRow.data.allow_advance) throw new ClaimInputError("สวัสดิการนี้ยื่นเบิกล่วงหน้าไม่ได้");
@@ -566,8 +574,17 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
     if (countError) throw countError;
     if (!advance) {
       if (!count) throw new ClaimInputError("กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์");
-      if (!input.receiptNo || !input.receiptDate) throw new ClaimInputError("กรุณาระบุเลขที่และวันที่ในใบเสร็จ");
-      if (!input.providerName) throw new ClaimInputError("กรุณาระบุผู้ออกใบเสร็จหรือสถานพยาบาล");
+      if (receiptRequired) {
+        if (!input.receiptNo || !input.receiptDate) throw new ClaimInputError("กรุณาระบุเลขที่และวันที่ในใบเสร็จ");
+        if (!input.providerName) throw new ClaimInputError("กรุณาระบุผู้ออกใบเสร็จหรือสถานพยาบาล");
+      }
+    }
+    // แบบฟอร์มที่ไม่มีใบเสร็จ ตรวจช่องบังคับตามแบบฟอร์มที่ฝั่งเซิร์ฟเวอร์ด้วย (ที่อยู่ สถานะ ระดับผลกระทบ วันที่)
+    if (!receiptRequired) {
+      const active = fieldsFor(formType).filter((field) => isFieldActive(field, formValues));
+      if (active.some((field) => field.key !== "amount" && !field.optional && !formValues[field.key]?.trim()) || !(input.amount > 0)) throw new ClaimInputError("กรุณากรอกข้อมูลให้ครบถ้วน");
+      const invalid = active.find((field) => field.pattern && !field.pattern.regex.test(formValues[field.key]?.trim() ?? ""));
+      if (invalid?.pattern) throw new ClaimInputError(invalid.pattern.message);
     }
 
     const { error } = await supabaseAdmin.rpc("welfare_claim_transition", {

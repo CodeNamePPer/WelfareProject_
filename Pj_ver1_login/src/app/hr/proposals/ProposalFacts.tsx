@@ -1,5 +1,6 @@
 import type { BudgetType, ProposalDetail, ProposalStatus } from "@/lib/hr/proposals";
 import { DEFAULT_ADVANCE_RECEIPT_DAYS } from "@/lib/claims/types";
+import { FORM_TYPE_LABELS } from "@/lib/claims/forms";
 import { Card, type BadgeTone } from "@/features/hr/ui";
 
 const BUDGET_LABEL: Record<BudgetType, string> = { yearly: "รายปี", monthly: "รายเดือน", per_claim: "ต่อครั้ง" };
@@ -32,6 +33,8 @@ export function ProposalFacts({ proposal }: { proposal: ProposalDetail }) {
   const input = proposal.input;
   const facts = [
     { label: "หมวด", value: input.category || "—" },
+    // แสดงเฉพาะแบบฟอร์มพิเศษ (เช่น ภัยพิบัติ) ข้อเสนอทั่วไปคงตามดีไซน์ HH2
+    ...(input.formType && input.formType !== "general" ? [{ label: "แบบฟอร์มยื่นเบิก", value: FORM_TYPE_LABELS[input.formType] ?? input.formType }] : []),
     { label: "รอบวงเงิน", value: BUDGET_LABEL[input.budgetType] },
     { label: "จำนวนครั้ง", value: input.maxClaims ? `${input.maxClaims} ครั้ง/ปี` : "ไม่จำกัด" },
     ...limitPairs(proposal.levelLimits),

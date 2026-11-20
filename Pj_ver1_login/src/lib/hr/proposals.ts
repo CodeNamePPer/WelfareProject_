@@ -2,6 +2,7 @@ import "server-only";
 import { emailHr } from "./emailNotify";
 import { supabaseAdmin } from "@/lib/supabase";
 import { findEmployeeUuidByCode } from "@/lib/auth/users";
+import { DISASTER_CATEGORY, FLOOD_MAX_AMOUNT } from "@/lib/claims/forms";
 
 // ข้อเสนอสร้างสวัสดิการ (ดีไซน์ H03, H04, H14, HH1, HH2)
 //   HR เสนอ -> หัวหน้า HR อนุมัติ (สร้างสวัสดิการทันที) / ขอข้อมูลเพิ่ม (HR แก้แล้วส่งกลับ) / ไม่อนุมัติ
@@ -35,6 +36,8 @@ export type ProposalInput = {
   advanceReceiptDays: number | null;
   documents: string[];
   reason: string;
+  /** ชุดแบบฟอร์มยื่นเบิก (FORM_FIELDS) "" = ไม่ระบุ (สร้างใหม่ใช้ general, แก้ไขคงค่าเดิม) · แบบฟอร์มภัยพิบัติเลือกได้เฉพาะหมวด DISASTER_CATEGORY */
+  formType: string;
 };
 
 export class ProposalError extends Error {
@@ -66,6 +69,13 @@ export function validateProposal(input: ProposalInput, mode: "draft" | "submit",
   }
   if (mode === "draft") return;
   if (!input.category.trim()) throw new ProposalError("เลือกหมวด", "category");
+  if (input.formType === "flood") {
+    if (input.category.trim() !== DISASTER_CATEGORY) throw new ProposalError(`แบบฟอร์มภัยพิบัติใช้ได้เฉพาะหมวด${DISASTER_CATEGORY}`, "formType");
+    if (input.allowAdvance) throw new ProposalError("แบบฟอร์มภัยพิบัติยื่นเบิกล่วงหน้าไม่ได้", "allowAdvance");
+    if (input.limits.some((limit) => limit.amount > 0 && limit.amount < FLOOD_MAX_AMOUNT)) {
+      throw new ProposalError(`แบบฟอร์มภัยพิบัติจ่ายสูงสุด ${FLOOD_MAX_AMOUNT.toLocaleString("th-TH")} บาท (ระดับ 3) วงเงินต้องไม่น้อยกว่านี้`, "limits");
+    }
+  }
   if (kind === "create" && !input.description.trim()) {
     throw new ProposalError("กรอกคำอธิบายสั้นบนการ์ด", "description");
   }
@@ -96,6 +106,7 @@ function proposalRow(input: ProposalInput) {
     eligibility: { all_departments: true },
     required_documents: input.documents.map((doc) => doc.trim()).filter(Boolean),
     reason: input.reason.trim() || null,
+    form_type: input.formType || null,
   };
 }
 
@@ -273,7 +284,7 @@ async function insertBenefit(input: ProposalInput) {
       image_path: input.imagePath,
       budget_type: input.budgetType,
       max_claims: input.maxClaims,
-      form_type: "general",
+      form_type: input.formType || "general",
       eligibility_note: notes || null,
       required_documents: input.documents,
       allow_advance: input.allowAdvance,
@@ -380,6 +391,7 @@ async function applyBenefitUpdate(benefitId: string, benefitCode: string, input:
       required_documents: input.documents,
       allow_advance: input.allowAdvance,
       advance_receipt_days: input.allowAdvance ? input.advanceReceiptDays : null,
+      ...(input.formType ? { form_type: input.formType } : {}),
       is_active: true,
     })
     .eq("id", benefitId);
@@ -657,6 +669,7 @@ type DetailRow = SummaryRow & {
   advance_receipt_days: number | null;
   required_documents: string[];
   reason: string | null;
+  form_type: string | null;
   decision_note: string | null;
   decided_at: string | null;
   decider: Person;
@@ -669,7 +682,7 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
   const { data, error } = await supabaseAdmin
     .from("welfare_benefit_proposal")
     .select(
-      `${SUMMARY_SELECT}, proposed_by, description, detail, max_claims, effective_from, allow_family, allow_insurance_excess, allow_advance, advance_receipt_days, required_documents, reason, decision_note, decided_at,
+      `${SUMMARY_SELECT}, proposed_by, description, detail, max_claims, effective_from, allow_family, allow_insurance_excess, allow_advance, advance_receipt_days, required_documents, reason, form_type, decision_note, decided_at,
        decider:decided_by(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th)), applied:applied_benefit_id(code),
        level_limits:welfare_benefit_proposal_limit(amount, job_level_id, level:job_level_id(code, name_th, rank_order)),
        events:welfare_benefit_proposal_event(kind, note, created_at, actor:actor_employee_id(employee_code, photo_url, first_name_th, last_name_th, position:position_id(name_th)))`,
@@ -708,6 +721,7 @@ export async function getProposal(id: string): Promise<ProposalDetail | null> {
       advanceReceiptDays: data.advance_receipt_days,
       documents: data.required_documents,
       reason: data.reason ?? "",
+      formType: data.form_type ?? "",
     },
     levelLimits,
     decisionNote: data.decision_note,

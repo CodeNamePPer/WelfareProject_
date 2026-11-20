@@ -5,6 +5,7 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import { Check, ImageIcon, Plus, X } from 'lucide-react';
 import { cx } from '@/lib/cx';
 import { DEFAULT_ADVANCE_RECEIPT_DAYS } from '@/lib/claims/types';
+import { DISASTER_CATEGORY, FLOOD_LEVELS, FLOOD_MAX_AMOUNT } from '@/lib/claims/forms';
 import { useToast } from '@/components/ui/Toast';
 import type { BudgetType, ProposalInput } from '@/lib/hr/proposals';
 import { Avatar, BenefitPreview, Button, Card, Input, PageHeader, Select, Textarea, fieldClass, labelClass } from '@/features/hr/ui';
@@ -21,7 +22,19 @@ const DEFAULT_CATEGORIES = [
   'กีฬาและออกกำลังกาย',
   'อุปกรณ์และเครื่องมือทำงาน',
   'ช่วยเหลือพิเศษ',
+  DISASTER_CATEGORY,
 ];
+
+/** แบบฟอร์มยื่นเบิกที่เลือกได้ในหมวดภัยพิบัติ */
+const DISASTER_FORMS = [
+  { id: 'general', label: 'ทั่วไป', desc: 'พนักงานกรอกร้านค้า ยอดเงิน และแนบใบเสร็จ' },
+  {
+    id: 'flood',
+    label: 'ภัยพิบัติ (ระดับผลกระทบ)',
+    desc: `ที่อยู่ที่ได้รับผลกระทบ สถานะ ณ วันที่ยื่น และระดับผลกระทบ ${FLOOD_LEVELS.map((level) => `฿${level.amount.toLocaleString('th-TH')}`).join(' / ')} ไม่ต้องใช้ใบเสร็จ`,
+  },
+];
+const FLOOD_DOCS = ['รูปถ่ายหลักฐานความเสียหาย'];
 
 const BUDGETS: { id: BudgetType; label: string; desc: string; per: string }[] = [
   { id: 'yearly', label: 'รายปี', desc: 'คำนวณวงเงินรวมต่อปีปฏิทิน', per: 'ต่อปี' },
@@ -129,6 +142,22 @@ export function ProposalForm({
   const [documents, setDocuments] = useState<string[]>(start?.documents.length ? start.documents : DEFAULT_DOCS);
   const [newDoc, setNewDoc] = useState('');
   const [reason, setReason] = useState(start?.reason ?? '');
+  // "" = ไม่ระบุ (ร่างเก่า) ฝั่งเซิร์ฟเวอร์คงแบบฟอร์มเดิม · สร้างใหม่เริ่มที่ทั่วไป
+  const [formType, setFormType] = useState(start?.formType || (kind === 'create' ? 'general' : ''));
+  const disaster = category.trim() === DISASTER_CATEGORY;
+  // แบบฟอร์มภัยพิบัติอยู่ในหมวดภัยพิบัติเท่านั้น ย้ายหมวดแล้วกลับเป็นแบบทั่วไป
+  const effectiveFormType = formType === 'flood' && !disaster ? 'general' : formType;
+  const flood = effectiveFormType === 'flood';
+
+  /** เลือกแบบฟอร์มภัยพิบัติ: ตั้งค่าที่เข้ากันให้ (ต่อครั้ง วงเงินไม่ต่ำกว่าระดับ 3 ไม่มีเบิกล่วงหน้า เอกสารเป็นรูปหลักฐาน) */
+  function chooseFormType(next: string) {
+    setFormType(next);
+    if (next !== 'flood') return;
+    setBudgetType('per_claim');
+    setAllowAdvance(false);
+    if (limitMode === 'flat' && !(toNumber(flatAmount) >= FLOOD_MAX_AMOUNT)) setFlatAmount(String(FLOOD_MAX_AMOUNT));
+    if (documents.length === 0 || documents.join() === DEFAULT_DOCS.join()) setDocuments(FLOOD_DOCS);
+  }
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -186,10 +215,11 @@ export function ProposalForm({
     effectiveFrom,
     allowFamily,
     allowInsurance,
-    allowAdvance,
-    advanceReceiptDays: allowAdvance && receiptDays.trim() ? Number(receiptDays) : null,
+    allowAdvance: allowAdvance && !flood,
+    advanceReceiptDays: allowAdvance && !flood && receiptDays.trim() ? Number(receiptDays) : null,
     documents,
     reason: reason.trim(),
+    formType: effectiveFormType,
   });
 
   /** ตรวจทีละขั้นก่อนไปขั้นถัดไป */
@@ -217,8 +247,11 @@ export function ProposalForm({
           found.maxClaims = 'กรุณาระบุจำนวนครั้งเป็นจำนวนเต็มตั้งแต่ 1 ครั้งขึ้นไป';
         }
       }
+      if (!found.limits && flood && filled.some((amount) => amount < FLOOD_MAX_AMOUNT)) {
+        found.limits = `แบบฟอร์มภัยพิบัติจ่ายสูงสุด ฿${money(FLOOD_MAX_AMOUNT)} (ระดับ 3) วงเงินต้องไม่น้อยกว่านี้`;
+      }
       if (!effectiveFrom) found.effectiveFrom = 'กรุณาเลือกวันที่มีผลบังคับใช้';
-      if (allowAdvance) {
+      if (allowAdvance && !flood) {
         const days = Number(receiptDays);
         if (!receiptDays.trim() || !Number.isInteger(days) || days < 1 || days > 365) found.advanceReceiptDays = 'กรุณาระบุจำนวนวันเป็นจำนวนเต็ม 1–365 วัน';
       }
@@ -498,6 +531,32 @@ export function ProposalForm({
                 </div>
               </div>
 
+              {disaster ? (
+                <div>
+                  <p className={labelClass}>แบบฟอร์มยื่นเบิก</p>
+                  <div role="group" aria-label="แบบฟอร์มยื่นเบิก" className="grid gap-2.5 sm:grid-cols-2">
+                    {DISASTER_FORMS.map((item) => {
+                      const active = (effectiveFormType || 'general') === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => chooseFormType(item.id)}
+                          className={cx(
+                            'flex flex-col items-start rounded-[10px] border p-3 text-left transition-colors',
+                            active ? 'border-[#1D4ED8] bg-[#EFF6FF]' : 'border-line bg-white hover:bg-surface',
+                          )}
+                        >
+                          <span className={cx('text-14 font-semibold', active ? 'text-[#1E40AF]' : 'text-ink')}>{item.label}</span>
+                          <span className="mt-0.5 text-12 text-muted">{item.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <Input
                 label={
                   <>
@@ -752,22 +811,24 @@ export function ProposalForm({
                       desc: 'ใช้เบิกส่วนต่างค่ารักษาที่เกินจากวงเงินประกันกลุ่ม',
                     },
                     {
-                      checked: allowAdvance,
+                      checked: allowAdvance && !flood,
                       set: setAllowAdvance,
                       title: 'เบิกล่วงหน้าได้',
-                      desc: 'ยื่นขอรับเงินก่อนและแนบใบเสร็จจริงหลังเสร็จสิ้นกิจกรรม',
+                      desc: flood ? 'แบบฟอร์มภัยพิบัติยื่นหลังเกิดเหตุพร้อมหลักฐาน เบิกล่วงหน้าไม่ได้' : 'ยื่นขอรับเงินก่อนและแนบใบเสร็จจริงหลังเสร็จสิ้นกิจกรรม',
+                      disabled: flood,
                     },
                   ].map((opt) => (
                     <label
                       key={opt.title}
                       className={cx(
-                        'flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3 transition-colors',
-                        opt.checked ? 'border-[#1D4ED8] bg-[#EFF6FF]/60' : 'border-line bg-white hover:bg-surface',
+                        'flex items-start gap-2.5 rounded-[10px] border p-3 transition-colors',
+                        opt.disabled ? 'cursor-not-allowed border-line bg-surface opacity-60' : opt.checked ? 'cursor-pointer border-[#1D4ED8] bg-[#EFF6FF]/60' : 'cursor-pointer border-line bg-white hover:bg-surface',
                       )}
                     >
                       <input
                         type="checkbox"
                         checked={opt.checked}
+                        disabled={opt.disabled}
                         onChange={(e) => opt.set(e.target.checked)}
                         className="mt-0.5 size-4 shrink-0 accent-[#1D4ED8]"
                       />
@@ -778,7 +839,7 @@ export function ProposalForm({
                     </label>
                   ))}
                 </div>
-                {allowAdvance ? (
+                {allowAdvance && !flood ? (
                   <div className="mt-3 rounded-[10px] border border-line bg-surface p-3">
                     <label htmlFor="advance-receipt-days" className={labelClass}>
                       ต้องแนบใบเสร็จจริงภายใน <span className="text-[#B3261E]">*</span>
@@ -910,10 +971,11 @@ export function ProposalForm({
                   {[
                     ['ชื่อสวัสดิการ', name || '—'],
                     ['หมวดหมู่', category || '—'],
+                    ...(disaster ? [['แบบฟอร์มยื่นเบิก', DISASTER_FORMS.find((item) => item.id === (effectiveFormType || 'general'))?.label ?? '—']] : []),
                     ['รอบและวงเงิน', limitText],
                     ['จำนวนครั้งต่อปี', effectiveMaxClaims ? `${effectiveMaxClaims} ครั้ง/ปี` : 'ไม่จำกัดจำนวนครั้ง'],
                     ['วันที่มีผล', thaiDate(effectiveFrom)],
-                    ['เงื่อนไขเพิ่มเติม', chips.join(', ') || 'เบิกเฉพาะพนักงานตามใบเสร็จจริง'],
+                    ['เงื่อนไขเพิ่มเติม', chips.join(', ') || (flood ? 'เบิกตามระดับผลกระทบ ไม่ต้องใช้ใบเสร็จ' : 'เบิกเฉพาะพนักงานตามใบเสร็จจริง')],
                   ].map(([label, value]) => (
                     <div key={label} className="min-w-0">
                       <dt className="text-12 text-muted">{label}</dt>

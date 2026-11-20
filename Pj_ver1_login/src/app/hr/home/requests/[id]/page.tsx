@@ -9,6 +9,7 @@ import { getBenefitMaxClaims, getClaimReviewFields, type DocKind } from "@/lib/h
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
 import { toPendingRequest } from "@/lib/claims/mappers";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
+import { needsReceipt } from "@/lib/claims/forms";
 import { currentRound, payDateOf, thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { DEFAULT_PAY_SETTINGS } from "@/features/payroll/lib/pay-settings";
 import { claimKindOf, proxyReasonOf, roundCutoff, tabOf } from "@/features/hr/queue";
@@ -47,6 +48,7 @@ const MEDICAL_FORMS = ["medical", "dental", "checkup", "child_medical", "child_v
 function labelsOf(formType: string | null) {
   if (formType && MEDICAL_FORMS.includes(formType)) return { provider: "สถานพยาบาล", date: "วันที่รับบริการ" };
   if (formType === "training") return { provider: "สถาบัน", date: "วันที่อบรม" };
+  if (formType === "flood") return { provider: null, date: "วันที่เกิดภัยพิบัติ" };
   return { provider: "ผู้ให้บริการ", date: "วันที่เกิดค่าใช้จ่าย" };
 }
 
@@ -107,11 +109,13 @@ export default async function ReviewPage({ params }: { params: Params }) {
   // รายละเอียดคำขอ 6 ช่องตามดีไซน์ H02
   const facts: ReviewData["facts"] = [
     { label: "ผู้รับสิทธิ์", value: relation === "self" ? "ตัวเอง" : `${RELATION[relation] ?? relation}${fields?.beneficiaryName ? ` · ${fields.beneficiaryName}` : ""}` },
-    { label: labels.provider, value: claim.providerName || "—" },
+    ...(labels.provider ? [{ label: labels.provider, value: claim.providerName || "—" }] : []),
     { label: labels.date, value: claim.expenseDate ? thaiDate(`${claim.expenseDate}T00:00:00+07:00`) : "—" },
     { label: "ค่าใช้จ่ายทั้งหมด", value: money(totalCost) },
     { label: "ประกันจ่ายแล้ว", value: insured ? `${money(insurancePaid)}${fields?.insurerName ? ` · ${fields.insurerName}` : ""}` : "ไม่มี" },
     { label: insured ? "ขอเบิก (ส่วนเกิน)" : "ขอเบิก", value: money(claim.amountRequested), strong: true },
+    // แบบฟอร์มที่ไม่มีใบเสร็จ (ภัยพิบัติ) ข้อมูลหลักอยู่ใน details: ที่อยู่ สถานะ ระดับผลกระทบ
+    ...(needsReceipt(claim.formType) ? [] : Object.entries(claim.details).map(([label, value]) => ({ label, value }))),
   ];
 
   const withinLimit = !blockers.some((item) => item.message.includes("วงเงิน")) && !(max !== null && benefit && benefit.claimsThisYear > max);

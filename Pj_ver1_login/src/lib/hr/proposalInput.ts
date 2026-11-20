@@ -1,4 +1,5 @@
 import type { BudgetType, ProposalInput } from "./proposals";
+import { FORM_FIELDS } from "../claims/forms";
 
 const BUDGETS: BudgetType[] = ["yearly", "monthly", "per_claim"];
 
@@ -30,5 +31,7 @@ export function parseProposalInput(raw: unknown): ProposalInput {
     advanceReceiptDays: typeof body.advanceReceiptDays === "number" ? body.advanceReceiptDays : null,
     documents,
     reason: text("reason"),
+    // ชุดแบบฟอร์มที่ไม่รู้จักหรือไม่ส่งมา = ไม่ระบุ (แก้ไขแล้วคงแบบฟอร์มเดิมไว้)
+    formType: text("formType") in FORM_FIELDS ? text("formType") : "",
   };
 }
