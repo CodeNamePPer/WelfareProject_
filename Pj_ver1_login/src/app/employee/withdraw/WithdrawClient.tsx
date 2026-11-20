@@ -3,7 +3,7 @@
 import { useNavTransition } from '@/lib/useNavTransition';
 import { useEffect, useRef, useState } from 'react';
 import { FileText, Image as ImageIcon, Upload, X } from 'lucide-react';
-import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES, fieldsFor, toClaimPayload } from '@/lib/claims/forms';
+import { ADDRESS_OTHER, ADDRESS_SYSTEM, ALLOWED_ATTACHMENT_TYPES, FLOOD_LEVELS, MAX_ATTACHMENT_BYTES, fieldsFor, fixedAmount, isFieldActive, needsReceipt, toClaimPayload } from '@/lib/claims/forms';
 import type { EmployeeBenefit } from '@/lib/claims/types';
 import { baht, bangkokToday } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
@@ -52,6 +52,7 @@ export default function WithdrawClient({
     benefits,
     subordinates,
     benefitsByEmployee,
+    addresses,
     initial,
     initialBenefitCode,
     initialProxy,
@@ -62,6 +63,8 @@ export default function WithdrawClient({
     /** พนักงานในแผนกที่ผู้ใช้เป็นหัวหน้าแผนก ว่างเมื่อไม่ได้เป็นหัวหน้าแผนก (ยื่นแทนไม่ได้) */
     subordinates: Person[];
     benefitsByEmployee: Record<string, EmployeeBenefit[]>;
+    /** ที่อยู่ในระบบของผู้รับสิทธิ์แต่ละคน (รหัสพนักงาน → ที่อยู่) ไม่มีคีย์ = ยังไม่มีที่อยู่ในระบบ */
+    addresses: Record<string, string>;
     initial: WithdrawInitial | null;
     initialBenefitCode: string | null;
     initialProxy: boolean;
@@ -103,8 +106,13 @@ export default function WithdrawClient({
     const benefit = list.find((item) => item.code === benefitCode);
     const fields = fieldsFor(benefit?.formType);
     const amountField = fields.find((field) => field.key === 'amount');
-    const detailFields = fields.filter((field) => field.key !== 'amount');
-    const amount = Number(values.amount) || 0;
+    const systemAddress = addresses[person.code] ?? '';
+    // ที่อยู่ในระบบใช้ค่าปัจจุบันของผู้รับสิทธิ์เสมอ ไม่ใช่ค่าที่บันทึกไว้ในร่าง
+    const formValues = fields.some((field) => field.key === 'systemAddress') ? { ...values, systemAddress } : values;
+    const detailFields = fields.filter((field) => field.key !== 'amount' && isFieldActive(field, formValues));
+    const fixed = fixedAmount(benefit?.formType, values);
+    const amount = fixed ?? (Number(values.amount) || 0);
+    const receipt = needsReceipt(benefit?.formType);
     const revising = Boolean(initial?.revisionNote);
     // คำขอที่ส่งกลับมาแก้ไขกันวงเงินไว้อยู่แล้ว (ฐานข้อมูลไม่นับตัวเองซ้ำ) จึงคืนยอดเดิมก่อนเทียบ ไม่งั้นแก้แล้วส่งใหม่ไม่ได้
     // คืนเฉพาะเมื่อยอดเดิมถูกนับใน remaining จริง: สวัสดิการเดียวกัน ไม่ใช่ต่อครั้ง และวันที่เกิดค่าใช้จ่ายอยู่ในรอบวงเงินปัจจุบัน
@@ -158,15 +166,19 @@ export default function WithdrawClient({
     function validateFields() {
         if (proxy && !reasonNote.trim()) return 'กรุณาระบุรายละเอียดเหตุที่พนักงานยื่นเองไม่ได้';
         if (outOfClaims) return `เบิกสวัสดิการนี้ครบ ${benefit?.maxClaims} ครั้งของปีนี้แล้ว`;
-        const missing = fields.some((field) => !field.optional && !values[field.key]?.trim());
+        if (formValues.addressSource === ADDRESS_SYSTEM && !systemAddress) return `ยังไม่มีที่อยู่ในระบบ กรุณาเลือก "${ADDRESS_OTHER}" แล้วกรอกที่อยู่`;
+        const active = fields.filter((field) => isFieldActive(field, formValues));
+        const missing = active.some((field) => field.key !== 'amount' && !field.optional && !formValues[field.key]?.trim());
         if (missing || amount <= 0) return 'กรุณากรอกข้อมูลให้ครบถ้วน';
+        const invalid = active.find((field) => field.pattern && !field.pattern.regex.test(formValues[field.key]?.trim() ?? ''));
+        if (invalid?.pattern) return invalid.pattern.message;
         if (overLimit) return `ยอดเบิกเกินวงเงินคงเหลือ ${money(available)} บาท`;
         return '';
     }
 
     async function send(submit: boolean) {
         if (!benefit || busy) return;
-        const payload = toClaimPayload(benefit.formType, values);
+        const payload = toClaimPayload(benefit.formType, formValues);
         if (revising && !submit && (amount <= 0 || !payload.expenseDate)) {
             setError('คำขอที่ส่งกลับมาแก้ไขต้องระบุยอดเบิกและวันที่เกิดค่าใช้จ่าย');
             return;
@@ -188,8 +200,8 @@ export default function WithdrawClient({
                     ...(proxy ? { employeeCode: person.code } : initial?.employeeCode ? { employeeCode: initial.employeeCode } : {}),
                     benefitCode: benefit.code,
                     note: fullNote,
-                    receiptNo: advance ? '' : receiptNo,
-                    receiptDate: advance ? '' : receiptDate,
+                    receiptNo: advance || !receipt ? '' : receiptNo,
+                    receiptDate: advance || !receipt ? '' : receiptDate,
                     advance,
                     submit,
                 }),
@@ -238,7 +250,7 @@ export default function WithdrawClient({
         const problem = validateFields();
         if (problem) return setError(problem);
         if (!advance) {
-            if (!receiptNo.trim() || !receiptDate) return setError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
+            if (receipt && (!receiptNo.trim() || !receiptDate)) return setError('กรุณาระบุเลขที่และวันที่ในใบเสร็จ');
             if (files.length + uploadedCount + (initial?.attachments.length ?? 0) === 0) return setError('กรุณาแนบเอกสารประกอบอย่างน้อย 1 ไฟล์');
         }
         if (!agreed) return setError('กรุณายืนยันความถูกต้องของข้อมูลก่อนส่งคำขอ');
@@ -256,7 +268,9 @@ export default function WithdrawClient({
         { label: 'ตำแหน่ง', value: person.position },
         { label: 'หัวหน้า', value: person.manager },
     ];
-    const documents = advance ? ['ใบเสนอราคาหรือใบแจ้งค่าใช้จ่าย (ถ้ามี)', ...(benefit?.documents ?? [])] : ['ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน', ...(benefit?.documents ?? [])];
+    const documents = advance
+        ? ['ใบเสนอราคาหรือใบแจ้งค่าใช้จ่าย (ถ้ามี)', ...(benefit?.documents ?? [])]
+        : [...(receipt ? ['ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน'] : []), ...(benefit?.documents ?? [])];
     // ผู้ยื่นคือคนที่กรอกฟอร์มเสมอ ส่วนผู้รับสิทธิ์คือเจ้าของวงเงินที่ถูกหัก (ตัวเอง หรือพนักงานที่ยื่นแทน)
     const remainingAfter = benefit ? Math.max(available - amount, 0) : 0;
     const summary: { label: string; value: string; strong?: boolean; danger?: boolean }[] = [
@@ -459,17 +473,65 @@ export default function WithdrawClient({
                     {/* 3. รายละเอียดค่าใช้จ่าย */}
                     <Sheet aria-labelledby="sec-expense" className="flex flex-col gap-3.5 p-5">
                         <h2 id="sec-expense" className="text-16 font-semibold">
-                            3. รายละเอียดค่าใช้จ่าย
+                            {receipt ? '3. รายละเอียดค่าใช้จ่าย' : '3. รายละเอียดผลกระทบ'}
                         </h2>
                         <div className="grid gap-3.5 sm:grid-cols-2">
                             {detailFields.map((field) => {
-                                const value = values[field.key] ?? '';
+                                const value = formValues[field.key] ?? '';
                                 const label = (
                                     <label htmlFor={field.key} className={labelClass}>
                                         {field.label}
                                         {field.optional ? null : <Required />}
                                     </label>
                                 );
+                                if (field.type === 'radio') {
+                                    // ระดับผลกระทบแสดงยอดเบิกที่ได้ในแต่ละตัวเลือก
+                                    const amountOf = (option: string) => FLOOD_LEVELS.find((level) => level.label === option)?.amount;
+                                    return (
+                                        <fieldset key={field.key} className={cx(field.wide && 'sm:col-span-2')}>
+                                            <legend className={labelClass}>
+                                                {field.label}
+                                                {field.optional ? null : <Required />}
+                                            </legend>
+                                            <div className={cx('grid gap-2', (field.options?.length ?? 0) > 2 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+                                                {field.options?.map((option) => {
+                                                    const optionAmount = amountOf(option);
+                                                    const [head, ...rest] = option.split(' · ');
+                                                    return (
+                                                        <label key={option} className={cx(choice(value === option), 'cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary-500')}>
+                                                            <input type="radio" name={field.key} value={option} checked={value === option} onChange={() => setValue(field.key, option)} className="sr-only" />
+                                                            {optionAmount !== undefined ? (
+                                                                <>
+                                                                    <span className="text-12 text-muted">{head}</span>
+                                                                    <span className="font-semibold">{rest.join(' · ')}</span>
+                                                                    <span className="mt-1 text-13 font-semibold tabular-nums text-primary-700">{baht(optionAmount)}</span>
+                                                                </>
+                                                            ) : (
+                                                                <span className={cx(value === option && 'font-semibold')}>{option}</span>
+                                                            )}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </fieldset>
+                                    );
+                                }
+                                if (field.readOnly) {
+                                    return (
+                                        <div key={field.key} className={cx(field.wide && 'sm:col-span-2')}>
+                                            {label}
+                                            {value ? (
+                                                <p id={field.key} className="rounded-lg border border-line bg-slate-100 px-3 py-2.5 text-14 text-slate-700">
+                                                    {value}
+                                                </p>
+                                            ) : (
+                                                <p id={field.key} role="alert" className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2.5 text-13 text-orange-900">
+                                                    ยังไม่มีที่อยู่ในระบบ กรุณาเลือก &ldquo;{ADDRESS_OTHER}&rdquo; แล้วกรอกที่อยู่
+                                                </p>
+                                            )}
+                                        </div>
+                                    );
+                                }
                                 if (field.type === 'textarea') {
                                     return (
                                         <div key={field.key} className="sm:col-span-2">
@@ -490,7 +552,7 @@ export default function WithdrawClient({
                                     );
                                 }
                                 return (
-                                    <div key={field.key}>
+                                    <div key={field.key} className={cx(field.wide && 'sm:col-span-2')}>
                                         {label}
                                         <input
                                             id={field.key}
@@ -498,12 +560,14 @@ export default function WithdrawClient({
                                             value={value}
                                             onChange={(e) => setValue(field.key, e.target.value)}
                                             placeholder={field.placeholder}
+                                            inputMode={field.pattern ? 'numeric' : undefined}
+                                            maxLength={field.pattern ? 5 : undefined}
                                             className={inputClass}
                                         />
                                     </div>
                                 );
                             })}
-                            {advance ? null : (
+                            {advance || !receipt ? null : (
                                 <>
                                     <div>
                                         <label htmlFor="receiptNo" className={labelClass}>
@@ -522,7 +586,17 @@ export default function WithdrawClient({
                                 </>
                             )}
                         </div>
-                        {amountField ? (
+                        {amountField && fixed !== null ? (
+                            <div className="sm:max-w-[50%] sm:pr-[7px]">
+                                <label htmlFor="amount" className={labelClass}>
+                                    {amountField.label} (บาท)
+                                </label>
+                                <input id="amount" readOnly value={fixed ? money(fixed) : ''} placeholder="เลือกระดับผลกระทบ" aria-describedby="amount-hint" aria-invalid={overLimit} className={cx(lockedClass, 'text-right tabular-nums')} />
+                                <p id="amount-hint" role={overLimit ? 'alert' : undefined} className={cx('mt-1 text-12', overLimit ? 'text-status-rejected' : 'text-muted')}>
+                                    {overLimit ? `ยอดตามระดับเกินวงเงินคงเหลือ ${money(available)} บาท` : 'ยอดเบิกกำหนดตามระดับผลกระทบ HR ตรวจกับรูปหลักฐาน'}
+                                </p>
+                            </div>
+                        ) : amountField ? (
                             <div className="sm:max-w-[50%] sm:pr-[7px]">
                                 <label htmlFor="amount" className={labelClass}>
                                     {amountField.label} (บาท)

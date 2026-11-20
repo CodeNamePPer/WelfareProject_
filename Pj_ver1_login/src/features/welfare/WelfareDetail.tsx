@@ -331,6 +331,7 @@ export function WelfareDetail({
               <p className="text-12 leading-5 text-muted">
                 ช่องที่พนักงานต้องกรอก:{' '}
                 {fieldsFor(editing ? form.formType : item.formType)
+                  .filter((field) => !field.when && !field.readOnly)
                   .map((field) => field.label)
                   .join(' · ')}
               </p>

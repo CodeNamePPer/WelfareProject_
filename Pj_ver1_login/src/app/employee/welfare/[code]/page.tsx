@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/get-session";
-import { APPROVAL_FLOW, fieldsFor } from "@/lib/claims/forms";
+import { APPROVAL_FLOW, fieldsFor, needsReceipt } from "@/lib/claims/forms";
 import { getEmployeeBenefits, getPaySettings, listClaims } from "@/lib/claims/service";
 import { baht, thaiDate } from "@/lib/claims/requester";
 import { DEFAULT_PAY_SETTINGS, monthOffsetLabel } from "@/features/payroll/lib/pay-settings";
@@ -34,7 +34,9 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
     const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
     const perClaim = benefit.budgetType === "per_claim";
     const canClaim = benefit.remaining > 0 && !outOfClaims;
-    const formFields = fieldsFor(benefit.formType).filter((field) => !field.optional);
+    // ช่องที่ขึ้นตามตัวเลือก (เช่น ที่อยู่ที่กรอกเอง) หรือระบบเติมให้ ไม่นับเป็นข้อมูลที่ต้องกรอกเสมอ
+    const formFields = fieldsFor(benefit.formType).filter((field) => !field.optional && !field.when && !field.readOnly);
+    const receipt = needsReceipt(benefit.formType);
     const history = (claims ?? []).filter((claim) => claim.benefitCode === benefit.code && claim.status !== "cancelled");
     const conditions = [
         { label: "วงเงิน", value: `${baht(benefit.limit)} ${BUDGET_TYPE[benefit.budgetType]}` },
@@ -44,9 +46,11 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
             label: "ยื่นล่วงหน้า",
             value: benefit.allowAdvance
                 ? `ได้ · รับเงินก่อน แล้วแนบใบเสร็จจริงภายใน ${benefit.advanceReceiptDays} วันหลังได้รับเงิน`
-                : "ไม่ได้ · ต้องจ่ายเองก่อนแล้วยื่นเบิกพร้อมใบเสร็จ",
+                : receipt
+                  ? "ไม่ได้ · ต้องจ่ายเองก่อนแล้วยื่นเบิกพร้อมใบเสร็จ"
+                  : "ไม่ได้ · ยื่นหลังเกิดเหตุพร้อมหลักฐาน",
         },
-        { label: "เอกสารที่ต้องแนบ", value: ["ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน", ...benefit.documents].join(", ") },
+        { label: "เอกสารที่ต้องแนบ", value: [...(receipt ? ["ใบเสร็จรับเงินหรือหลักฐานการชำระเงิน"] : []), ...benefit.documents].join(", ") || "—" },
         { label: "ข้อมูลที่ต้องกรอก", value: formFields.map((field) => field.label).join(", ") },
         { label: "ผู้อนุมัติ", value: APPROVAL_FLOW },
         {
