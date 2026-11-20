@@ -6,7 +6,7 @@ import { getMyProfile } from "@/lib/employee/profile";
 import { listMyEditRequests } from "@/lib/hr/editRequests";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { APPROVAL_FLOW } from "@/lib/claims/forms";
-import { APPROVED, HOLDER, RESERVED, balanceLabel, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
+import { APPROVED, RESERVED, holderOf, balanceLabel, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
 import type { ClaimRecord, EmployeeBenefit } from "@/lib/claims/types";
 import { BenefitThumb, ClaimPill, EmptyNote, RowLink, Sheet, UsageBar } from "@/features/requester/ui";
 import { HomeTabs } from "@/features/requester/HomeTabs";
@@ -261,7 +261,7 @@ function RequestsPanel({ claims, paidThisYear, awaiting }: { claims: ClaimRecord
                     <span className="block break-words font-medium">{claim.benefitName}</span>
                     <span className="block text-12 text-muted">{claim.claimNo}</span>
                   </span>
-                  <span className="whitespace-nowrap text-13 text-ink-soft">{HOLDER[claim.status]}</span>
+                  <span className="whitespace-nowrap text-13 text-ink-soft">{holderOf(claim)}</span>
                   <span className="text-right tabular-nums">{baht(claim.amountRequested)}</span>
                   <span className="text-right tabular-nums">
                     {APPROVED.includes(claim.status) ? <b className="font-semibold">{baht(countedAmount(claim))}</b> : <span className="text-muted">{claim.status === "rejected" ? "ไม่จ่าย" : "รอดำเนินการ"}</span>}

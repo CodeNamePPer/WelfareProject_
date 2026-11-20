@@ -743,8 +743,14 @@ export async function applyClaimAction(claimNo: string, input: ClaimActionInput,
 
   if (input.action === "pay") {
     if (actor.role !== "FINANCE") throw new ClaimInputError("ไม่มีสิทธิ์ดำเนินการ");
+    // บันทึกจ่ายคำขอของตัวเอง (หรือที่ตัวเองยื่นแทน) ไม่ได้ เหมือนการอนุมัติ ต้องให้การเงินคนอื่นบันทึก
+    if (claim.employeeCode === actor.sub || claim.submittedByCode === actor.sub) {
+      throw new ClaimInputError("บันทึกจ่ายคำขอของตัวเองหรือที่ตัวเองยื่นแทนไม่ได้");
+    }
+    if (claim.status !== "awaiting_payment") throw new ClaimInputError("คำขอนี้ไม่ได้อยู่ในสถานะรอจ่าย กรุณาโหลดหน้าใหม่");
     const transferRef = input.transferRef?.trim();
     if (!transferRef) throw new ClaimInputError("กรุณาระบุเลขอ้างอิงการโอน");
+    if (transferRef.length > 200) throw new ClaimInputError("เลขอ้างอิงการโอนยาวเกินไป");
     const ownerId = await findEmployeeUuidByCode(claim.employeeCode);
     const { data: account, error: accountError } = await supabaseAdmin
       .from("employee_bank_account")

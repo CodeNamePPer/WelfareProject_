@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useNavTransition } from '@/lib/useNavTransition';
 import { Badge, Button, Card, Input, PageHeader, ReadOnlyInput, RequesterFull, type BadgeTone, type RequesterDetail } from '@/features/hr/ui';
 import { FormError, claimAction } from '@/features/finance/ui';
+import { PayClaimDialog, type PayTarget } from '@/features/finance/PayClaimDialog';
 
 export type ClaimDetailData = {
   /** คำขอของผู้ใช้เอง: อนุมัติหรือส่งกลับเองไม่ได้ ต้องให้การเงินคนอื่น */
@@ -23,6 +24,7 @@ export type ClaimDetailData = {
   receipts: { id: string; name: string; isImage: boolean; src: string }[];
   receiptLines: { label: string; amount: string }[];
   history: string | null;
+  advance: boolean;
 };
 
 const TONE: Partial<Record<ClaimDbStatus, BadgeTone>> = { pending_finance: 'finance', awaiting_payment: 'approved', finance_returned: 'revise', paid: 'paid' };
@@ -34,6 +36,15 @@ export function ClaimDetailClient({ data }: { data: ClaimDetailData }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'approve' | 'return' | null>(null);
   const [shown, setShown] = useState(0);
+  const [paying, setPaying] = useState<PayTarget | null>(null);
+
+  const canPay = data.status === 'awaiting_payment' && !data.own;
+  const openPay = () => setPaying({ claimNo: data.claimNo, name: data.person.name, amount: `฿${data.amounts.transfer}`, account: data.account, advance: data.advance });
+  const paid = (claimNo: string) => {
+    notify(`บันทึกจ่าย ${claimNo} แล้ว`);
+    // คงหน้าต่างไว้จนหน้ารายการแสดงจริง
+    nav.navigate('/payroll/approvals?tab=paid', { refresh: true });
+  };
 
   const canApprove = data.status === 'pending_finance' && !data.own;
   const canReturn = (data.status === 'pending_finance' || data.status === 'awaiting_payment') && !data.own;
@@ -143,6 +154,11 @@ export function ClaimDetailClient({ data }: { data: ClaimDetailData }) {
                     {busy === 'approve' ? 'กำลังอนุมัติ…' : `อนุมัติจ่าย${data.payDateShort ? ` รอบ ${data.payDateShort}` : ''}`}
                   </Button>
                 ) : null}
+                {canPay ? (
+                  <Button disabled={busy !== null || paying !== null} onClick={openPay}>
+                    บันทึกจ่ายแล้ว
+                  </Button>
+                ) : null}
                 <Button variant="secondary" className="border-[#EA580C] text-[#9A3412] hover:bg-[#FFF7ED]" disabled={busy !== null} onClick={() => run('return')}>
                   {busy === 'return' ? 'กำลังส่งกลับ…' : 'ส่งกลับ HR'}
                 </Button>
@@ -150,11 +166,15 @@ export function ClaimDetailClient({ data }: { data: ClaimDetailData }) {
             </Card>
           ) : data.own && data.status === 'pending_finance' ? (
             <Card className="p-5 text-13 text-ink-soft">คำขอนี้เป็นของคุณ อนุมัติจ่ายเองไม่ได้ ต้องให้การเงินคนอื่นอนุมัติ</Card>
+          ) : data.own && data.status === 'awaiting_payment' ? (
+            <Card className="p-5 text-13 text-ink-soft">คำขอนี้เป็นของคุณ บันทึกจ่ายเองไม่ได้ ต้องให้การเงินคนอื่นบันทึก</Card>
           ) : data.history ? (
             <Card className="p-5 text-13 text-ink-soft">{data.history}</Card>
           ) : null}
         </div>
       </div>
+
+      <PayClaimDialog target={paying} onClose={() => setPaying(null)} onPaid={paid} />
     </>
   );
 }
