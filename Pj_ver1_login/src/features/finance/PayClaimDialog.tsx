@@ -50,22 +50,20 @@ function PayForm({ target, onClose, onPaid }: { target: PayTarget; onClose: () =
         {target.name} · {target.account ?? 'ยังไม่มีบัญชีรับเงิน'} · <b className="font-semibold text-ink">{target.amount}</b>
       </p>
       {noAccount ? (
-        <p className="rounded-[6px] bg-[#FFF7ED] px-2.5 py-2 text-13 text-[#9A3412]">ผู้ขอยังไม่มีบัญชีรับเงินหลัก ให้ HR เพิ่มบัญชีก่อน แล้วจึงบันทึกจ่าย</p>
-      ) : (
-        <>
-          <Input label="เลขอ้างอิงการโอน" value={ref} onChange={(event) => setRef(event.target.value)} maxLength={200} placeholder="เช่น TRF-251125-001" autoFocus />
-          <p className="text-12 text-muted">
-            ยืนยันเมื่อโอนเงินเข้าบัญชีผู้ขอแล้วเท่านั้น สถานะจะเปลี่ยนเป็น “จ่ายแล้ว” และแจ้งผู้ขอทันที
-            {target.advance ? ' · เบิกล่วงหน้า: ระบบจะเริ่มนับกำหนดแนบใบเสร็จจริงจากวันนี้' : ''}
-          </p>
-        </>
-      )}
+        // ชั่วคราว: ยังบันทึกจ่ายได้แม้ไม่มีบัญชีในระบบ (การโอนจะบันทึกบัญชีเป็น "ไม่ระบุ")
+        <p className="rounded-[6px] bg-[#FFF7ED] px-2.5 py-2 text-13 text-[#9A3412]">ผู้ขอยังไม่มีบัญชีรับเงินในระบบ ตรวจบัญชีที่โอนให้ถูกต้องก่อนยืนยัน การโอนจะบันทึกบัญชีเป็น “ไม่ระบุ”</p>
+      ) : null}
+      <Input label="เลขอ้างอิงการโอน" value={ref} onChange={(event) => setRef(event.target.value)} maxLength={200} placeholder="เช่น TRF-251125-001" autoFocus />
+      <p className="text-12 text-muted">
+        ยืนยันเมื่อโอนเงินเข้าบัญชีผู้ขอแล้วเท่านั้น สถานะจะเปลี่ยนเป็น “จ่ายแล้ว” และแจ้งผู้ขอทันที
+        {target.advance ? ' · เบิกล่วงหน้า: ระบบจะเริ่มนับกำหนดแนบใบเสร็จจริงจากวันนี้' : ''}
+      </p>
       <FormError>{error}</FormError>
       <div className="flex justify-end gap-2">
         <Button variant="quiet" onClick={onClose} disabled={busy}>
           ยกเลิก
         </Button>
-        <Button onClick={submit} disabled={busy || noAccount}>
+        <Button onClick={submit} disabled={busy}>
           {busy ? 'กำลังบันทึก…' : 'ยืนยันจ่ายแล้ว'}
         </Button>
       </div>
