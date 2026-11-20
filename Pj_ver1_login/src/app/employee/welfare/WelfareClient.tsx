@@ -84,7 +84,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
             ) : (
                 <ul aria-label="รายการสวัสดิการ" className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
                     {shown.map((benefit) => {
-                        const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
+                        const spent = benefit.available === 0;
                         return (
                             <li key={benefit.code} className="flex flex-col overflow-hidden rounded-lg border border-line bg-white">
                                 <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="h-[140px]" />
@@ -101,7 +101,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                                     {benefit.description ? <p className="text-13 text-ink-soft">{benefit.description}</p> : null}
                                     <div className="mt-auto flex justify-between gap-3 pt-1.5 text-12 text-muted">
                                         <span>{benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : benefit.maxClaimsNote || 'ไม่จำกัดครั้ง'}</span>
-                                        <span className={cx('font-semibold tabular-nums', outOfClaims ? 'text-status-pending-ink' : 'text-ink')}>
+                                        <span className={cx('font-semibold tabular-nums', spent ? 'text-status-pending-ink' : 'text-ink')}>
                                             {balanceLabel(benefit)}
                                         </span>
                                     </div>

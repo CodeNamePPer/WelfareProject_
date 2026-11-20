@@ -20,10 +20,8 @@ export function thaiTime(iso: string) {
   return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 }
 
-/** ข้อความยอดคงเหลือบนการ์ดสวัสดิการ ต่อครั้งบอกจำนวนครั้งที่เหลือ เพราะคำขอถัดไปเบิกได้เต็มวงเงินต่อครั้ง */
-export function balanceLabel(benefit: Pick<EmployeeBenefit, "budgetType" | "claimsLeft" | "limit" | "available">) {
-  if (benefit.claimsLeft === 0) return "ครบจำนวนครั้งแล้ว";
-  if (benefit.budgetType === "per_claim") return benefit.claimsLeft === null ? `ต่อครั้ง ${baht(benefit.limit)}` : `เหลือ ${benefit.claimsLeft} ครั้ง`;
+/** ข้อความยอดคงเหลือบนการ์ดสวัสดิการ แสดงเป็นเงินเสมอ (ต่อครั้ง = วงเงินต่อครั้ง, ครบจำนวนครั้งแล้ว = ฿0) จำนวนครั้งอยู่ในบรรทัดรอง */
+export function balanceLabel(benefit: Pick<EmployeeBenefit, "available">) {
   return `คงเหลือ ${baht(benefit.available)}`;
 }
 

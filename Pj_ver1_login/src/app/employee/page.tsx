@@ -154,7 +154,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                 ) : (
                   <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,440px),1fr))] gap-3 px-5 pt-1 pb-5">
                     {shownBenefits.map((benefit) => {
-                      const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
+                      const spent = benefit.available === 0;
                       return (
                         <li key={benefit.code} className="flex items-center gap-3.5 rounded-lg border border-line px-3.5 py-3">
                           <BenefitThumb category={benefit.category} imageUrl={benefit.imageUrl} className="size-16 rounded-lg" />
@@ -166,7 +166,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                             <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
                           </div>
                           <div className="shrink-0 text-right">
-                            <p className={`text-14 font-semibold tabular-nums ${outOfClaims ? "text-status-pending-ink" : "text-ink"}`}>{balanceLabel(benefit)}</p>
+                            <p className={`text-14 font-semibold tabular-nums ${spent ? "text-status-pending-ink" : "text-ink"}`}>{balanceLabel(benefit)}</p>
                             <Link
                               href={`/employee/welfare/${encodeURIComponent(benefit.code)}`}
                               aria-label={`ดูรายละเอียด ${benefit.name}`}
