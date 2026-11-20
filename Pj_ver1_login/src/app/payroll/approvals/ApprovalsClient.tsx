@@ -9,6 +9,7 @@ import type { ClaimDbStatus } from '@/lib/claims/types';
 import { useToast } from '@/components/ui/Toast';
 import { Badge, Button, Card, EmptyState, FilterPill, PageHeader, RequesterCompact, StatRow, StatTile, Tabs, fieldClass, type StatTone } from '@/features/hr/ui';
 import { claimAction } from '@/features/finance/ui';
+import { PayClaimDialog, type PayTarget } from '@/features/finance/PayClaimDialog';
 import type { FinPerson } from '@/lib/payroll/finance';
 
 export type ApprovalRow = {
@@ -23,6 +24,9 @@ export type ApprovalRow = {
   paidAt: string | null;
   /** คำขอของผู้ใช้เอง อนุมัติเองไม่ได้ */
   own: boolean;
+  /** บัญชีรับเงินหลักของผู้ขอ (เฉพาะคำขอที่รอจ่าย) */
+  account: string | null;
+  advance: boolean;
 };
 
 type Tab = 'pending' | 'awaiting' | 'returned' | 'paid';
@@ -62,6 +66,14 @@ export function ApprovalsClient({
   const [round, setRound] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [paying, setPaying] = useState<PayTarget | null>(null);
+
+  const openPay = (row: ApprovalRow) => setPaying({ claimNo: row.claimNo, name: row.person.name, amount: baht(row.amount), account: row.account, advance: row.advance });
+  const paid = (claimNo: string) => {
+    setPaying(null);
+    notify(`บันทึกจ่าย ${claimNo} แล้ว`);
+    nav.refresh();
+  };
 
   const changeTab = (next: Tab) => {
     setTab(next);
@@ -196,8 +208,12 @@ export function ApprovalsClient({
                           <Button size="sm" disabled={busy !== null} onClick={() => approve([row.claimNo])}>
                             {busy === row.claimNo ? 'กำลังอนุมัติ…' : 'อนุมัติจ่าย'}
                           </Button>
+                        ) : row.status === 'awaiting_payment' && row.own ? (
+                          <span className="text-12 text-muted">คำขอของคุณ บันทึกจ่ายเองไม่ได้</span>
                         ) : row.status === 'awaiting_payment' ? (
-                          <span className="text-12 text-muted">อยู่ในรอบจ่าย</span>
+                          <Button size="sm" disabled={busy !== null || paying !== null} onClick={() => openPay(row)}>
+                            บันทึกจ่ายแล้ว
+                          </Button>
                         ) : row.status === 'finance_returned' ? (
                           <span className="text-12 text-muted">รอ HR</span>
                         ) : null}
@@ -210,6 +226,8 @@ export function ApprovalsClient({
           </div>
         </div>
       </Card>
+
+      <PayClaimDialog target={paying} onClose={() => setPaying(null)} onPaid={paid} />
 
       <p className="text-12 text-muted">การเงินไม่เห็นเอกสารสุขภาพ และปรับยอดไม่ได้ (HR ปรับ) ถ้าพบปัญหาให้ส่งกลับ HR</p>
     </>

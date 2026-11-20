@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSession } from "@/lib/auth/get-session";
-import { getFinanceData, currentRoundKey, daysFrom } from "@/lib/payroll/finance";
+import { getFinanceData, currentRoundKey, daysFrom, getPrimaryAccounts, accountLabel } from "@/lib/payroll/finance";
 import { baht, thaiDate, thaiDayMonth } from "@/lib/claims/requester";
 import { HrPage } from "@/features/hr/ui";
 import { ApprovalsClient, type ApprovalRow } from "./ApprovalsClient";
@@ -9,11 +9,14 @@ export const metadata: Metadata = { title: "รายการอนุมัต
 export const dynamic = "force-dynamic";
 
 // F01 รายการอนุมัติ / รอจ่าย: คำขอที่ HR อนุมัติแล้ว การเงินอนุมัติจ่ายได้ทั้งในแถวและในหน้ารายละเอียด (F05)
+// แท็บรอจ่าย: บันทึกจ่ายแล้วได้ทั้งในแถวและในหน้ารายละเอียด (คำขอของตัวเองบันทึกเองไม่ได้)
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [data, params, session] = await Promise.all([getFinanceData(), searchParams, getSession()]);
   if (!data) return <p className="text-13 text-status-rejected-ink">โหลดรายการคำขอไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
 
   const current = data.rounds.get(currentRoundKey(data.today));
+  // บัญชีรับเงินของคำขอที่รอจ่าย ใช้แสดงในหน้าต่างบันทึกจ่ายแล้ว
+  const accounts = await getPrimaryAccounts([...new Set(data.claims.filter(({ claim }) => claim.status === "awaiting_payment").map(({ claim }) => claim.employeeCode))]);
   const rows: ApprovalRow[] = data.claims.map(({ claim, person, roundKey, payDate, amount, hrApprovedAt }) => {
     const returned = [...claim.events].reverse().find((event) => event.kind === "returned");
     return {
@@ -28,6 +31,8 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
       payDate: payDate ? thaiDate(payDate) : "—",
       roundKey,
       paidAt: claim.status === "paid" ? (claim.payment?.paidAt ?? null) : null,
+      account: accounts.has(claim.employeeCode) && accountLabel(accounts.get(claim.employeeCode)) !== "ไม่มีบัญชีรับเงิน" ? accountLabel(accounts.get(claim.employeeCode)) : null,
+      advance: Boolean(claim.advance),
       // ผู้อนุมัติต้องไม่ใช่เจ้าของคำขอ (guard_welfare_claim_event)
       own: claim.employeeCode === session?.sub || claim.submittedByCode === session?.sub,
     };

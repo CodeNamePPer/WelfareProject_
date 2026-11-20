@@ -42,6 +42,18 @@ export const HOLDER: Record<ClaimDbStatus, string> = {
   cancelled: "จบแล้ว",
 };
 
+/** คำขออยู่ที่ใคร โดยดูขั้นเบิกล่วงหน้าด้วย: จ่ายแล้วแต่ยังต้องแนบใบเสร็จจริง ยังไม่จบ */
+export function holderOf(claim: ClaimRecord): string {
+  const advance = claim.advance;
+  if (claim.status === "paid" && advance?.advancePaidAt) {
+    if (advance.status === "awaiting_receipt") return "คุณ · แนบใบเสร็จจริง";
+    if (advance.status === "receipt_returned") return "คุณ · แนบใบเสร็จใหม่";
+    if (advance.status === "receipt_submitted") return "HR · ตรวจใบเสร็จ";
+    if (advance.status === "cancelled_overdue" && advance.refundAmount && advance.refundAmount > 0) return "คุณ · คืนเงินล่วงหน้า";
+  }
+  return HOLDER[claim.status];
+}
+
 /** ยอดที่นับกับวงเงิน: ยอดอนุมัติถ้ามี ไม่เช่นนั้นใช้ยอดที่ขอ */
 export const countedAmount = (claim: ClaimRecord) => claim.amountApproved ?? claim.amountRequested;
 
