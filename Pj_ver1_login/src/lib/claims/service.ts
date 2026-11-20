@@ -483,10 +483,11 @@ export async function saveClaim(input: SaveClaimInput, actor: ClaimActor): Promi
   }
 
   const targetEmployeeCode = existing ? existing.employeeCode : input.employeeCode;
-  if (!existing && targetEmployeeCode !== actor.sub) {
+  // ตรวจทั้งตอนสร้างและตอนแก้/ส่งร่างยื่นแทนเดิม กันคนที่ไม่ใช่หัวหน้าแผนก (หรือพ้นตำแหน่งแล้ว) ส่งต่อ
+  if (targetEmployeeCode !== actor.sub) {
     const reports = await getSubordinates(actor.sub);
     if (!reports?.some((report) => report.id === targetEmployeeCode)) {
-      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้า และเฉพาะลูกน้องหรือพนักงานในแผนกของตัวเองที่ยังทำงานอยู่");
+      throw new ClaimInputError("ยื่นแทนได้เฉพาะหัวหน้าแผนก และเฉพาะพนักงานในแผนกของตัวเองที่ยังทำงานอยู่", existing?.claimNo);
     }
   }
 

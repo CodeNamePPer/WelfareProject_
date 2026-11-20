@@ -59,7 +59,7 @@ export default function WithdrawClient({
 }: {
     applicant: Person;
     benefits: EmployeeBenefit[];
-    /** ลูกน้องและพนักงานในแผนกที่ผู้ใช้เป็นหัวหน้า ว่างเมื่อไม่ได้เป็นหัวหน้าของใคร (ยื่นแทนไม่ได้) */
+    /** พนักงานในแผนกที่ผู้ใช้เป็นหัวหน้าแผนก ว่างเมื่อไม่ได้เป็นหัวหน้าแผนก (ยื่นแทนไม่ได้) */
     subordinates: Person[];
     benefitsByEmployee: Record<string, EmployeeBenefit[]>;
     initial: WithdrawInitial | null;
@@ -260,7 +260,7 @@ export default function WithdrawClient({
     // ผู้ยื่นคือคนที่กรอกฟอร์มเสมอ ส่วนผู้รับสิทธิ์คือเจ้าของวงเงินที่ถูกหัก (ตัวเอง หรือพนักงานที่ยื่นแทน)
     const remainingAfter = benefit ? Math.max(available - amount, 0) : 0;
     const summary: { label: string; value: string; strong?: boolean; danger?: boolean }[] = [
-        { label: 'ผู้ยื่น', value: proxy ? `${applicant.fullName} (หัวหน้า)` : applicant.fullName },
+        { label: 'ผู้ยื่น', value: proxy ? `${applicant.fullName} (หัวหน้าแผนก)` : applicant.fullName },
         { label: 'ผู้รับสิทธิ์', value: proxy ? `${person.fullName} · ${person.code}` : 'ตัวเอง' },
         { label: 'สวัสดิการ', value: benefit?.name ?? '—' },
         { label: 'ประเภท', value: `${advance ? 'ยื่นล่วงหน้า' : 'ยื่นเบิก'}${proxy ? ' · ยื่นแทน' : ''}` },
@@ -327,7 +327,7 @@ export default function WithdrawClient({
                                         </option>
                                     ))}
                                 </select>
-                                <p className="mt-1.5 text-12 text-muted">หัวหน้ายื่นแทนได้เฉพาะลูกน้องและพนักงานในแผนกของตัวเอง ({subordinates.length} คน)</p>
+                                <p className="mt-1.5 text-12 text-muted">หัวหน้าแผนกยื่นแทนได้เฉพาะพนักงานในแผนกของตัวเอง ({subordinates.length} คน)</p>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
                                     <div>
                                         <label htmlFor="proxy-reason" className={labelClass}>

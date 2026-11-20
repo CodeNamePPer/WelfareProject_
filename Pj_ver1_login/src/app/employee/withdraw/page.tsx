@@ -33,7 +33,9 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
   let ownerBenefits: EmployeeBenefit[] | null = null;
   if (editing) {
     const claim = editing;
-    if ((claim.employeeCode === session.sub || claim.submittedByCode === session.sub) && (claim.status === "draft" || claim.status === "needs_revision")) {
+    // ร่างที่ยื่นแทนไว้ แก้ต่อได้เฉพาะเมื่อยังเป็นหัวหน้าแผนกของเจ้าของคำขอ (กฎเดียวกับ saveClaim)
+    const canEditProxy = claim.submittedByCode === session.sub && Boolean(subordinates?.some((employee) => employee.id === claim.employeeCode));
+    if ((claim.employeeCode === session.sub || canEditProxy) && (claim.status === "draft" || claim.status === "needs_revision")) {
       if (claim.employeeCode !== session.sub) {
         ownerBenefits = await getEmployeeBenefits(claim.employeeCode);
       }
@@ -57,7 +59,7 @@ export default async function WithdrawPage({ searchParams }: { searchParams: Pro
     }
   }
 
-  // หัวหน้ายื่นแทนลูกน้องโดยตรงได้ (เดิมอยู่หน้า /employee/HeadEm) ยกเว้นตอนแก้ไขคำขอของตัวเอง
+  // หัวหน้าแผนกยื่นแทนพนักงานในแผนกได้ (เดิมอยู่หน้า /employee/HeadEm) ยกเว้นตอนแก้ไขคำขอที่มีอยู่
   const team = initial ? [] : (subordinates ?? []);
   const teamBenefits = await Promise.all(team.map((employee) => getEmployeeBenefits(employee.id)));
   const benefitsByEmployee: Record<string, EmployeeBenefit[]> = Object.fromEntries(team.map((employee, index) => [employee.id, teamBenefits[index] ?? []]));
