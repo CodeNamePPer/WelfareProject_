@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth/get-session";
 import { getHrEmployee } from "@/lib/hr/employees";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
+import { availableTotal } from "@/lib/claims/totalCap";
+import { getEmployeeTotalCap } from "@/lib/hr/employeeTotalLimit";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 import { payDateOf, thaiDate } from "@/lib/claims/requester";
 import { DEFAULT_PAY_SETTINGS, resolvePayDate } from "@/features/payroll/lib/pay-settings";
@@ -30,12 +32,13 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
   const claim = await getClaim(decodeURIComponent(claimNo));
   if (!claim || !FIN_STATUSES.includes(claim.status)) notFound();
 
-  const [owner, benefits, account, settings, session] = await Promise.all([
+  const [owner, benefits, account, settings, session, totalCap] = await Promise.all([
     getHrEmployee(claim.employeeCode),
     getEmployeeBenefits(claim.employeeCode).catch(() => null),
     getPrimaryBankAccount(claim.employeeCode).catch(() => null),
     getPaySettings().catch(() => DEFAULT_PAY_SETTINGS),
     getSession(),
+    getEmployeeTotalCap(claim.employeeCode),
   ]);
   const employee = owner ?? null;
   const hr = [...claim.events].reverse().find((event) => event.kind === "hr_approved") ?? null;
@@ -49,7 +52,7 @@ export default async function FinClaimDetailPage({ params }: { params: Params })
     payDate = resolvePayDate(year, month, day <= 15 ? 1 : 2, settings);
   }
 
-  const remainingAll = benefits ? benefits.reduce((sum, item) => sum + Math.max(item.remaining, 0), 0) : null;
+  const remainingAll = benefits ? availableTotal(benefits, totalCap) : null;
   const claimsAll = benefits ? benefits.reduce((sum, item) => sum + item.claimsThisYear, 0) : null;
   const maxAll = benefits ? benefits.reduce((sum, item) => sum + (item.maxClaims ?? 0), 0) : 0;
   const approved = claim.amountApproved ?? claim.amountRequested;

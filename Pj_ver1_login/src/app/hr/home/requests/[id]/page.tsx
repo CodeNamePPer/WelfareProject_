@@ -7,6 +7,8 @@ import { getHrStaffCodes } from "@/lib/hr/hrClaims";
 import { getPrimaryBankAccount } from "@/lib/hr/bankAccount";
 import { getBenefitMaxClaims, getClaimReviewFields, type DocKind } from "@/lib/hr/claimReview";
 import { getClaim, getEmployeeBenefits, getPaySettings } from "@/lib/claims/service";
+import { availableTotal } from "@/lib/claims/totalCap";
+import { getEmployeeTotalCap } from "@/lib/hr/employeeTotalLimit";
 import { toPendingRequest } from "@/lib/claims/mappers";
 import { CLAIM_STATUS_LABEL } from "@/lib/claims/types";
 import { needsReceipt } from "@/lib/claims/forms";
@@ -61,7 +63,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
   if (!claim || !tab) notFound();
 
   // ยื่นแทน: วงเงิน จำนวนครั้ง และบัญชี ใช้ของพนักงานเจ้าของสิทธิ์ (employeeCode) ไม่ใช่คนกรอก
-  const [owner, session, benefits, settings, account, fields, maxClaims] = await Promise.all([
+  const [owner, session, benefits, settings, account, fields, maxClaims, totalCap] = await Promise.all([
     getHrEmployee(claim.employeeCode),
     getSession(),
     getEmployeeBenefits(claim.employeeCode),
@@ -69,6 +71,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
     getPrimaryBankAccount(claim.employeeCode).catch(() => null),
     getClaimReviewFields(claim.id).catch(() => null),
     getBenefitMaxClaims().catch(() => null),
+    getEmployeeTotalCap(claim.employeeCode),
   ]);
   const employee = owner ?? null;
   const request = toPendingRequest(claim);
@@ -85,7 +88,7 @@ export default async function ReviewPage({ params }: { params: Params }) {
   const round = currentRound(settings);
   const payDate = payDateOf(claim) ?? round.payDate;
   const cutoff = roundCutoff(round.year, round.month, round.roundNo);
-  const remainingAll = benefits ? benefits.reduce((sum, item) => sum + Math.max(item.remaining, 0), 0) : null;
+  const remainingAll = benefits ? availableTotal(benefits, totalCap) : null;
   const claimsAll = benefits ? benefits.reduce((sum, item) => sum + item.claimsThisYear, 0) : null;
   // เพดานรวมชุดเดียวกับหน้ารายชื่อพนักงาน (H05) เพื่อให้ตัวเลข "เบิกปีนี้" ตรงกันทุกหน้า
   const maxAll = maxClaims ? [...maxClaims.values()].reduce<number>((sum, value) => sum + (value ?? 0), 0) : 0;

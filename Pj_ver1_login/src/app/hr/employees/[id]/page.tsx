@@ -13,6 +13,9 @@ import { COUNTED } from "@/features/hr/queue";
 import { ButtonLink, Card, EmptyState, HrPage, PageHeader, RequesterFull, StatusBadge } from "@/features/hr/ui";
 import { cx } from "@/lib/cx";
 import { LimitTable, type LimitRow } from "./LimitTable";
+import { TotalLimitBox, type TotalLimitSummary } from "./TotalLimitBox";
+import { getEmployeeTotalCap, getEmployeeTotalLimit } from "@/lib/hr/employeeTotalLimit";
+import { availableTotal } from "@/lib/claims/totalCap";
 import { tenureOf } from "@/lib/tenure";
 import { toBangkokDate } from "@/lib/claims/mappers";
 
@@ -35,7 +38,7 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
   const { id } = await params;
   const code = decodeURIComponent(id);
   // ดึงทุกอย่างพร้อมกัน (เดิมโหลดพนักงานทั้งบริษัทก่อนเพื่อหาคนเดียว แล้วค่อยโหลดส่วนที่เหลือ)
-  const [employee, benefits, claims, maxClaims, limits, session, hrHead] = await Promise.all([
+  const [employee, benefits, claims, maxClaims, limits, session, hrHead, totalLimit, totalCap] = await Promise.all([
     getHrEmployee(code),
     getEmployeeBenefits(code),
     listClaims({ employeeCode: code }),
@@ -43,6 +46,8 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
     getEmployeeLimits(code).catch(() => null),
     getSession(),
     getHrHeadCode(),
+    getEmployeeTotalLimit(code),
+    getEmployeeTotalCap(code),
   ]);
   if (employee === null) return <p className="text-13 text-status-rejected-ink">โหลดข้อมูลพนักงานไม่สำเร็จ กรุณารีเฟรชหน้าอีกครั้ง</p>;
   if (!employee) notFound();
@@ -73,7 +78,16 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
       remaining: capped ? (item.budgetType === "per_claim" ? own : Math.max(own - item.used - item.pending, 0)) : null,
     };
   });
-  const remainingAll = benefits ? limitRows.reduce((sum, row) => sum + (row.remaining ?? 0), 0) : null;
+  // ไม่เกินคงเหลือของวงเงินรวมต่อปี (ถ้าตั้งไว้)
+  const remainingAll = benefits ? availableTotal(limitRows.map((row) => ({ remaining: row.remaining ?? 0 })), totalCap) : null;
+  const totalSummary: TotalLimitSummary | null = totalCap
+    ? {
+        ...totalCap,
+        next: totalLimit?.next
+          ? `${totalLimit.next.amount === null ? "ไม่จำกัด" : money(totalLimit.next.amount)} ตั้งแต่ ${thaiDate(`${totalLimit.next.effectiveFrom}T00:00:00+07:00`)}`
+          : null,
+      }
+    : null;
   const line = [employee.code, employee.position, employee.department].filter(Boolean).join(" · ");
 
   return (
@@ -126,7 +140,10 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
             ) : benefits.length === 0 ? (
               <EmptyState>ยังไม่มีสวัสดิการที่มีสิทธิ์</EmptyState>
             ) : (
-              <LimitTable employeeCode={employee.code} rows={limitRows} canAdjust={canAdjust} />
+              <>
+                <TotalLimitBox employeeCode={employee.code} summary={totalSummary} canAdjust={canAdjust} />
+                <LimitTable employeeCode={employee.code} rows={limitRows} canAdjust={canAdjust} />
+              </>
             )}
           </Card>
 

@@ -188,6 +188,27 @@ export function toLogEntries(rows: DbAuditEntry[], users: Map<string, UserInfo>)
       ];
     }
 
+    if (row.action === 'EMPLOYEE_TOTAL_LIMIT_UPDATE') {
+      const change = row.changes?.total;
+      const targetName = (row.targetId && users.get(row.targetId)?.name) || undefined;
+      const fmtTotal = (v: unknown) =>
+        v == null || v === '' ? 'ไม่จำกัด' : `฿${Number(v).toLocaleString('th-TH', { maximumFractionDigits: 2 })}`;
+      return [
+        {
+          ...base,
+          title: `ปรับวงเงินรวมต่อปีของ ${targetName ?? row.targetId ?? ''}`,
+          detail: row.detail ?? '',
+          category: 'settings' as AuditCategory,
+          action: 'welfare',
+          target: row.targetId ? { code: row.targetId, name: targetName, href: `/admin/users?user=${row.targetId}` } : undefined,
+          change: {
+            fields: [{ label: 'วงเงินรวมต่อปี', before: fmtTotal(change?.old), after: fmtTotal(change?.new) }],
+            reason: row.reason,
+          },
+        },
+      ];
+    }
+
     if (row.action === 'NOTIFICATION_RESOLVE') {
       return [
         {

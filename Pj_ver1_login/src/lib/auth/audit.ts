@@ -15,6 +15,7 @@ export type AuditAction =
   | "USER_UPDATE"
   | "EMPLOYEE_CREATE" // HR เพิ่มพนักงานใหม่ (targetId = รหัสพนักงาน)
   | "EMPLOYEE_LIMIT_UPDATE" // HR ปรับวงเงินรายคน (targetId = รหัสพนักงาน, changes = { รหัสสวัสดิการ: { old, new } })
+  | "EMPLOYEE_TOTAL_LIMIT_UPDATE" // หัวหน้า HR ปรับวงเงินรวมต่อปี (targetId = รหัสพนักงาน, changes = { total: { old, new } } null = ไม่จำกัด)
   | "ACCOUNT_CREATE" // admin ออกบัญชีให้พนักงาน (targetId = รหัสพนักงาน)
   | "NOTIFICATION_RESOLVE"
   | "WELFARE_CREATE"

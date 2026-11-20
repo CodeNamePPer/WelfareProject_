@@ -18,7 +18,7 @@ export type HrLogEntry = {
   detail: string;
 };
 
-const AUDIT_ACTIONS = ["EMPLOYEE_CREATE", "EMPLOYEE_LIMIT_UPDATE", "WELFARE_CREATE", "WELFARE_UPDATE"] as const;
+const AUDIT_ACTIONS = ["EMPLOYEE_CREATE", "EMPLOYEE_LIMIT_UPDATE", "EMPLOYEE_TOTAL_LIMIT_UPDATE", "WELFARE_CREATE", "WELFARE_UPDATE"] as const;
 const LIMIT = 500;
 
 const CHANGE_LABEL: Record<string, string> = {
@@ -75,6 +75,13 @@ function fromAudit(row: AuditRow, employeeName: Map<string, string>, benefitName
     );
     const detail = [...changes, effective ? `มีผล ${thaiShort(effective)}` : ""].filter(Boolean).join(" · ");
     return { ...base, category: "limit", action: "ปรับวงเงินรายคน", item: [target, employeeName.get(target)].filter(Boolean).join(" "), detail: withReason(detail || (row.details ?? "—"), row.reason) };
+  }
+  if (row.action === "EMPLOYEE_TOTAL_LIMIT_UPDATE") {
+    const effective = row.details?.match(/มีผล (\d{4}-\d{2}-\d{2})/)?.[1];
+    const total = (value: unknown) => (value === null || value === undefined ? "ไม่จำกัด" : money(Number(value)));
+    const change = row.changes?.total;
+    const detail = [change ? `${total(change.old)} → ${total(change.new)}` : "", effective ? `มีผล ${thaiShort(effective)}` : ""].filter(Boolean).join(" · ");
+    return { ...base, category: "limit", action: "ปรับวงเงินรวมต่อปี", item: [target, employeeName.get(target)].filter(Boolean).join(" "), detail: withReason(detail || (row.details ?? "—"), row.reason) };
   }
   const changes = Object.entries(row.changes ?? {}).map(([key, change]) =>
     row.action === "WELFARE_CREATE" ? `${CHANGE_LABEL[key] ?? key}: ${shown(change.new)}` : `${CHANGE_LABEL[key] ?? key}: ${shown(change.old)} → ${shown(change.new)}`,

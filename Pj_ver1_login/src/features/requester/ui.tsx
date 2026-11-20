@@ -72,7 +72,7 @@ export function ClaimPill({ status }: { status: ClaimDbStatus }) {
   return <Pill tone={STATUS_TONE[status]}>{CLAIM_STATUS_LABEL[status]}</Pill>;
 }
 
-/** แถบวงเงิน: น้ำเงิน = ใช้ไปแล้ว, เหลืองอำพัน = กันไว้รอตรวจ */
+/** แถบวงเงิน: เขียว = ใช้ไปแล้ว, เหลืองอำพัน = กันไว้รอตรวจ (ต่อกันไม่มีช่องว่าง) */
 export function UsageBar({ used, pending, limit, size = 'sm', label }: { used: number; pending: number; limit: number; size?: 'sm' | 'lg'; label?: string }) {
   const usedPct = limit > 0 ? Math.min((used / limit) * 100, 100) : 0;
   const pendingPct = limit > 0 ? Math.min((pending / limit) * 100, 100 - usedPct) : 0;
@@ -81,7 +81,7 @@ export function UsageBar({ used, pending, limit, size = 'sm', label }: { used: n
       role={label ? 'img' : undefined}
       aria-label={label}
       aria-hidden={label ? undefined : true}
-      className={cx('flex overflow-hidden bg-mist', size === 'lg' ? 'h-3 gap-0.5 rounded-md' : 'h-1.5 gap-px rounded-sm')}
+      className={cx('flex overflow-hidden bg-mist', size === 'lg' ? 'h-3 rounded-md' : 'h-1.5 rounded-sm')}
     >
       <div className="bg-emerald-500" style={{ width: `${usedPct}%` }} />
       <div className="bg-amber-500" style={{ width: `${pendingPct}%` }} />
