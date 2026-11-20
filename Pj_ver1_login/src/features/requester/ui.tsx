@@ -83,7 +83,7 @@ export function UsageBar({ used, pending, limit, size = 'sm', label }: { used: n
       aria-hidden={label ? undefined : true}
       className={cx('flex overflow-hidden bg-mist', size === 'lg' ? 'h-3 gap-0.5 rounded-md' : 'h-1.5 gap-px rounded-sm')}
     >
-      <div className="bg-primary-700" style={{ width: `${usedPct}%` }} />
+      <div className="bg-emerald-500" style={{ width: `${usedPct}%` }} />
       <div className="bg-amber-500" style={{ width: `${pendingPct}%` }} />
     </div>
   );

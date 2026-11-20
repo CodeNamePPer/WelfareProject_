@@ -368,9 +368,16 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
       const rawLimit = limitOf.get(benefit.id);
       if (rawLimit === null || rawLimit === undefined) return [];
       const limit = Number(rawLimit);
-      const current = usage.filter((u) => u.benefit_id === benefit.id && samePeriod(benefit.budget_type, u.expense_date, today));
+      const perClaim = benefit.budget_type === "per_claim";
+      const thisYear = usage.filter((u) => u.benefit_id === benefit.id && u.expense_date.slice(0, 4) === today.slice(0, 4));
+      // วงเงินต่อครั้งไม่มียอดสะสม แถบจึงแสดงคำขอล่าสุดของปีนี้เทียบวงเงินต่อครั้ง (รอตรวจ = กันไว้, อนุมัติ = ใช้แล้ว)
+      const latest = perClaim ? thisYear.reduce<UsageRow | null>((last, u) => (!last || u.expense_date >= last.expense_date ? u : last), null) : null;
+      const current = perClaim ? (latest ? [latest] : []) : usage.filter((u) => u.benefit_id === benefit.id && samePeriod(benefit.budget_type, u.expense_date, today));
       const used = current.filter((u) => APPROVED.includes(u.status)).reduce((sum, u) => sum + usageAmount(u), 0);
       const pending = current.filter((u) => !APPROVED.includes(u.status)).reduce((sum, u) => sum + usageAmount(u), 0);
+      const remaining = perClaim ? limit : Math.max(limit - used - pending, 0);
+      const claimsLeft = benefit.max_claims === null ? null : Math.max(benefit.max_claims - thisYear.length, 0);
+      const available = claimsLeft === 0 ? 0 : remaining;
       return [{
         code: benefit.code,
         name: benefit.name_th,
@@ -382,7 +389,7 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         maxClaimsNote: maxClaimsLabel(benefit.max_claims, benefit.max_claims_note) || null,
         maxClaims: benefit.max_claims,
         // นับต่อปีของวันที่เกิดค่าใช้จ่าย ตามกฎเดียวกับ guard_welfare_claim
-        claimsThisYear: usage.filter((u) => u.benefit_id === benefit.id && u.expense_date.slice(0, 4) === today.slice(0, 4)).length,
+        claimsThisYear: thisYear.length,
         eligibilityNote: benefit.eligibility_note,
         documents: benefit.required_documents ?? [],
         imageUrl: benefit.image_path ? (images.get(benefit.image_path) ?? null) : null,
@@ -392,7 +399,9 @@ export async function getEmployeeBenefits(code: string): Promise<EmployeeBenefit
         baseLimit: baseBest.has(benefit.id) ? Number(baseBest.get(benefit.id)!.amount) : limit,
         used,
         pending,
-        remaining: Math.max(limit - used - pending, 0),
+        remaining,
+        available,
+        claimsLeft,
       }];
     });
   } catch (err) {

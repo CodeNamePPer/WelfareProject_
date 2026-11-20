@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import type { EmployeeBenefit } from '@/lib/claims/types';
-import { baht } from '@/lib/claims/requester';
+import { balanceLabel, baht } from '@/lib/claims/requester';
 import { cx } from '@/lib/cx';
 import { BenefitThumb, PageHead, Sheet, UsageBar, inputClass, pill } from '@/features/requester/ui';
 import { Search } from 'lucide-react';
@@ -102,7 +102,7 @@ export default function WelfareClient({ benefits, roleNote, faded = [] }: { bene
                                     <div className="mt-auto flex justify-between gap-3 pt-1.5 text-12 text-muted">
                                         <span>{benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : benefit.maxClaimsNote || 'ไม่จำกัดครั้ง'}</span>
                                         <span className={cx('font-semibold tabular-nums', outOfClaims ? 'text-status-pending-ink' : 'text-ink')}>
-                                            {outOfClaims ? 'ครบจำนวนครั้งแล้ว' : `คงเหลือ ${baht(benefit.remaining)}`}
+                                            {balanceLabel(benefit)}
                                         </span>
                                     </div>
                                     <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
