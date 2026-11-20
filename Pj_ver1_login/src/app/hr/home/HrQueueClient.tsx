@@ -122,7 +122,7 @@ export function HrQueueClient({ rows, stats, description, initialTab }: { rows: 
               <option key={name}>{name}</option>
             ))}
           </FilterPill>
-          <FilterPill label="ยื่นแทน" value={proxy} onChange={setProxy}>
+          <FilterPill label="ทั้งหมด" value={proxy} onChange={setProxy}>
             <option value="proxy">เฉพาะยื่นแทน</option>
             <option value="self">เฉพาะยื่นเอง</option>
           </FilterPill>
