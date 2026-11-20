@@ -1,6 +1,6 @@
 // ตัวช่วยแสดงผลคำขอในมุมของผู้ส่งคำขอ ใช้ได้ทั้ง server และ client
 import { DEFAULT_PAY_SETTINGS, resolvePayDate, type PaySettings } from "../../features/payroll/lib/pay-settings";
-import type { ClaimDbStatus, ClaimRecord } from "./types";
+import type { ClaimDbStatus, ClaimRecord, EmployeeBenefit } from "./types";
 
 const TZ = "Asia/Bangkok";
 
@@ -18,6 +18,13 @@ export function thaiDayMonth(iso: string) {
 
 export function thaiTime(iso: string) {
   return new Date(iso).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+}
+
+/** ข้อความยอดคงเหลือบนการ์ดสวัสดิการ ต่อครั้งบอกจำนวนครั้งที่เหลือ เพราะคำขอถัดไปเบิกได้เต็มวงเงินต่อครั้ง */
+export function balanceLabel(benefit: Pick<EmployeeBenefit, "budgetType" | "claimsLeft" | "limit" | "available">) {
+  if (benefit.claimsLeft === 0) return "ครบจำนวนครั้งแล้ว";
+  if (benefit.budgetType === "per_claim") return benefit.claimsLeft === null ? `ต่อครั้ง ${baht(benefit.limit)}` : `เหลือ ${benefit.claimsLeft} ครั้ง`;
+  return `คงเหลือ ${baht(benefit.available)}`;
 }
 
 export const bangkokToday = () => new Date().toLocaleDateString("sv-SE", { timeZone: TZ });

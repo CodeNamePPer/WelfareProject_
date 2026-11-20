@@ -32,6 +32,7 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
     }
 
     const outOfClaims = benefit.maxClaims !== null && benefit.claimsThisYear >= benefit.maxClaims;
+    const perClaim = benefit.budgetType === "per_claim";
     const canClaim = benefit.remaining > 0 && !outOfClaims;
     const formFields = fieldsFor(benefit.formType).filter((field) => !field.optional);
     const history = (claims ?? []).filter((claim) => claim.benefitCode === benefit.code && claim.status !== "cancelled");
@@ -71,7 +72,7 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
                     {benefit.description ? <p className="text-15 text-ink-soft">{benefit.description}</p> : null}
                     <div className="flex flex-col gap-1.5 rounded-lg bg-surface px-4 py-3.5">
                         <div className="flex justify-between gap-3 text-13 text-muted">
-                            <span>คงเหลือใช้ได้</span>
+                            <span>{perClaim ? "คำขอล่าสุด" : "คงเหลือใช้ได้"}</span>
                             {benefit.maxClaims !== null ? (
                                 <span>
                                     เบิกแล้ว {benefit.claimsThisYear}/{benefit.maxClaims} ครั้ง
@@ -79,13 +80,20 @@ export default async function WelfareDetailPage({ params }: { params: Promise<{ 
                             ) : null}
                         </div>
                         <p className="text-[26px] font-semibold tabular-nums">
-                            {baht(benefit.remaining)} <span className="text-14 font-normal text-muted">/ {baht(benefit.limit)}</span>
+                            {baht(perClaim ? benefit.used + benefit.pending : benefit.available)} <span className="text-14 font-normal text-muted">/ {baht(benefit.limit)}</span>
                         </p>
                         <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
-                        <p className="text-12 text-muted">
-                            ใช้ไป {baht(benefit.used)}
-                            {benefit.pending > 0 ? ` · กันไว้รอตรวจ ${baht(benefit.pending)}` : ""} · ยอดที่รอตรวจถูกกันจากวงเงินทันทีที่ยื่น
-                        </p>
+                        {perClaim ? (
+                            <p className="text-12 text-muted">
+                                {benefit.pending > 0 ? `รอตรวจ · กันวงเงินไว้ ${baht(benefit.pending)}` : benefit.used > 0 ? `อนุมัติแล้ว ${baht(benefit.used)}` : "ยังไม่มีคำขอปีนี้"} · เบิกได้สูงสุด {baht(benefit.limit)} ต่อครั้ง
+                                {benefit.claimsLeft !== null ? ` · เหลือ ${benefit.claimsLeft} ครั้ง` : ""}
+                            </p>
+                        ) : (
+                            <p className="text-12 text-muted">
+                                อนุมัติแล้ว {baht(benefit.used)}
+                                {benefit.pending > 0 ? ` · กันไว้รอตรวจ ${baht(benefit.pending)}` : ""} · ยอดที่รอตรวจถูกกันจากวงเงินทันทีที่ยื่น
+                            </p>
+                        )}
                     </div>
                     <div className="mt-auto flex flex-wrap items-center gap-2">
                         {canClaim ? (

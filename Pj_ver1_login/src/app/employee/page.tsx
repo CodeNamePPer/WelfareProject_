@@ -6,7 +6,7 @@ import { getMyProfile } from "@/lib/employee/profile";
 import { listMyEditRequests } from "@/lib/hr/editRequests";
 import { ROLE_LABELS } from "@/lib/auth/roles";
 import { APPROVAL_FLOW } from "@/lib/claims/forms";
-import { APPROVED, RESERVED, holderOf, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
+import { APPROVED, RESERVED, holderOf, balanceLabel, baht, bangkokToday, countedAmount, lastEventOf, nextPayDate, payDateOf, thaiDate } from "@/lib/claims/requester";
 import type { ClaimRecord, EmployeeBenefit } from "@/lib/claims/types";
 import { BenefitThumb, ClaimPill, EmptyNote, RowLink, Sheet, UsageBar } from "@/features/requester/ui";
 import { HomeTabs } from "@/features/requester/HomeTabs";
@@ -18,8 +18,15 @@ const BUDGET_TYPE = { yearly: "รายปี", monthly: "รายเดือ
 // กว้างขั้นต่ำ 900px ให้ "อยู่ที่ใคร" ที่ยาวที่สุดยังอยู่บรรทัดเดียว
 const CLAIM_COLS = "grid-cols-[minmax(0,1.7fr)_minmax(0,1.3fr)_110px_120px_120px_130px]";
 
-/** วงเงินเทียบเป็นต่อปี สวัสดิการที่จ่ายต่อครั้งไม่มีเพดานรายปีจึงไม่นับ */
-const yearlyLimit = (benefit: EmployeeBenefit) => (benefit.budgetType === "yearly" ? benefit.limit : benefit.budgetType === "monthly" ? benefit.limit * 12 : 0);
+/** สวัสดิการต่อครั้งที่ไม่จำกัดจำนวนครั้งไม่มีเพดานรายปี จึงไม่นับในวงเงินรวม */
+const uncapped = (benefit: EmployeeBenefit) => benefit.budgetType === "per_claim" && benefit.maxClaims === null;
+
+/** วงเงินเทียบเป็นต่อปี: รายเดือน × 12, ต่อครั้ง × จำนวนครั้งต่อปี */
+function yearlyLimit(benefit: EmployeeBenefit) {
+  if (benefit.budgetType === "monthly") return benefit.limit * 12;
+  if (benefit.budgetType === "per_claim") return uncapped(benefit) ? 0 : benefit.limit * (benefit.maxClaims ?? 0);
+  return benefit.limit;
+}
 
 function claimsNote(benefit: EmployeeBenefit) {
   return benefit.maxClaims !== null ? `เบิกแล้ว ${benefit.claimsThisYear}/${benefit.maxClaims} ครั้ง` : "ไม่จำกัดครั้ง";
@@ -49,8 +56,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
   const thaiYear = Number(year) + 543;
   // นับตามปีของวันที่เกิดค่าใช้จ่าย กฎเดียวกับวงเงินในฐานข้อมูล
   const thisYear = claims.filter((claim) => claim.expenseDate?.slice(0, 4) === year);
-  // วงเงินรวมไม่นับสวัสดิการต่อครั้ง (yearlyLimit = 0) จึงต้องไม่หักยอดของสวัสดิการต่อครั้งด้วย
-  const capped = thisYear.filter((claim) => claim.budgetType !== "per_claim");
+  // วงเงินรวมไม่นับสวัสดิการต่อครั้งที่ไม่จำกัดครั้ง (yearlyLimit = 0) จึงต้องไม่หักยอดของมันด้วย
+  const uncappedCodes = new Set(benefits.filter(uncapped).map((benefit) => benefit.code));
+  const capped = thisYear.filter((claim) => !uncappedCodes.has(claim.benefitCode));
   const used = capped.filter((claim) => APPROVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
   const reserved = capped.filter((claim) => RESERVED.includes(claim.status)).reduce((sum, claim) => sum + countedAmount(claim), 0);
   const total = benefits.reduce((sum, benefit) => sum + yearlyLimit(benefit), 0);
@@ -97,14 +105,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                 </p>
               </div>
               <p className="text-right text-12 text-muted">
-                รวมวงเงินรายปีและรายเดือน
+                รวมวงเงินรายปี รายเดือน และต่อครั้ง
                 <br />
                 รีเซ็ต 1 ม.ค. {thaiYear + 1}
               </p>
             </div>
-            <UsageBar size="lg" used={used} pending={reserved} limit={total} label={`ใช้ไปแล้ว ${baht(used)} กันวงเงินไว้ ${baht(reserved)}`} />
+            <UsageBar size="lg" used={used} pending={reserved} limit={total} label={`อนุมัติแล้ว ${baht(used)} กันวงเงินไว้ ${baht(reserved)}`} />
             <ul className="flex flex-wrap gap-5 text-13">
-              <Legend swatch="bg-primary-700" label="ใช้ไปแล้ว" value={baht(used)} />
+              <Legend swatch="bg-emerald-500" label="อนุมัติแล้ว" value={baht(used)} />
               <Legend swatch="bg-amber-500" label="กันวงเงินไว้ (รอตรวจ)" value={baht(reserved)} />
               <Legend swatch="border border-slate-300 bg-mist" label="ใช้ได้" value={baht(available)} />
             </ul>
@@ -158,7 +166,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
                             <UsageBar used={benefit.used} pending={benefit.pending} limit={benefit.limit} />
                           </div>
                           <div className="shrink-0 text-right">
-                            <p className={`text-14 font-semibold tabular-nums ${outOfClaims ? "text-status-pending-ink" : "text-ink"}`}>{outOfClaims ? "ครบจำนวนครั้งแล้ว" : `คงเหลือ ${baht(benefit.remaining)}`}</p>
+                            <p className={`text-14 font-semibold tabular-nums ${outOfClaims ? "text-status-pending-ink" : "text-ink"}`}>{balanceLabel(benefit)}</p>
                             <Link
                               href={`/employee/welfare/${encodeURIComponent(benefit.code)}`}
                               aria-label={`ดูรายละเอียด ${benefit.name}`}

@@ -69,7 +69,8 @@ export default async function EmployeeProfilePage({ params }: { params: Params }
       custom: custom?.current != null,
       next: custom?.next ? `${money(custom.next.amount)} ตั้งแต่ ${thaiDate(`${custom.next.effectiveFrom}T00:00:00+07:00`)}` : null,
       claims: item.maxClaims !== null ? `${item.claimsThisYear}/${item.maxClaims}` : String(item.claimsThisYear),
-      remaining: capped ? Math.max(own - item.used - item.pending, 0) : null,
+      // ต่อครั้ง: ยอดสะสมไม่ลดวงเงินของคำขอถัดไป
+      remaining: capped ? (item.budgetType === "per_claim" ? own : Math.max(own - item.used - item.pending, 0)) : null,
     };
   });
   const remainingAll = benefits ? limitRows.reduce((sum, row) => sum + (row.remaining ?? 0), 0) : null;
